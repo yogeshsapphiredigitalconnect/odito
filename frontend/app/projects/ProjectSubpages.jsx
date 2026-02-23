@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import PageDetailsModal from '@/components/pages/PageDetailsModal';
 import { 
   Tooltip,
   TooltipContent,
@@ -15,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft,
   ExternalLink,
@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 
 export default function ProjectSubpages({ projectId, projectName, onBack }) {
+  const router = useRouter();
   const [subpages, setSubpages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,9 +42,6 @@ export default function ProjectSubpages({ projectId, projectName, onBack }) {
   const [sortBy, setSortBy] = useState('page_score');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showPremiumBanner, setShowPremiumBanner] = useState(true);
-  const [selectedPage, setSelectedPage] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalPageUrl, setModalPageUrl] = useState(null);
   const [projectStats, setProjectStats] = useState({
     crawled_pages: 0,
     found_pages: 0,
@@ -151,13 +149,9 @@ export default function ProjectSubpages({ projectId, projectName, onBack }) {
 
   const handlePageClick = (page, event) => {
     event.preventDefault();
-    setModalPageUrl(page.url);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setModalPageUrl(null);
+    // Navigate to the new page route instead of opening modal
+    const encodedUrl = encodeURIComponent(page.url);
+    router.push(`/projects/${projectId}/pages/${encodedUrl}`);
   };
 
   if (loading) {
@@ -492,14 +486,6 @@ export default function ProjectSubpages({ projectId, projectName, onBack }) {
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
         </Button>
       </div>
-
-      {/* Page Details Modal */}
-      <PageDetailsModal
-        isOpen={isModalOpen}
-        toggle={handleCloseModal}
-        projectId={projectId}
-        pageUrl={modalPageUrl}
-      />
     </div>
-  );
+  )
 }

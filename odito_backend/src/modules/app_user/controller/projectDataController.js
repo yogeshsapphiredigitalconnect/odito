@@ -1178,9 +1178,11 @@ export const getPageIssues = async (req, res) => {
 
   try {
 
-    const { projectId } = req.query;
+    const { id: projectId } = req.params;
 
     const { page_url } = req.query;
+
+    console.log("🔍 getPageIssues called with:", { projectId, page_url });
 
 
 
@@ -1220,24 +1222,27 @@ export const getPageIssues = async (req, res) => {
 
 
 
-    // Validate project exists in AI visibility data (consistent with page-score)
-    const validationScore = await db.collection('seo_ai_page_scores').findOne({
-      projectId: projectIdObj,
-      $or: [
-        { page_url: decodedPageUrl },
-        { page_url: page_url }
-      ]
-    });
-
-    if (!validationScore) {
-      console.log('❌ No AI visibility data found for project:', projectId);
+    // Verify project belongs to user (consistent with other functions)
+    const project = await SeoProject.findById(projectId);
+    
+    if (!project) {
+      console.log('❌ Project not found:', projectId);
       return res.status(404).json({
         success: false,
         message: 'Project not found'
       });
     }
 
-    console.log('✅ AI visibility data validated for project:', projectId);
+    // Check if user owns this project
+    if (project.user_id.toString() !== req.user._id.toString()) {
+      console.log('❌ Access denied for user:', req.user._id);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    console.log('✅ Project validated:', project.project_name);
 
     // Get page score from seo_page_scores collection (same source as subpages table)
     const pageScore = await db.collection('seo_page_scores')
@@ -1271,7 +1276,7 @@ export const getPageIssues = async (req, res) => {
     console.log("🧪 PAGE SCREENSHOT RAW:", pageScreenshot);
 
     // Get issues for specific page URL
-    const issues = await db.collection('seo_ai_visibility_issues')
+    const issues = await db.collection('seo_page_issues')
       .find({
         projectId: projectIdObj,
         page_url: decodedPageUrl

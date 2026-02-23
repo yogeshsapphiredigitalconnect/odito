@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../../user/middleware/auth.js';
-import { startAiVisibility, getAiVisibilityProjects, startAudit } from '../../ai_visibility/controller/aiVisibilityController.js';
+import { startAiVisibility, getAiVisibilityProjects, startAudit, getWebsiteOptimization } from '../../ai_visibility/controller/aiVisibilityController.js';
 import { getStandaloneAIVisibilityPages, getPageScore, getAIVisibilityPageIssues } from '../../app_user/controller/projectDataController.js';
 
 const router = express.Router();
@@ -9,6 +9,9 @@ router.use(auth);
 router.post('/start', startAiVisibility);
 router.post('/start-audit', startAudit);
 router.get('/projects', getAiVisibilityProjects);
+
+// NEW: Get website optimization aggregation
+router.get('/projects/:projectId/website-optimization', getWebsiteOptimization);
 
 // NEW: Get pages for standalone AI visibility records
 router.get('/:id/pages', getStandaloneAIVisibilityPages);

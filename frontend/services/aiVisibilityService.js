@@ -131,9 +131,21 @@ class AIVisibilityService {
     
     return this.request(endpoint);
   }
+
+  /**
+   * Get Website Optimization Aggregation
+   * GET /api/ai-visibility/projects/:projectId/website-optimization
+   */
+  async getWebsiteOptimization(projectId) {
+    const response = await this.request(`/ai-visibility/projects/${projectId}/website-optimization`);
+    return response.data;  // ✅ FIXED: No double unwrapping
+  }
 }
 
 // Create singleton instance
 const aiVisibilityService = new AIVisibilityService();
+
+// Export individual function for easy importing
+export const getWebsiteOptimization = (projectId) => aiVisibilityService.getWebsiteOptimization(projectId);
 
 export default aiVisibilityService;

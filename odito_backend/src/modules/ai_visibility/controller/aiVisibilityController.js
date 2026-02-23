@@ -12,6 +12,8 @@ import { JOB_TYPES, JOB_TYPE_CONFIG } from "../../jobs/constants/jobTypes.js";
 
 import mongoose from "mongoose";
 
+import { getWebsiteOptimizationAggregation } from "../../../services/aiVisibilityAggregationService.js";
+
 const jobService = new JobService();
 
 const jobDispatcher = new JobDispatcher();
@@ -630,6 +632,70 @@ export const getAiVisibilityProjects = async (req, res) => {
 
       message: "Failed to get AI Visibility projects",
 
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get Website Optimization Aggregation
+ * GET /api/ai-visibility/website-optimization/:projectId
+ */
+export const getWebsiteOptimization = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Validate projectId presence and format
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'projectId is required',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    // Call aggregation service
+    const aggregationResult = await getWebsiteOptimizationAggregation(projectId);
+
+    // Handle case where no pages found
+    if (aggregationResult.total_pages === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No pages found for this project',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: aggregationResult,
+    });
+  } catch (error) {
+    console.error('[AI_VISIBILITY][WEBSITE_OPTIMIZATION]', error);
+
+    // Handle specific error cases with exact error matching
+    if (error.message === 'INVALID_PROJECT_ID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    if (error.message === 'DATABASE_CONNECTION_ERROR') {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error. Please try again later.',
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get website optimization data',
       error: error.message,
     });
   }
