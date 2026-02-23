@@ -1,0 +1,174 @@
+# Standard library imports
+import os
+import sys
+import threading
+import logging
+import random
+import string
+from datetime import datetime
+
+# Third-party imports
+import requests
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+# Local imports
+from api.health import router as health_router
+from api.jobs import router as jobs_router, is_job_cancelled
+from api.scraping import router as scraping_router, handle_page_scraping
+from api.analysis import router as analysis_router, handle_page_analysis
+from api.performance import router as performance_router
+from api.seo_scoring import router as seo_scoring_router
+from api.ai_visibility import router as ai_visibility_router
+from api.ai_visibility_scoring_v2 import router as ai_visibility_scoring_v2_router, AIVisibilityScoringV2Job
+from api.ai_link_discovery import router as ai_link_discovery_router
+from scraper.workers.ai.ai_visibility.ai_visibility import execute_ai_visibility, AIVisibilityJob
+
+# Configure logging to suppress third-party errors
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+
+app = FastAPI()
+
+# Include API routers
+app.include_router(health_router, prefix="/api", tags=["health"])
+app.include_router(jobs_router, prefix="/api", tags=["jobs"])
+app.include_router(scraping_router, prefix="/api", tags=["scraping"])
+app.include_router(analysis_router, prefix="/api", tags=["analysis"])
+app.include_router(performance_router, prefix="/api", tags=["performance"])
+app.include_router(seo_scoring_router, prefix="/api", tags=["seo_scoring"])
+app.include_router(ai_visibility_router, prefix="/api", tags=["ai_visibility"])
+app.include_router(ai_visibility_scoring_v2_router, prefix="/api", tags=["ai_visibility_scoring_v2"])
+app.include_router(ai_link_discovery_router, prefix="/api", tags=["ai_link_discovery"])
+
+# Global set to track cancelled jobs
+cancelled_jobs = set()
+cancelled_jobs_lock = threading.Lock()
+
+# Global set to track completed jobs (defensive guard)
+completed_jobs = set()
+completed_jobs_lock = threading.Lock()
+
+class CancelJobRequest(BaseModel):
+    jobId: str
+
+class JobClaimRequest(BaseModel):
+    job_type: str
+    worker_id: str
+
+class JobClaimResponse(BaseModel):
+    success: bool
+    message: str
+    data: dict | None = None
+
+class JobCompletion(BaseModel):
+    error: str | None = None
+    stats: dict | None = None
+
+
+
+def send_progress_update(job_id: str, percentage: int, step: str, message: str, subtext: str = None):
+    """Send progress update to Node.js backend"""
+    try:
+        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
+        
+        payload = {
+            "percentage": percentage,
+            "step": step,
+            "message": message,
+            "subtext": subtext
+        }
+        
+        response = requests.post(progress_url, json=payload, timeout=5)
+        response.raise_for_status()
+        
+        print(f"📊 Progress update sent: {percentage}% - {step}")
+        
+    except Exception as e:
+        print(f"⚠️ Failed to send progress update: {e}")
+        # Don't raise exception - progress updates are non-critical
+
+def generate_worker_id():
+    """Generate a unique worker ID"""
+    return f"worker-{''.join(random.choices(string.ascii_lowercase + string.digits, k=8))}"
+
+
+@app.post("/jobs/ai-visibility")
+def handle_ai_visibility(job: AIVisibilityJob):
+    """Handle AI_VISIBILITY job dispatched dealt Node.js"""
+    # === CRITICAL FIX: Extract aiProjectId from job ===
+    aiProjectId = job.aiProjectId or job.projectId
+    return execute_ai_visibility(job, aiProjectId)
+
+@app.post("/jobs/ai-visibility-scoring")
+def handle_ai_visibility_scoring(job: AIVisibilityScoringV2Job):
+    """Handle AI_VISIBILITY_SCORING job dispatched dealt Node.js"""
+    # Import worker function
+    from scraper.workers.ai.ai_scoring_v2.ai_scoring_v2_worker import execute_ai_visibility_scoring_logic
+    
+    # Execute scoring logic
+    result = execute_ai_visibility_scoring_logic(job.dict())
+    
+    if result["status"] == "failed":
+        raise HTTPException(status_code=500, detail=result.get("error", "Scoring failed"))
+    
+    return result
+
+@app.post("/workers/claim")
+def claim_job(request: JobClaimRequest):
+    try:
+        print(f"🔄 Worker {request.worker_id} requesting job of type: {request.job_type}")
+        
+        # Call Node.js backend to claim a job
+        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        node_url = f"{node_backend_url}/api/workers/claim"
+        claim_payload = {
+            "job_type": request.job_type,
+            "worker_id": request.worker_id
+        }
+        
+        print(f"📡 Sending claim request to: {node_url}")
+        print(f"📦 Payload: {claim_payload}")
+        
+        response = requests.post(node_url, json=claim_payload, timeout=10)
+        response.raise_for_status()
+        
+        result = response.json()
+        print(f"📥 Response from Node: {result}")
+        
+        if result.get("success"):
+            job_data = result.get("data", {})
+            print(f"✅ Job claimed successfully: {job_data}")
+            return JobClaimResponse(
+                success=True,
+                message="Job claimed successfully",
+                data=job_data
+            )
+        else:
+            print(f"❌ Failed to claim job: {result.get('message', 'Unknown error')}")
+            return JobClaimResponse(
+                success=False,
+                message=result.get('message', 'Failed to claim job'),
+                data=None
+            )
+            
+    except Exception as e:
+        print(f"❌ Error claiming job: {str(e)}")
+        return JobClaimResponse(
+            success=False,
+            message=f"Error claiming job: {str(e)}",
+            data=None
+        )
+
+if __name__ == "__main__":
+    
+    # Get worker ID from command line args or generate one
+    worker_id = sys.argv[1] if len(sys.argv) > 1 else generate_worker_id()
+    
+    print(f"🤖 Starting Python worker with ID: {worker_id}")
+    print("🚀 Worker ready to receive dispatched jobs from Node.js")
+    
+    # Start FastAPI server (no polling loop needed)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

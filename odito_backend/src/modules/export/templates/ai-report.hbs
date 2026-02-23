@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AI Visibility Report - {{project.project_name}}</title>
+  <style>
+    @page {
+      margin: 40px;
+      size: A4;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #1f2937;
+      line-height: 1.6;
+      background: #ffffff;
+    }
+    
+    .cover-page {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      page-break-after: always;
+    }
+    
+    .cover-content {
+      text-align: center;
+      max-width: 600px;
+      padding: 60px 40px;
+    }
+    
+    .cover-title {
+      font-size: 48px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+    
+    .cover-subtitle {
+      font-size: 20px;
+      color: #64748b;
+      margin-bottom: 40px;
+    }
+    
+    .score-badge {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 40px auto;
+      box-shadow: 0 20px 40px rgba(79, 70, 229, 0.3);
+    }
+    
+    .score-value {
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    
+    .score-grade {
+      font-size: 24px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    
+    .cover-meta {
+      margin-top: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .cover-meta-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 16px;
+    }
+    
+    .cover-meta-label {
+      color: #64748b;
+    }
+    
+    .cover-meta-value {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .page-content {
+      padding: 40px;
+      max-width: 100%;
+    }
+    
+    .page-header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .page-subtitle {
+      font-size: 18px;
+      color: #64748b;
+    }
+    
+    .section {
+      margin-bottom: 48px;
+      page-break-inside: avoid;
+    }
+    
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #4f46e5;
+      display: flex;
+      align-items: center;
+    }
+    
+    .section-title::before {
+      content: '';
+      width: 8px;
+      height: 32px;
+      background: #4f46e5;
+      margin-right: 16px;
+      border-radius: 4px;
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .summary-card {
+      background: #ffffff;
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    
+    .summary-card:hover {
+      border-color: #4f46e5;
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.1);
+    }
+    
+    .summary-value {
+      font-size: 36px;
+      font-weight: 800;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .summary-label {
+      font-size: 14px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .summary-paragraph {
+      background: #f8fafc;
+      border-left: 4px solid #4f46e5;
+      padding: 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      line-height: 1.7;
+      margin: 32px 0;
+    }
+    
+    .score-breakdown {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 32px;
+    }
+    
+    .score-item {
+      margin-bottom: 24px;
+    }
+    
+    .score-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .score-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .score-percentage {
+      font-size: 18px;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+    
+    .progress-bar {
+      height: 12px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.3s ease;
+      position: relative;
+    }
+    
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+    }
+    
+    .progress-excellent { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .progress-good { background: linear-gradient(90deg, #22c55e, #84cc16); }
+    .progress-average { background: linear-gradient(90deg, #eab308, #f59e0b); }
+    .progress-poor { background: linear-gradient(90deg, #f97316, #fb923c); }
+    .progress-critical { background: linear-gradient(90deg, #dc2626, #ef4444); }
+    
+    .issue-category {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .issue-category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .issue-category-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    
+    .issue-category-count {
+      font-size: 16px;
+      color: #64748b;
+    }
+    
+    .issue-severity-badges {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .severity-badge {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .severity-high {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    .severity-medium {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    
+    .severity-low {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+    
+    .high-issues-section {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      border-radius: 16px;
+      padding: 32px;
+      margin: 32px 0;
+    }
+    
+    .high-issues-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #dc2626;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .high-issues-title::before {
+      content: '⚠️';
+      margin-right: 12px;
+      font-size: 24px;
+    }
+    
+    .high-issue-item {
+      background: #ffffff;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    
+    .high-issue-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .high-issue-description {
+      color: #64748b;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    
+    .high-issue-meta {
+      font-size: 14px;
+      color: #dc2626;
+      font-weight: 600;
+    }
+    
+    .entity-bars {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 32px;
+    }
+    
+    .entity-item {
+      margin-bottom: 20px;
+    }
+    
+    .entity-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .entity-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .entity-bar {
+      height: 16px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .entity-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4f46e5, #7c3aed);
+      border-radius: 8px;
+      transition: width 0.3s ease;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 24px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .data-table th {
+      background: #f8fafc;
+      padding: 16px;
+      text-align: left;
+      font-weight: 700;
+      color: #1f2937;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .data-table td {
+      padding: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+    }
+    
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .data-table tr:nth-child(even) {
+      background: #fafbfc;
+    }
+    
+    .score-cell {
+      font-weight: 700;
+      text-align: center;
+    }
+    
+    .score-excellent { background: #dcfce7; color: #16a34a; }
+    .score-good { background: #d9f99d; color: #84cc16; }
+    .score-average { background: #fef3c7; color: #d97706; }
+    .score-poor { background: #fed7aa; color: #ea580c; }
+    .score-critical { background: #fee2e2; color: #dc2626; }
+    
+    .severity-cell {
+      text-align: center;
+      font-weight: 600;
+    }
+    
+    .footer {
+      position: fixed;
+      bottom: 20px;
+      left: 40px;
+      right: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 12px;
+    }
+    
+    .page-number {
+      position: fixed;
+      bottom: 20px;
+      right: 40px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div class="cover-content">
+      <h1 class="cover-title">AI Visibility Report</h1>
+      <div class="cover-subtitle">Enterprise AI Schema & Structured Data Analysis</div>
+      
+      <div class="score-badge">
+        <div class="score-value">{{overview.aiScore}}</div>
+        <div class="score-grade">Grade {{overview.aiGrade}}</div>
+      </div>
+      
+      <div class="cover-meta">
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Project</span>
+          <span class="cover-meta-value">{{project.project_name}}</span>
+        </div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">URL</span>
+          <span class="cover-meta-value">{{project.main_url}}</span>
+        </div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Total Issues</span>
+          <span class="cover-meta-value">{{overview.totalIssues}}</span>
+        </div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Pages Scored</span>
+          <span class="cover-meta-value">{{overview.pagesScored}}</span>
+        </div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Generated</span>
+          <span class="cover-meta-value">{{formatDate generatedAt}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="page-content">
+    <div class="page-header">
+      <h1 class="page-title">Executive Summary</h1>
+      <div class="page-subtitle">{{project.project_name}}</div>
+    </div>
+    
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-value">{{overview.aiScore}}</div>
+        <div class="summary-label">AI Score</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">{{overview.aiGrade}}</div>
+        <div class="summary-label">Grade</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">{{overview.pagesScored}}</div>
+        <div class="summary-label">Pages Analyzed</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">{{overview.totalIssues}}</div>
+        <div class="summary-label">Total Issues</div>
+      </div>
+    </div>
+    
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-value" style="color: #dc2626;">{{overview.highIssues}}</div>
+        <div class="summary-label">High Priority</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" style="color: #d97706;">{{overview.mediumIssues}}</div>
+        <div class="summary-label">Medium Priority</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" style="color: #16a34a;">{{overview.lowIssues}}</div>
+        <div class="summary-label">Low Priority</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">{{entities.totalEntities}}</div>
+        <div class="summary-label">Total Entities</div>
+      </div>
+    </div>
+    
+    <div class="summary-paragraph">
+      {{summary.paragraph}}
+    </div>
+  </div>
+
+  <!-- SCORE BREAKDOWN -->
+  <div class="page-content">
+    <div class="section">
+      <h2 class="section-title">AI Score Breakdown</h2>
+      <div class="score-breakdown">
+        <div class="score-item">
+          <div class="score-label">
+            <span>Blocking Issues</span>
+            <span class="score-percentage">{{scores.avgBlocking}}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill progress-{{scores.scoreClass}}" style="width: {{scores.blockingWidth}}%;"></div>
+          </div>
+        </div>
+        
+        <div class="score-item">
+          <div class="score-label">
+            <span>Completeness</span>
+            <span class="score-percentage">{{scores.avgCompleteness}}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill progress-{{scores.scoreClass}}" style="width: {{scores.completenessWidth}}%;"></div>
+          </div>
+        </div>
+        
+        <div class="score-item">
+          <div class="score-label">
+            <span>Clarity</span>
+            <span class="score-percentage">{{scores.avgClarity}}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill progress-{{scores.scoreClass}}" style="width: {{scores.clarityWidth}}%;"></div>
+          </div>
+        </div>
+        
+        <div class="score-item">
+          <div class="score-label">
+            <span>Structured Data</span>
+            <span class="score-percentage">{{scores.avgStructuredData}}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill progress-{{scores.scoreClass}}" style="width: {{scores.structuredDataWidth}}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ISSUE DISTRIBUTION -->
+  <div class="page-content">
+    <div class="section">
+      <h2 class="section-title">Issue Distribution by Category</h2>
+      {{#each issues.byCategory}}
+      <div class="issue-category">
+        <div class="issue-category-header">
+          <div class="issue-category-name">{{this.category}}</div>
+          <div class="issue-category-count">{{this.count}} issues</div>
+        </div>
+        <div style="color: #64748b; font-size: 14px;">Found on {{this.pageCount}} pages</div>
+        <div class="issue-severity-badges">
+          {{#if this.highCount}}
+          <span class="severity-badge severity-high">High: {{this.highCount}}</span>
+          {{/if}}
+          {{#if this.mediumCount}}
+          <span class="severity-badge severity-medium">Medium: {{this.mediumCount}}</span>
+          {{/if}}
+          {{#if this.lowCount}}
+          <span class="severity-badge severity-low">Low: {{this.lowCount}}</span>
+          {{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <!-- HIGH PRIORITY ISSUES -->
+  {{#if issues.highPriorityIssues.length}}
+  <div class="page-content">
+    <div class="section">
+      <h2 class="section-title">High Priority Issues</h2>
+      <div class="high-issues-section">
+        <div class="high-issues-title">Critical Issues Requiring Immediate Attention</div>
+        {{#each issues.highPriorityIssues}}
+        <div class="high-issue-item">
+          <div class="high-issue-name">{{this.code}} - {{this.name}}</div>
+          <div class="high-issue-description">{{this.messageTruncated}}</div>
+          <div class="high-issue-meta">Found on {{this.affectedPagesCount}} pages</div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ENTITY ANALYSIS -->
+  <div class="page-content">
+    <div class="section">
+      <h2 class="section-title">Entity Analysis</h2>
+      <div class="entity-bars">
+        <div style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-weight: 700; color: #1f2937;">Total Entities</span>
+            <span style="font-weight: 700; color: #4f46e5;">{{entities.totalEntities}}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-weight: 700; color: #1f2937;">Average per Page</span>
+            <span style="font-weight: 700; color: #4f46e5;">{{entities.avgEntitiesPerPage}}</span>
+          </div>
+        </div>
+        
+        {{#each entities.topTypes}}
+        <div class="entity-item">
+          <div class="entity-label">
+            <span>{{this.type}}</span>
+            <span>{{this.count}}</span>
+          </div>
+          <div class="entity-bar">
+            <div class="entity-fill" style="width: {{this.percentWidth}}%;"></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE LEVEL BREAKDOWN -->
+  <div class="page-content">
+    <div class="section">
+      <h2 class="section-title">Page-Level Analysis</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 40%;">URL</th>
+            <th style="width: 12%;">AI Score</th>
+            <th style="width: 12%;">High</th>
+            <th style="width: 12%;">Medium</th>
+            <th style="width: 12%;">Low</th>
+            <th style="width: 12%;">Entities</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each pages}}
+          <tr>
+            <td>{{this.urlTruncated}}</td>
+            <td class="score-cell score-{{this.scoreClass}}">{{this.aiScore}}</td>
+            <td class="severity-cell" style="color: #dc2626;">{{this.highCount}}</td>
+            <td class="severity-cell" style="color: #d97706;">{{this.mediumCount}}</td>
+            <td class="severity-cell" style="color: #16a34a;">{{this.lowCount}}</td>
+            <td style="text-align: center;">{{this.entityCount}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    AI Visibility Report generated by Odito SEO Platform | {{project.project_name}}
+  </div>
+  <div class="page-number">Page </div>
+
+</body>
+</html>

@@ -1,0 +1,646 @@
+import AIVisibilityProjectService from "../service/AIVisibilityProjectService.js";
+
+import AIVisibilityProject from "../model/AIVisibilityProject.js";
+
+import Job from "../../jobs/model/Job.js";
+
+import { JobService } from "../../jobs/service/jobService.js";
+
+import JobDispatcher from "../../jobs/service/jobDispatcher.js";
+
+import { JOB_TYPES, JOB_TYPE_CONFIG } from "../../jobs/constants/jobTypes.js";
+
+import mongoose from "mongoose";
+
+const jobService = new JobService();
+
+const jobDispatcher = new JobDispatcher();
+
+/**
+
+
+
+ * Start AI Audit for existing AI project
+
+
+
+ * POST /api/ai-visibility/start-audit
+
+
+
+ */
+
+export const startAudit = async (req, res) => {
+  try {
+    const { aiProjectId } = req.body;
+
+    const aiProject = await AIVisibilityProject.findById(aiProjectId);
+
+    if (!aiProject) {
+      return res.status(404).json({ message: "AI Project not found" });
+    }
+
+    // 🛡 Safety Validation - Check current status
+
+    if (aiProject.aiStatus === "running") {
+      return res.status(400).json({ message: "Audit already running" });
+    }
+
+    if (aiProject.aiStatus === "completed") {
+      return res.status(400).json({
+        message: "Audit already completed. Use re-run functionality if needed.",
+      });
+    }
+
+    // Only allow starting from "pending" or "failed" status
+
+    if (!["pending", "failed"].includes(aiProject.aiStatus)) {
+      return res.status(400).json({
+        message: `Cannot start audit from current status: ${aiProject.aiStatus}`,
+      });
+    }
+
+    let job;
+
+    if (aiProject.isStandalone) {
+      // NEW project → trigger AI_LINK_DISCOVERY
+
+      job = await jobService.createJob({
+        user_id: req.user._id,
+
+        seo_project_id: aiProject._id, // Use AI project ID as seo_project_id
+
+        jobType: JOB_TYPES.AI_LINK_DISCOVERY,
+
+        input_data: {
+          aiProjectId: aiProject._id,
+
+          isStandalone: aiProject.isStandalone,
+
+          url: aiProject.config.url,
+        },
+      });
+
+      // Link discovery job to AI project
+
+      await AIVisibilityProjectService.linkJob(aiProject._id, job._id);
+
+      console.log(
+        `[AI_LINK_DISCOVERY] Job dispatched | jobId=${job._id} | aiProjectId=${aiProject._id}`,
+      );
+
+      // Dispatch discovery job
+
+      await jobService.atomicallyDispatchJob(job._id);
+
+      jobDispatcher.dispatchAiLinkDiscoveryJob(job).catch((error) => {
+        console.error(
+          `[ERROR] AI_LINK_DISCOVERY dispatch failed | jobId=${job._id}:`,
+          error,
+        );
+      });
+    } else {
+      // EXISTING project → trigger AI_VISIBILITY directly
+
+      job = await jobService.createJob({
+        user_id: req.user._id,
+
+        seo_project_id: aiProject.projectId, // Use SEO project ID
+
+        jobType: JOB_TYPES.AI_VISIBILITY,
+
+        input_data: {
+          aiProjectId: aiProject._id,
+
+          isStandalone: aiProject.isStandalone,
+        },
+      });
+
+      // Link job to AI project
+
+      await AIVisibilityProjectService.linkJob(aiProject._id, job._id);
+
+      console.log(
+        `[AI_VISIBILITY] Job dispatched | jobId=${job._id} | aiProjectId=${aiProject._id}`,
+      );
+
+      // Dispatch AI visibility job
+
+      await jobService.atomicallyDispatchJob(job._id);
+
+      jobDispatcher.dispatchAiVisibilityJob(job).catch((error) => {
+        console.error(
+          `[ERROR] AI_VISIBILITY dispatch failed | jobId=${job._id}:`,
+          error,
+        );
+      });
+    }
+
+    // ✅ CORRECT: Update AI project status to running ONLY when audit is explicitly started
+
+    await AIVisibilityProjectService.updateStatus(aiProject._id, "running", {
+      skipTimestamp: false,
+    });
+
+    console.log(
+      `[AI_AUDIT] Started | aiProjectId=${aiProject._id} | jobId=${job._id} | status=running`,
+    );
+
+    res.json({
+      success: true,
+
+      message: "AI audit started successfully",
+
+      data: {
+        jobId: job._id,
+
+        jobType: job.jobType,
+      },
+    });
+  } catch (error) {
+    console.error("[ERROR] Failed to start AI audit:", error);
+
+    res.status(500).json({
+      success: false,
+
+      message: "Failed to start AI audit",
+
+      error: error.message,
+    });
+  }
+};
+
+/**
+
+
+
+ * Create AI Visibility Project (PENDING STATUS ONLY)
+
+
+
+ * POST /api/ai-visibility/start
+
+
+
+ */
+
+export const startAiVisibility = async (req, res) => {
+  try {
+    const { type, projectId, url } = req.body;
+
+    // Validate required fields
+
+    if (!type || !["existing", "new"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+
+        message: 'Invalid type. Must be "existing" or "new"',
+      });
+    }
+
+    let aiProject;
+
+    if (type === "existing") {
+      // Validate projectId for existing projects
+
+      if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Valid projectId is required for existing projects",
+        });
+      }
+
+      // Create AI project for existing SeoProject with PENDING status
+
+      aiProject = await AIVisibilityProjectService.createForExistingProject(
+        projectId,
+        {
+          analysisDepth: "standard",
+
+          includeSchemaValidation: true,
+
+          includeEntityExtraction: true,
+        },
+      );
+    } else if (type === "new") {
+      // Validate URL for standalone projects
+
+      if (!url) {
+        return res.status(400).json({
+          success: false,
+
+          message: "URL is required for standalone projects",
+        });
+      }
+
+      // Create standalone AI project with PENDING status
+
+      aiProject = await AIVisibilityProjectService.createStandalone(url, {
+        analysisDepth: "standard",
+
+        includeSchemaValidation: true,
+
+        includeEntityExtraction: true,
+      });
+    }
+
+    console.log(
+      `[AI_PROJECT] Created | type=${type} | aiProjectId=${aiProject._id} | status=pending`,
+    );
+
+    // 🚨 IMPORTANT: Do NOT start any jobs here
+
+    // 🚨 IMPORTANT: Do NOT set status to running
+
+    // Project remains idle until user clicks "Start AI Audit"
+
+    return res.status(201).json({
+      success: true,
+
+      message:
+        "AI Visibility project created successfully. Ready to start audit.",
+
+      data: {
+        aiProject: {
+          id: aiProject._id,
+
+          aiStatus: aiProject.aiStatus, // Should be "pending"
+
+          type: type,
+
+          projectId: aiProject.projectId,
+
+          url: aiProject.config?.url || null,
+
+          createdAt: aiProject.createdAt,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("[AI_VISIBILITY] Create project failed:", error);
+
+    // Handle duplicate key error (MongoDB error code 11000)
+
+    if (error.code === 11000 || error.message.includes("already exists")) {
+      // Extract the duplicate key information
+
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+
+      return res.status(409).json({
+        success: false,
+
+        message: `AI Visibility project already exists for this ${duplicateField}`,
+
+        code: "DUPLICATE_AI_PROJECT",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to create AI Visibility project",
+
+      error: error.message,
+    });
+  }
+};
+
+/**
+
+
+
+ * Get AI Project by ID
+
+
+
+ * GET /api/ai-visibility/:id
+
+
+
+ */
+
+export const getAiProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid AI project ID format",
+      });
+    }
+
+    const aiProject = await AIVisibilityProjectService.getById(id);
+
+    if (!aiProject) {
+      return res.status(404).json({
+        success: false,
+
+        message: "AI project not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+
+      data: {
+        id: aiProject._id,
+
+        projectId: aiProject.projectId,
+
+        isStandalone: aiProject.isStandalone,
+
+        aiStatus: aiProject.aiStatus,
+
+        progressPercentage: aiProject.progressPercentage,
+
+        summary: aiProject.summary,
+
+        config: aiProject.config,
+
+        error: aiProject.error,
+
+        startedAt: aiProject.startedAt,
+
+        completedAt: aiProject.completedAt,
+
+        lastActivityAt: aiProject.lastActivityAt,
+
+        createdAt: aiProject.createdAt,
+
+        updatedAt: aiProject.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("[AI_VISIBILITY] Get project failed:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get AI project",
+
+      error: error.message,
+    });
+  }
+};
+
+/**
+
+
+
+ * Get AI Project by Project ID
+
+
+
+ * GET /api/ai-visibility/by-project/:projectId
+
+
+
+ */
+
+export const getAiProjectByProjectId = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid project ID format",
+      });
+    }
+
+    const aiProject =
+      await AIVisibilityProjectService.getByProjectId(projectId);
+
+    if (!aiProject) {
+      return res.status(404).json({
+        success: false,
+
+        message: "AI project not found for this project",
+      });
+    }
+
+    return res.json({
+      success: true,
+
+      data: {
+        id: aiProject._id,
+
+        projectId: aiProject.projectId,
+
+        isStandalone: aiProject.isStandalone,
+
+        aiStatus: aiProject.aiStatus,
+
+        progressPercentage: aiProject.progressPercentage,
+
+        summary: aiProject.summary,
+
+        config: aiProject.config,
+
+        error: aiProject.error,
+
+        startedAt: aiProject.startedAt,
+
+        completedAt: aiProject.completedAt,
+
+        lastActivityAt: aiProject.lastActivityAt,
+
+        createdAt: aiProject.createdAt,
+
+        updatedAt: aiProject.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("[AI_VISIBILITY] Get project by projectId failed:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get AI project by project ID",
+
+      error: error.message,
+    });
+  }
+};
+
+/**
+
+
+
+ * Get Active AI Projects
+
+
+
+ * GET /api/ai-visibility/active
+
+
+
+ */
+
+export const getActiveAiProjects = async (req, res) => {
+  try {
+    const projects = await AIVisibilityProjectService.getActiveProjects();
+
+    return res.json({
+      success: true,
+
+      data: projects.map((project) => ({
+        id: project._id,
+
+        projectId: project.projectId,
+
+        isStandalone: project.isStandalone,
+
+        aiStatus: project.aiStatus,
+
+        progressPercentage: project.progressPercentage,
+
+        summary: project.summary,
+
+        config: project.config,
+
+        startedAt: project.startedAt,
+
+        lastActivityAt: project.lastActivityAt,
+
+        createdAt: project.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("[AI_VISIBILITY] Get active projects failed:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get active AI projects",
+
+      error: error.message,
+    });
+  }
+};
+
+/**
+
+
+
+ * Cancel AI Project
+
+
+
+ * DELETE /api/ai-visibility/:id
+
+
+
+ */
+
+export const cancelAiProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid AI project ID format",
+      });
+    }
+
+    const aiProject = await AIVisibilityProjectService.getById(id);
+
+    if (!aiProject) {
+      return res.status(404).json({
+        success: false,
+
+        message: "AI project not found",
+      });
+    }
+
+    // Only allow cancellation of pending or running projects
+
+    if (!["pending", "running"].includes(aiProject.aiStatus)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Cannot cancel project that is already completed",
+      });
+    }
+
+    // Mark as failed with cancellation reason
+
+    await AIVisibilityProjectService.markFailed(
+      id,
+      "Cancelled by user",
+      aiProject.currentStage,
+    );
+
+    console.log(`[AI_VISIBILITY] Cancelled | aiProjectId=${id}`);
+
+    return res.json({
+      success: true,
+
+      message: "AI Visibility project cancelled successfully",
+    });
+  } catch (error) {
+    console.error("[AI_VISIBILITY] Cancel failed:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to cancel AI project",
+
+      error: error.message,
+    });
+  }
+};
+
+/**
+
+
+
+ * Get AI Visibility Projects
+
+
+
+ * GET /api/ai-visibility/projects
+
+
+
+ */
+
+export const getAiVisibilityProjects = async (req, res) => {
+  try {
+    const latestProject = await AIVisibilityProjectService.getLatestProject();
+
+    return res.status(200).json({
+      success: true,
+
+      message: "AI Visibility projects retrieved successfully",
+
+      data: latestProject,
+    });
+  } catch (error) {
+    console.error("[AI_VISIBILITY] Get projects failed:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get AI Visibility projects",
+
+      error: error.message,
+    });
+  }
+};
+
+// Validation middleware
+
+export const validateStartAiVisibility = [
+  // Add validation rules here if needed
+];
+
+export const validateAiProjectId = [
+  // Add validation rules here if needed
+];
