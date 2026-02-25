@@ -4,6 +4,38 @@ import React, { use, useState, useEffect } from 'react';
 import apiService from '@/lib/apiService';
 import { AI_CATEGORY_COLOR_MAP } from "@/utils/aiCategoryColors";
 
+/**
+ * SAFE URL BUILDER - No hardcoded domains
+ * Constructs full page URL from project base URL and pathname
+ * @param {string} slug - Page slug/pathname (with or without leading slash)
+ * @param {string} projectBaseUrl - Project base URL from config (must include protocol)
+ * @returns {string} Full absolute URL
+ */
+function buildPageUrl(slug, projectBaseUrl) {
+  // Handle malformed inputs
+  if (!slug || !projectBaseUrl) {
+    throw new Error('buildPageUrl: slug and projectBaseUrl are required');
+  }
+
+  // If slug is already a full URL, return it as-is
+  if (slug.startsWith('http://') || slug.startsWith('https://')) {
+    return slug;
+  }
+
+  // Normalize projectBaseUrl: remove trailing slash
+  const normalizedBase = projectBaseUrl.replace(/\/$/, '');
+  
+  // Normalize slug: remove leading slash
+  const normalizedSlug = slug.replace(/^\/+/, '');
+
+  // Construct full URL
+  const fullUrl = `${normalizedBase}/${normalizedSlug}`;
+  
+  console.log(`[URL_BUILDER] slug="${slug}" | baseUrl="${projectBaseUrl}" | result="${fullUrl}"`);
+  
+  return fullUrl;
+}
+
 export default function AIPageDetailDeepDive(props) {
   const params = use(props.params);
   const slugArray = params?.url || [];
@@ -17,12 +49,9 @@ export default function AIPageDetailDeepDive(props) {
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('ai_impact');
   const [activeTab, setActiveTab] = useState('issues');
-
-  const pageUrl = slug.startsWith("http") 
-    ? slug 
-    : `https://www.sapphiredigitalagency.com/${slug.replace(/^\/+/, "")}`;
-  const displayUrl = pageUrl.replace(/^(https?:\/\/(www\.)?)/, "");
-  const pagePath = new URL(pageUrl).pathname;
+  const [pageUrl, setPageUrl] = useState(null);
+  const [displayUrl, setDisplayUrl] = useState(null);
+  const [pagePath, setPagePath] = useState(null);
 
   useEffect(() => {
     if (!slug) {
@@ -43,7 +72,26 @@ export default function AIPageDetailDeepDive(props) {
           return;
         }
 
-        const pageScoreRes = await apiService.request(`/ai-visibility/page-score?projectId=${currentProject._id}&url=${encodeURIComponent(pageUrl)}`);
+        // PHASE 2: Use safe URL builder with project config
+        if (!currentProject.config?.url) {
+          setError('Project domain not configured');
+          return;
+        }
+
+        let constructedPageUrl;
+        try {
+          constructedPageUrl = buildPageUrl(slug, currentProject.config.url);
+        } catch (e) {
+          setError(`Invalid URL construction: ${e.message}`);
+          return;
+        }
+
+        // Set URL state for use in render
+        setPageUrl(constructedPageUrl);
+        setDisplayUrl(constructedPageUrl.replace(/^(https?:\/\/(www\.)?)/, ""));
+        setPagePath(new URL(constructedPageUrl).pathname);
+
+        const pageScoreRes = await apiService.request(`/ai-visibility/page-score?projectId=${currentProject._id}&url=${encodeURIComponent(constructedPageUrl)}`);
         
         if (!pageScoreRes.success || !pageScoreRes.data) {
           throw new Error(pageScoreRes.message || 'Failed to load page score data');
@@ -63,7 +111,7 @@ export default function AIPageDetailDeepDive(props) {
         
         setPageScore(pageScoreData);
 
-        const issuesRes = await apiService.request(`/ai-visibility/page-issues?projectId=${currentProject._id}&page_url=${encodeURIComponent(pageUrl)}`);
+        const issuesRes = await apiService.request(`/ai-visibility/page-issues?projectId=${currentProject._id}&page_url=${encodeURIComponent(constructedPageUrl)}`);
         
         if (issuesRes.success && issuesRes.data) {
           setIssues(issuesRes.data);
@@ -122,7 +170,7 @@ export default function AIPageDetailDeepDive(props) {
     };
 
     fetchPageData();
-  }, [slug, pageUrl]);
+  }, [slug]);
 
   if (loading) {
     return (
