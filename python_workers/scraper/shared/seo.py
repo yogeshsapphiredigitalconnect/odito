@@ -19,6 +19,132 @@ from config.config import (
 from .utils import clean_text
 
 
+def extract_page_signals(html: str, soup: BeautifulSoup) -> tuple:
+    """
+    Extract critical page signals.
+    
+    Returns:
+        tuple: (top_level_signals, tracking_updates)
+        - top_level_signals: dict with review_schema_present, doctype_present, theme_color_present, hreflang_present
+        - tracking_updates: dict with analytics_detected, analytics_types, facebook_pixel to merge into tracking object
+                            Also includes backward compatibility fields (google_analytics, google_tag_manager)
+    """
+    top_level_signals = {
+        "review_schema_present": False,
+        "doctype_present": False,
+        "theme_color_present": False,
+        "hreflang_present": False
+    }
+    
+    tracking_updates = {
+        "analytics_detected": False,
+        "analytics_types": [],
+        "facebook_pixel": False,
+        "google_analytics": False,  # Backward compatibility with rule layer
+        "google_tag_manager": False  # Backward compatibility with rule layer
+    }
+    
+    try:
+        html_lower = html.lower() if html else ""
+        
+        # 1. DOCTYPE detection (check first non-empty line of raw HTML)
+        try:
+            for line in html.split('\n'):
+                stripped = line.strip()
+                if stripped:
+                    if stripped.lower().startswith('<!doctype'):
+                        top_level_signals["doctype_present"] = True
+                    break
+        except:
+            pass
+        
+        # 2. Review Schema detection (Review + AggregateRating in JSON-LD)
+        try:
+            for script in soup.find_all("script", type="application/ld+json"):
+                if script.string:
+                    try:
+                        schema_data = json.loads(script.string)
+                        # Handle both dict and list JSON-LD structures
+                        schemas_to_check = [schema_data] if isinstance(schema_data, dict) else (schema_data if isinstance(schema_data, list) else [])
+                        
+                        for schema in schemas_to_check:
+                            if isinstance(schema, dict):
+                                schema_type = schema.get("@type", "")
+                                if schema_type in ["Review", "AggregateRating"]:
+                                    top_level_signals["review_schema_present"] = True
+                                    break
+                        
+                        if top_level_signals["review_schema_present"]:
+                            break
+                    except (json.JSONDecodeError, TypeError, ValueError):
+                        continue
+        except:
+            pass
+        
+        # 3. Analytics detection (GA4, UA, GTM) - updates tracking object
+        try:
+            analytics_types = []
+            
+            # GA4 detection: gtag( AND G- pattern
+            if re.search(r'gtag\s*\(', html_lower) and re.search(r'G-[A-Z0-9]{10,}', html, re.IGNORECASE):
+                analytics_types.append("GA4")
+            # GA4 script pattern
+            elif re.search(r'googletagmanager\.com/gtag/js\?id=G-', html_lower):
+                analytics_types.append("GA4")
+            
+            # Universal Analytics detection: UA- pattern
+            if re.search(r'UA-\d{4,10}-\d{1,5}', html):
+                if "UA" not in analytics_types:
+                    analytics_types.append("UA")
+            
+            # Google Tag Manager detection: GTM or googletagmanager.com
+            if re.search(r'GTM-[A-Z0-9]+', html, re.IGNORECASE) or 'googletagmanager.com' in html_lower or 'datalayer' in html_lower:
+                if "GTM" not in analytics_types:
+                    analytics_types.append("GTM")
+            
+            if analytics_types:
+                tracking_updates["analytics_detected"] = True
+                tracking_updates["analytics_types"] = analytics_types
+                # Set old field names for backward compatibility with rule layer
+                tracking_updates["google_analytics"] = True
+                if "GTM" in analytics_types:
+                    tracking_updates["google_tag_manager"] = True
+        except:
+            pass
+        
+        # 4. Theme Color detection (meta name="theme-color")
+        try:
+            theme_meta = soup.find("meta", attrs={"name": re.compile(r"^theme-color$", re.IGNORECASE)})
+            if theme_meta and theme_meta.get("content"):
+                top_level_signals["theme_color_present"] = True
+        except:
+            pass
+        
+        # 5. Hreflang detection (link rel="alternate" hreflang)
+        try:
+            hreflang_links = soup.find_all("link", rel=re.compile(r"alternate", re.IGNORECASE), attrs={"hreflang": True})
+            if hreflang_links:
+                top_level_signals["hreflang_present"] = True
+        except:
+            pass
+        
+        # 6. Facebook Pixel detection (connect.facebook.net OR fbq( OR facebook.com/tr) - updates tracking object
+        try:
+            if ('connect.facebook.net' in html_lower or 
+                re.search(r'fbq\s*\(', html_lower) or 
+                'facebook.com/tr' in html_lower):
+                tracking_updates["facebook_pixel"] = True
+        except:
+            pass
+        
+    except Exception as e:
+        # Return defaults if any unexpected error
+        pass
+    
+    return top_level_signals, tracking_updates
+
+
+
 def extract_head_and_meta_data(soup: BeautifulSoup, seo_data: dict):
     """Extract doctype, language, title, and all meta tags with validation."""
     # Doctype detection with validation
@@ -379,54 +505,82 @@ def extract_tracking_data(soup: BeautifulSoup, seo_data: dict):
         "google_tag_manager": False,
         "facebook_pixel": False,
         "linkedin_pixel": False,
-        "other_tracking": []
+        "other_tracking": [],
+        "analytics_detected": False,
+        "analytics_types": []
     }
     
-    # Check for Google Analytics 4
+    # Get full page HTML for comprehensive searching
+    page_html = str(soup)
+    page_html_lower = page_html.lower()
+    scripts = soup.find_all("script")
+    
+    # Compile patterns for detection
+    # Google Analytics 4 patterns
     ga4_patterns = [
         re.compile(r'googletagmanager\.com/gtag/js\?id=G-[A-Z0-9]+', re.IGNORECASE),
         re.compile(r'gtag\([\'"]config[\'"],\s*[\'"]G-[A-Z0-9]+[\'"]', re.IGNORECASE),
-        re.compile(r'GA4|G-[A-Z0-9]+', re.IGNORECASE)
+        re.compile(r'G-[A-Z0-9]{10,}', re.IGNORECASE),  # GA4 property ID pattern
+        re.compile(r'gtag\s*\(', re.IGNORECASE),          # gtag function call
     ]
     
-    # Check for Google Tag Manager
+    # Universal Analytics patterns
+    ua_patterns = [
+        re.compile(r'googletagmanager\.com/ga\.js', re.IGNORECASE),
+        re.compile(r'UA-\d{4,10}-\d{1,5}', re.IGNORECASE),  # UA property ID
+        re.compile(r'_gaq\.push', re.IGNORECASE),           # Classic GA push
+        re.compile(r'_setAccount', re.IGNORECASE),          # Classic GA account
+    ]
+    
+    # Google Tag Manager patterns
     gtm_patterns = [
         re.compile(r'googletagmanager\.com/ns\.html\?id=GTM-[A-Z0-9]+', re.IGNORECASE),
         re.compile(r'googletagmanager\.com/gtm\.js\?id=GTM-[A-Z0-9]+', re.IGNORECASE),
-        re.compile(r'GTM-[A-Z0-9]+', re.IGNORECASE)
+        re.compile(r'GTM-[A-Z0-9]+', re.IGNORECASE),       # GTM property ID
+        re.compile(r'dataLayer', re.IGNORECASE),           # GTM dataLayer
     ]
     
-    # Check for Facebook Pixel
+    # Facebook Pixel patterns
     fb_patterns = [
         re.compile(r'facebook\.com/tr\?id=[0-9]+', re.IGNORECASE),
         re.compile(r'fbq\([\'"]init[\'"],\s*[\'"][0-9]+[\'"]', re.IGNORECASE),
         re.compile(r'connect\.facebook\.net.*fbevents\.js', re.IGNORECASE)
     ]
     
-    # Check for LinkedIn Pixel
+    # LinkedIn Pixel patterns
     li_patterns = [
         re.compile(r'linkedin\.com/insight-tag.*pid=[0-9]+', re.IGNORECASE),
         re.compile(r'lintrk\([\'"]track[\'"]', re.IGNORECASE),
         re.compile(r'platform\.linkedin\.com.*insight\.js', re.IGNORECASE)
     ]
     
-    # Search in script tags and inline scripts
-    scripts = soup.find_all("script")
-    page_html = str(soup)
-    
+    # Process all script tags
     for script in scripts:
         script_content = script.string or str(script)
+        script_content_lower = script_content.lower()
         
         # Check GA4
         for pattern in ga4_patterns:
             if pattern.search(script_content):
                 tracking["google_analytics"] = True
+                if "analytics_types" not in tracking or "GA4" not in tracking["analytics_types"]:
+                    tracking["analytics_types"].append("GA4")
+                break
+        
+        # Check Universal Analytics
+        for pattern in ua_patterns:
+            if pattern.search(script_content):
+                tracking["google_analytics"] = True
+                if "analytics_types" not in tracking or "UA" not in tracking["analytics_types"]:
+                    tracking["analytics_types"].append("UA")
                 break
         
         # Check GTM
         for pattern in gtm_patterns:
             if pattern.search(script_content):
                 tracking["google_tag_manager"] = True
+                if "analytics_types" not in tracking or "GTM" not in tracking["analytics_types"]:
+                    tracking["analytics_types"].append("GTM")
                 break
         
         # Check Facebook
@@ -441,27 +595,52 @@ def extract_tracking_data(soup: BeautifulSoup, seo_data: dict):
                 tracking["linkedin_pixel"] = True
                 break
     
-    # Check for other tracking scripts
+    # Also check full HTML for common patterns not in scripts
+    # This catches GA/GTM injected via attributes, meta tags, or other locations
+    if not tracking["google_analytics"]:
+        # Check for GA4 property IDs anywhere
+        if re.search(r'G-[A-Z0-9]{10,}', page_html, re.IGNORECASE):
+            tracking["google_analytics"] = True
+            if "GA4" not in tracking["analytics_types"]:
+                tracking["analytics_types"].append("GA4")
+        # Check for UA property IDs anywhere
+        elif re.search(r'UA-\d{4,10}-\d{1,5}', page_html, re.IGNORECASE):
+            tracking["google_analytics"] = True
+            if "UA" not in tracking["analytics_types"]:
+                tracking["analytics_types"].append("UA")
+    
+    if not tracking["google_tag_manager"]:
+        # Check for GTM identifiers or dataLayer
+        if re.search(r'GTM-[A-Z0-9]+', page_html, re.IGNORECASE) or 'datalayer' in page_html_lower:
+            tracking["google_tag_manager"] = True
+            if "GTM" not in tracking["analytics_types"]:
+                tracking["analytics_types"].append("GTM")
+    
+    # Detect other tracking scripts
     for indicator in OTHER_TRACKING_INDICATORS:
-        if indicator.lower() in page_html.lower():
-            tracking["other_tracking"].append(indicator)
+        if indicator.lower() in page_html_lower:
+            if indicator not in tracking["other_tracking"]:
+                tracking["other_tracking"].append(indicator)
     
-    # Tracking setup validation data extracted
-    pass
+    # Set combined analytics_detected flag for easy frontend checking
+    tracking["analytics_detected"] = (
+        tracking["google_analytics"] or 
+        tracking["google_tag_manager"] or 
+        tracking["facebook_pixel"] or 
+        tracking["linkedin_pixel"]
+    )
     
+    # Remove duplicates from analytics_types
+    tracking["analytics_types"] = list(set(tracking["analytics_types"]))
+    
+    # Additional validation checks
     if not tracking["facebook_pixel"]:
         # Check if there's any social media presence that would benefit from FB tracking
         content_text = soup.get_text().lower()
         has_social_content = any(indicator in content_text for indicator in SOCIAL_MEDIA_INDICATORS)
-        
-    # Facebook pixel validation data extracted
-    pass
     
     # Check for conversion event tracking
     has_conversion_forms = bool(soup.find_all("form"))
     has_conversion_buttons = bool(soup.find_all("button"))
-    
-    # Conversion tracking validation data extracted
-    pass
     
     seo_data["tracking"] = tracking

@@ -95,7 +95,7 @@ export default function AIVisibility() {
         startPolling();
         
         // Update active view to overview to show progress
-        setActiveView('overview');
+        handleTabChange('overview');
         
         // Refresh project data after successful creation
         if (onRefresh) {
@@ -163,6 +163,37 @@ export default function AIVisibility() {
     logout()
   }
 
+  // Function to update URL with tab parameter
+  const updateTabInUrl = (tabValue) => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location);
+      if (tabValue === 'overview') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', tabValue);
+      }
+      window.history.replaceState({}, '', url);
+    }
+  }
+
+  // Function to handle tab changes
+  const handleTabChange = (view) => {
+    setActiveView(view);
+    // Map activeView values to URL parameter values
+    switch(view) {
+      case 'page-level-issues':
+        updateTabInUrl('page-level-issues');
+        break;
+      case 'entity-graph':
+        updateTabInUrl('ai-optimization');
+        break;
+      case 'overview':
+      default:
+        updateTabInUrl('overview');
+        break;
+    }
+  }
+
   const fetchAIIssues = async (filters = {}) => {
     try {
       setIssuesLoading(true);
@@ -214,6 +245,27 @@ export default function AIVisibility() {
   useEffect(() => {
     fetchAIIssues();
     fetchProject();
+    
+    // Handle tab navigation from query parameters
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam) {
+        // Map URL parameter values to activeView values
+        switch(tabParam) {
+          case 'page-level-issues':
+            setActiveView('page-level-issues');
+            break;
+          case 'ai-optimization':
+            setActiveView('entity-graph');
+            break;
+          case 'overview':
+          default:
+            setActiveView('overview');
+            break;
+        }
+      }
+    }
     
     // Cleanup polling on unmount
     return () => {
@@ -330,7 +382,7 @@ export default function AIVisibility() {
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-900'
           }`}
-          onClick={() => setActiveView('overview')}
+          onClick={() => handleTabChange('overview')}
         >
           Overview
         </Button>
@@ -342,7 +394,7 @@ export default function AIVisibility() {
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-900'
           }`}
-          onClick={() => setActiveView('entity-graph')}
+          onClick={() => handleTabChange('entity-graph')}
         >
           AI Optimization
         </Button>
@@ -354,7 +406,7 @@ export default function AIVisibility() {
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-900'
           }`}
-          onClick={() => setActiveView('page-level-issues')}
+          onClick={() => handleTabChange('page-level-issues')}
         >
           <Eye className="h-4 w-4 mr-1" />
           Page Level Issues

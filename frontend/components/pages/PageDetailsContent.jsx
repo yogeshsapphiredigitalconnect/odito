@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ScreenshotPreviewModal from '@/components/ScreenshotPreviewModal';
 
 const PageDetailsContent = ({ projectId, pageUrl }) => {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [issuesData, setIssuesData] = useState(null);
   const [error, setError] = useState('');
@@ -170,11 +172,14 @@ const PageDetailsContent = ({ projectId, pageUrl }) => {
               </svg>
               Re-analyze
             </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all text-sm font-bold shadow-lg shadow-blue-600/25">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+            <button 
+              onClick={() => router.push(`/projects/${projectId}?tab=projectsubpages`)}
+              className="flex items-center justify-center w-8 h-8 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-600 transition-all text-sm font-medium"
+              title="Close and go to project subpages"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Share Report
             </button>
           </div>
         </div>

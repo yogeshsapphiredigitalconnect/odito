@@ -14,6 +14,33 @@ from config.config import (
 )
 
 
+def flatten_schema(schema_obj):
+    """
+    Recursively flatten JSON-LD schema objects that contain @graph arrays.
+    
+    If schema_obj contains "@graph", extracts each item from the @graph array as a separate schema.
+    Otherwise, returns the object as-is.
+    
+    Returns:
+        list: Flattened list of schema objects
+    """
+    if not isinstance(schema_obj, dict):
+        return [schema_obj] if schema_obj else []
+    
+    # If this schema contains @graph, flatten it
+    if "@graph" in schema_obj:
+        graph_array = schema_obj.get("@graph", [])
+        flattened = []
+        if isinstance(graph_array, list):
+            for item in graph_array:
+                # Recursively flatten each item in case of nested @graph
+                flattened.extend(flatten_schema(item))
+        return flattened
+    
+    # No @graph, return as single-item list
+    return [schema_obj]
+
+
 def extract_structured_data(soup: BeautifulSoup, seo_data: dict):
     """Extract and validate structured data (JSON-LD schemas)."""
     schemas = []
@@ -23,13 +50,13 @@ def extract_structured_data(soup: BeautifulSoup, seo_data: dict):
         try:
             if script.string:
                 schema = json.loads(script.string)
-                schemas.append(schema)
-                if isinstance(schema, dict):
-                    schema_types.append(schema.get("@type", "Unknown"))
-                elif isinstance(schema, list):
-                    for item in schema:
-                        if isinstance(item, dict):
-                            schema_types.append(item.get("@type", "Unknown"))
+                # Flatten any @graph structures
+                flattened_schemas = flatten_schema(schema)
+                schemas.extend(flattened_schemas)
+                # Track schema types for validation
+                for flat_schema in flattened_schemas:
+                    if isinstance(flat_schema, dict):
+                        schema_types.append(flat_schema.get("@type", "Unknown"))
         except (json.JSONDecodeError, Exception):
             continue  # Skip invalid JSON
     

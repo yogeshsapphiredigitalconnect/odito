@@ -599,14 +599,30 @@ def normalize_page_data(page):
     # Convert tracking to synthetic scripts list for analytics rules
 
     tracking = page.get("tracking", {})
+    
+    # DEBUG: Log tracking data for all pages
+    page_url = page.get("url", "unknown")
+    print(f"[DEBUG TRACKING] URL: {page_url}")
+    print(f"[DEBUG TRACKING] Raw tracking object: {tracking}")
+    print(f"[DEBUG TRACKING] Type: {type(tracking)}, Empty: {not tracking}")
+    if isinstance(tracking, dict):
+        print(f"[DEBUG TRACKING] analytics_detected: {tracking.get('analytics_detected')}")
+        print(f"[DEBUG TRACKING] analytics_types: {tracking.get('analytics_types')}")
+        print(f"[DEBUG TRACKING] facebook_pixel: {tracking.get('facebook_pixel')}")
+        print(f"[DEBUG TRACKING] google_analytics: {tracking.get('google_analytics')}")
 
     scripts_list = []
 
-    if tracking:
+    # IMPORTANT: Handle tracking even if empty dict to preserve structure
+    # Empty dict is falsy in Python, so we check if it's a dict instead
+    if isinstance(tracking, dict):
 
         # Create synthetic script objects from tracking data
 
-        if tracking.get("google_analytics"):
+        # Check both old field names and new analytics_detected flag for compatibility
+        if tracking.get("google_analytics") or tracking.get("analytics_detected"):
+            
+            print(f"[DEBUG SCRIPTS] Adding GA/GTM script for {page_url}")
 
             scripts_list.append({
 
@@ -618,7 +634,11 @@ def normalize_page_data(page):
 
             })
 
-        if tracking.get("google_tag_manager"):
+        # Check for GTM via old or new field names
+        has_gtm = tracking.get("google_tag_manager") or ("GTM" in tracking.get("analytics_types", []))
+        if has_gtm:
+            
+            print(f"[DEBUG SCRIPTS] Adding GTM script for {page_url}")
 
             scripts_list.append({
 
@@ -632,6 +652,8 @@ def normalize_page_data(page):
 
         if tracking.get("facebook_pixel"):
 
+            print(f"[DEBUG SCRIPTS] Adding Facebook Pixel script for {page_url}")
+
             scripts_list.append({
 
                 "src": "https://connect.facebook.net/en_US/fbevents.js",
@@ -644,6 +666,8 @@ def normalize_page_data(page):
 
         if tracking.get("linkedin_pixel"):
 
+            print(f"[DEBUG SCRIPTS] Adding LinkedIn Pixel script for {page_url}")
+
             scripts_list.append({
 
                 "src": "https://px.ads.linkedin.com/collect/",
@@ -655,6 +679,26 @@ def normalize_page_data(page):
             })
 
     
+
+    # Normalize images: convert width/height to integers if numeric strings
+    images_normalized = []
+    for img in page.get("images", []):
+        normalized_img = dict(img)  # Shallow copy
+        # Convert width to int if it's a numeric string
+        if normalized_img.get("width") is not None:
+            try:
+                if isinstance(normalized_img["width"], str) and normalized_img["width"].isdigit():
+                    normalized_img["width"] = int(normalized_img["width"])
+            except (ValueError, TypeError):
+                pass  # Keep original value if conversion fails
+        # Convert height to int if it's a numeric string
+        if normalized_img.get("height") is not None:
+            try:
+                if isinstance(normalized_img["height"], str) and normalized_img["height"].isdigit():
+                    normalized_img["height"] = int(normalized_img["height"])
+            except (ValueError, TypeError):
+                pass  # Keep original value if conversion fails
+        images_normalized.append(normalized_img)
 
     # Normalize all fields with proper fallbacks
 
@@ -674,7 +718,7 @@ def normalize_page_data(page):
 
         "headings": headings_list,  # Now properly normalized
 
-        "images": page.get("images", []),
+        "images": images_normalized,
 
         "image_analysis": page.get("image_analysis", {}),
 
@@ -694,9 +738,16 @@ def normalize_page_data(page):
 
         "social": page.get("social", {}),  # Keep for advanced rules
 
-        "doctype": page.get("doctype"),
+        "doctype": page.get("doctype_present"),  # Map doctype_present boolean to doctype field for rules
 
-        "html_lang": page.get("html_lang")
+        "html_lang": page.get("html_lang"),
+
+        # Include new page signals for enhanced rule compatibility
+        "review_schema_present": page.get("review_schema_present", False),
+
+        "theme_color_present": page.get("theme_color_present", False),
+
+        "hreflang_present": page.get("hreflang_present", False)
 
     }
 
@@ -1052,7 +1103,23 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
         elif rule_id == "IMAGES_MISSING_ALT":
 
-            images_without_alt = [img for img in normalized["images"] if not normalize_text(img.get("alt")).strip()]
+            images_without_alt = [
+
+                img for img in normalized.get("images", [])
+
+                if not normalize_text(img.get("alt")).strip()
+
+                and not (
+
+                    img.get("is_decorative") is True
+
+                    or (img.get("width") == 1 and img.get("height") == 1)
+
+                    or "pixel" in (img.get("src") or "").lower()
+
+                )
+
+            ]
 
             if images_without_alt:
 
@@ -1092,9 +1159,15 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
         elif rule_id == "MISSING_LAZY_LOADING":
 
-            images_without_lazy = [img for img in normalized["images"] if img.get("loading") != "lazy"]
+            images_without_lazy = [
 
-            if images_without_lazy and len(images_without_lazy) > 3:
+                img for img in normalized.get("images", [])
+
+                if not img.get("loading")
+
+            ]
+
+            if images_without_lazy:
 
                 issues.append(create_issue(
 
@@ -1205,7 +1278,11 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
         
 
         elif rule_id == "ANALYTICS_MISSING":
-
+            
+            print(f"\n[DEBUG RULE] ===== ANALYTICS_MISSING for {url} =====")
+            print(f"[DEBUG RULE] Scripts list: {normalized['scripts']}")
+            print(f"[DEBUG RULE] Scripts count: {len(normalized['scripts'])}")
+            
             has_analytics = any(
 
                 "google-analytics" in script.get("src", "").lower() or 
@@ -1217,8 +1294,11 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
                 for script in normalized["scripts"]
 
             )
-
             
+            print(f"[DEBUG RULE] has_analytics result: {has_analytics}")
+            print(f"[DEBUG RULE] Checking tracking directly: {normalized.get('tracking', {})}")
+            print(f"[DEBUG RULE] tracking.analytics_detected: {normalized.get('tracking', {}).get('analytics_detected')}")
+            print(f"[DEBUG RULE] Issue will be created: {not has_analytics}")
 
             if not has_analytics:
 
@@ -1370,7 +1450,7 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
             missing_required = []
 
-            required_fields = ["name", "address", "telephone"]
+            required_fields = ["name", "description", "image"]
 
             
 
@@ -1444,16 +1524,6 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
         elif rule_id == "breadcrumb_schema_missing":
 
-            # Check for navigation elements
-
-            content_text = normalized.get("content_text", "").lower()
-
-            nav_indicators = ["navigation", "menu", "breadcrumb", "nav"]
-
-            has_nav_content = any(indicator in content_text for indicator in nav_indicators)
-
-            
-
             has_breadcrumb_schema = any(
 
                 isinstance(schema, dict) and schema.get("@type") == "BreadcrumbList"
@@ -1464,7 +1534,7 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
             
 
-            if has_nav_content and not has_breadcrumb_schema:
+            if not has_breadcrumb_schema:
 
                 issues.append(create_issue(
 
@@ -1482,14 +1552,6 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
         elif rule_id == "review_schema_missing":
 
-            content_text = normalized.get("content_text", "").lower()
-
-            review_indicators = ["review", "rating", "testimonial", "customer feedback"]
-
-            has_review_content = any(indicator in content_text for indicator in review_indicators)
-
-            
-
             has_review_schema = any(
 
                 isinstance(schema, dict) and schema.get("@type") in ["Review", "AggregateRating"]
@@ -1500,7 +1562,7 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
             
 
-            if has_review_content and not has_review_schema:
+            if not has_review_schema:
 
                 issues.append(create_issue(
 
@@ -1570,6 +1632,14 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
         elif rule_id == "localbusiness_country_format":
 
+            VALID_COUNTRY_NAMES = {
+
+                "United States", "India", "Australia",
+
+                "United Kingdom", "Canada", "Germany"
+
+            }
+
             structured_data = normalized.get("structured_data", [])
 
             for schema in structured_data:
@@ -1582,7 +1652,13 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
                         country = address.get("addressCountry")
 
-                        if country and not re.match(r'^[A-Z]{2}$', str(country)):
+                        if country and not (
+
+                            re.match(r'^[A-Z]{2}$', str(country))
+
+                            or str(country).strip() in VALID_COUNTRY_NAMES
+
+                        ):
 
                             issues.append(create_issue(
 
@@ -1603,6 +1679,12 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
         # Additional technical rules
 
         elif rule_id == "DOCTYPE_MISSING":
+            
+            print(f"\n[DEBUG RULE] ===== DOCTYPE_MISSING for {url} =====")
+            print(f"[DEBUG RULE] Page doctype_present field: {page.get('doctype_present')}")
+            print(f"[DEBUG RULE] Normalized doctype field: {normalized.get('doctype')}")
+            print(f"[DEBUG RULE] Type of normalized doctype: {type(normalized.get('doctype'))}")
+            print(f"[DEBUG RULE] Issue will be created: {not normalized.get('doctype')}")
 
             if not normalized.get("doctype"):
 
@@ -1624,11 +1706,13 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
             meta_tags = normalized.get("meta_tags", {})
 
-            has_theme_color = any(
+            has_theme_color = (
 
-                key.lower() == "theme-color" or key.lower() == "msapplication-tilecolor"
+                normalized.get("theme_color_present") is True
 
-                for key in meta_tags.keys()
+                or any(key.lower() in ("theme-color", "msapplication-tilecolor")
+
+                       for key in meta_tags.keys())
 
             )
 
@@ -1678,23 +1762,25 @@ def execute_rule(rule_id, rule_config, normalized, job_id, project_id, url):
 
         elif rule_id == "CONVERSION_TRACKING_MISSING":
 
-            # Check for conversion forms or buttons
+            tracking = normalized.get("tracking", {})
 
-            content_text = normalized.get("content_text", "").lower()
+            has_conversion_elements = any(
 
-            has_conversion_elements = any(indicator in content_text for indicator in ["contact", "submit", "buy", "order", "purchase"])
+                indicator in normalized.get("content_text", "").lower()
 
-            
-
-            has_conversion_tracking = any(
-
-                "conversion" in script.get("content", "").lower() or "conversion" in script.get("src", "").lower()
-
-                for script in normalized["scripts"]
+                for indicator in ["contact", "submit", "buy", "order", "purchase"]
 
             )
 
-            
+            has_conversion_tracking = (
+
+                tracking.get("google_analytics")
+
+                or tracking.get("google_tag_manager")
+
+                or tracking.get("facebook_pixel")
+
+            )
 
             if has_conversion_elements and not has_conversion_tracking:
 

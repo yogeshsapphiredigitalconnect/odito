@@ -530,7 +530,7 @@ export const getProjectPages = async (req, res) => {
 
     const pageUrls = pages.map(p => p.url);
 
-    const issuesByPage = await db.collection('seo_ai_visibility_issues').aggregate([
+    const issuesByPage = await db.collection('seo_page_issues').aggregate([
 
       { $match: { projectId: projectIdObj, page_url: { $in: pageUrls } } },
 

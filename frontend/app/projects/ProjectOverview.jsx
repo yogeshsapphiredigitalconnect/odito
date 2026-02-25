@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import apiService from '@/lib/apiService';
 import socketService from '@/lib/socketService';
 import { useExportReport } from '@/hooks/useExportReport';
@@ -51,6 +52,7 @@ import {
 } from 'lucide-react';
 
 export default function ProjectOverview({ projectId, onBack }) {
+  const searchParams = useSearchParams();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -99,6 +101,52 @@ export default function ProjectOverview({ projectId, onBack }) {
 
   // Export functionality
   const { exportReport, loading: isExporting, error: exportError, clearError: clearExportError } = useExportReport();
+
+  // Handle URL tab parameter
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'subpages' || tab === 'projectsubpages') {
+      setActiveView('subpages');
+    } else if (tab === 'google-visibility') {
+      setActiveView('google-visibility');
+    } else if (tab === 'reports') {
+      setActiveView('reports');
+    } else {
+      setActiveView('overview');
+    }
+  }, [searchParams]);
+
+  // Function to update URL with tab parameter
+  const updateTabInUrl = (tabValue) => {
+    const url = new URL(window.location);
+    if (tabValue === 'overview') {
+      url.searchParams.delete('tab');
+    } else {
+      url.searchParams.set('tab', tabValue);
+    }
+    window.history.replaceState({}, '', url);
+  }
+
+  // Function to handle tab changes
+  const handleTabChange = (view) => {
+    setActiveView(view);
+    // Map activeView values to URL parameter values
+    switch(view) {
+      case 'subpages':
+        updateTabInUrl('subpages');
+        break;
+      case 'google-visibility':
+        updateTabInUrl('google-visibility');
+        break;
+      case 'reports':
+        updateTabInUrl('reports');
+        break;
+      case 'overview':
+      default:
+        updateTabInUrl('overview');
+        break;
+    }
+  }
 
   useEffect(() => {
     if (projectId) {
@@ -806,7 +854,7 @@ export default function ProjectOverview({ projectId, onBack }) {
                 ? 'text-blue-600 border-b-2 border-blue-600' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
-            onClick={() => setActiveView('overview')}
+            onClick={() => handleTabChange('overview')}
           >
             Overview
           </Button>
@@ -817,7 +865,7 @@ export default function ProjectOverview({ projectId, onBack }) {
                 ? 'text-blue-600 border-b-2 border-blue-600' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
-            onClick={() => setActiveView('subpages')}
+            onClick={() => handleTabChange('subpages')}
           >
             Subpages
           </Button>
@@ -828,12 +876,20 @@ export default function ProjectOverview({ projectId, onBack }) {
                 ? 'text-blue-600 border-b-2 border-blue-600' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
-            onClick={() => setActiveView('google-visibility')}
+            onClick={() => handleTabChange('google-visibility')}
           >
             <Eye className="h-4 w-4 mr-1" />
             Google Visibility
           </Button>
-          <Button variant="ghost" className="text-gray-600 hover:text-gray-900 font-semibold text-base pb-1 cursor-pointer" onClick={() => alert('Reports page will be implemented soon')}>
+          <Button 
+            variant="ghost" 
+            className={`font-semibold text-base pb-1 cursor-pointer ${
+              activeView === 'reports' 
+                ? 'text-blue-600 border-b-2 border-blue-600' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => handleTabChange('reports')}
+          >
             Reports
           </Button>
         </div>
@@ -844,14 +900,22 @@ export default function ProjectOverview({ projectId, onBack }) {
         <ProjectSubpages 
           projectId={projectId}
           projectName={project.project_name}
-          onBack={() => setActiveView('overview')}
+          onBack={() => handleTabChange('overview')}
         />
       ) : activeView === 'google-visibility' ? (
         <ProjectGoogleVisibility 
           projectId={projectId}
           projectName={project.project_name}
-          onBack={() => setActiveView('overview')}
+          onBack={() => handleTabChange('overview')}
         />
+      ) : activeView === 'reports' ? (
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold mb-4">Reports</h2>
+          <p className="text-gray-600 mb-6">Reports functionality will be implemented soon.</p>
+          <Button onClick={() => handleTabChange('overview')}>
+            Back to Overview
+          </Button>
+        </div>
       ) : (
         <>
       {/* Crawl & Audit Summary */}

@@ -10,7 +10,8 @@ from .fetcher import fetch_html
 from .seo import (
     extract_head_and_meta_data, extract_social_media_data,
     extract_internationalization_data, extract_visual_branding_data,
-    extract_content_analysis, extract_image_data, extract_tracking_data
+    extract_content_analysis, extract_image_data, extract_tracking_data,
+    extract_page_signals
 )
 from .schema import extract_structured_data
 from .utils import create_content_hash
@@ -55,6 +56,17 @@ def extract_comprehensive_seo_data(html: str, base_url: str) -> dict:
         # 8. TRACKING & ANALYTICS
         extract_tracking_data(soup, seo_data)
         
+        # 9. PAGE SIGNALS (review, analytics, doctype, theme-color, hreflang, facebook pixel)
+        # Returns: (top_level_signals, tracking_updates)
+        top_level_signals, tracking_updates = extract_page_signals(html, soup)
+        
+        # Add top-level signals
+        seo_data.update(top_level_signals)
+        
+        # Merge tracking updates into tracking object (corrects old values with new accurate detections)
+        if seo_data.get("tracking"):
+            seo_data["tracking"].update(tracking_updates)
+        
         return seo_data
         
     except Exception as e:
@@ -86,5 +98,4 @@ def scrape_page_data(url: str) -> dict:
         return seo_data
         
     except Exception as e:
-        print(f"⚠️ Failed to scrape {url}: {str(e)}")
         return None

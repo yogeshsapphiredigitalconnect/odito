@@ -77,8 +77,24 @@ export default function AIOptimization({ project }) {
     return 'text-red-500';
   };
 
+  const getHealthBgColor = (score) => {
+    if (score >= 80) return 'bg-emerald-500/10';
+    if (score >= 60) return 'bg-blue-500/10';
+    if (score >= 40) return 'bg-yellow-500/10';
+    return 'bg-red-500/10';
+  };
+
+  const getHealthBorderColor = (score) => {
+    if (score >= 80) return 'border-emerald-500/20';
+    if (score >= 60) return 'border-blue-500/20';
+    if (score >= 40) return 'border-yellow-500/20';
+    return 'border-red-500/20';
+  };
+
   const healthLabel = getHealthLabel(score);
   const healthColorClass = getHealthColor(score);
+  const healthBgClass = getHealthBgColor(score);
+  const healthBorderClass = getHealthBorderColor(score);
 
   if (loading) {
     return (
@@ -184,7 +200,7 @@ export default function AIOptimization({ project }) {
                   </span>
                 </div>
               </div>
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${healthColorClass.replace('text-', 'bg-').replace('500', '500/10')} border ${healthColorClass.replace('text-', 'border-').replace('500', '500/20')} ${healthColorClass} text-xs font-bold mb-4`}>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${healthBgClass} border ${healthBorderClass} ${healthColorClass} text-xs font-bold mb-4`}>
                 <span className="size-2 rounded-full bg-current animate-pulse"></span>
                 {healthLabel}
               </div>

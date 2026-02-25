@@ -1,11 +1,13 @@
 "use client";
 
 import React, { use, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import apiService from '@/lib/apiService';
 import { AI_CATEGORY_COLOR_MAP } from "@/utils/aiCategoryColors";
 
 export default function AIPageDetailDeepDive(props) {
   const params = use(props.params);
+  const router = useRouter();
   const slug = decodeURIComponent(params?.url || '');
   const [pageScore, setPageScore] = useState(null);
   const [issues, setIssues] = useState([]);
@@ -16,14 +18,33 @@ export default function AIPageDetailDeepDive(props) {
 
   const pageUrl = slug.startsWith("http") 
     ? slug 
-    : `https://www.sapphiredigitalagency.com/${slug.replace(/^\/+/, "")}`;
+    : slug;
   const displayUrl = pageUrl.replace(/^(https?:\/\/(www\.)?)/, "");
-  const pagePath = new URL(pageUrl).pathname;
+  const pagePath = slug.startsWith("http") 
+    ? new URL(pageUrl).pathname 
+    : `/${slug}`;
 
   useEffect(() => {
     if (!slug) {
       setLoading(false);
       return;
+    }
+
+    // Handle tab navigation from query parameters
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const categoryParam = urlParams.get('category');
+      const tabParam = urlParams.get('view');
+      
+      if (categoryParam) {
+        setActiveCategory(categoryParam);
+      }
+      
+      if (tabParam === 'rules') {
+        setActiveTab('rules');
+      } else {
+        setActiveTab('issues');
+      }
     }
 
     const fetchPageData = async () => {
@@ -71,6 +92,39 @@ export default function AIPageDetailDeepDive(props) {
 
     fetchPageData();
   }, [slug, pageUrl]);
+
+  // Function to update URL with category and view parameters
+  const updateUrlParams = (category, view) => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location);
+      
+      if (category && category !== 'ai_impact') {
+        url.searchParams.set('category', category);
+      } else {
+        url.searchParams.delete('category');
+      }
+      
+      if (view && view !== 'issues') {
+        url.searchParams.set('view', view);
+      } else {
+        url.searchParams.delete('view');
+      }
+      
+      window.history.replaceState({}, '', url);
+    }
+  }
+
+  // Function to handle category changes
+  const handleCategoryChange = (category) => {
+    setActiveCategory(category);
+    updateUrlParams(category, activeTab);
+  }
+
+  // Function to handle view changes
+  const handleViewChange = (view) => {
+    setActiveTab(view);
+    updateUrlParams(activeCategory, view);
+  }
 
   if (loading) {
     return (
@@ -252,8 +306,12 @@ export default function AIPageDetailDeepDive(props) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="h-9 px-4 rounded border border-border bg-surface hover:bg-surface-highlight text-xs font-medium transition-colors">
-            Recrawl Page
+          <button 
+            onClick={() => router.push('/ai-visibility?tab=page-level-issues')}
+            className="flex items-center justify-center w-9 h-9 rounded border border-border bg-surface hover:bg-surface-highlight text-xs font-medium transition-colors"
+            title="Close and go to Page Level Issues"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
           </button>
           <button className="h-9 px-4 rounded bg-white text-background hover:bg-gray-200 text-xs font-bold transition-colors shadow-[0_0_15px_-3px_rgba(255,255,255,0.3)]">
             AI Suggestions
@@ -566,7 +624,7 @@ export default function AIPageDetailDeepDive(props) {
               return (
                 <button
                   key={tab.value}
-                  onClick={() => setActiveCategory(tab.value)}
+                  onClick={() => handleCategoryChange(tab.value)}
                   className={`font-medium text-sm pb-1 transition-colors duration-200 relative ${
                     activeCategory === tab.value
                       ? 'text-white font-semibold border-b-2 border-primary'
@@ -585,7 +643,7 @@ export default function AIPageDetailDeepDive(props) {
         <div className="border-b border-border/50 mb-4">
           <div className="flex gap-8 py-2 pl-2">
             <button
-              onClick={() => setActiveTab('issues')}
+              onClick={() => handleViewChange('issues')}
               className={`font-medium text-sm pb-1 transition-colors duration-200 ${
                 activeTab === 'issues'
                   ? 'text-white font-semibold border-b-2 border-primary'
@@ -595,7 +653,7 @@ export default function AIPageDetailDeepDive(props) {
               Issues
             </button>
             <button
-              onClick={() => setActiveTab('rules')}
+              onClick={() => handleViewChange('rules')}
               className={`font-medium text-sm pb-1 transition-colors duration-200 ${
                 activeTab === 'rules'
                   ? 'text-white font-semibold border-b-2 border-primary'

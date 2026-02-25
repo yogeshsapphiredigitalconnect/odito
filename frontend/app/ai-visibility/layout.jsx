@@ -32,7 +32,7 @@ export default function AIVisibilityLayout({ children }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} variant="inset" />
       <SidebarInset>
         <SiteHeader />
         {children}
