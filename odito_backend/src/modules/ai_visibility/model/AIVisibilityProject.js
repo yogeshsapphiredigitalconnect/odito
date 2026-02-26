@@ -2,6 +2,13 @@ import mongoose from 'mongoose';
 
 const aiVisibilityProjectSchema = new mongoose.Schema({
   // Ownership & Identity
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+  
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'SeoProject',
@@ -163,6 +170,8 @@ const aiVisibilityProjectSchema = new mongoose.Schema({
 });
 
 // Indexes
+aiVisibilityProjectSchema.index({ userId: 1 });
+aiVisibilityProjectSchema.index({ userId: 1, projectId: 1 });
 aiVisibilityProjectSchema.index({ projectId: 1 }, { 
   unique: true, 
   sparse: true, // Only enforce uniqueness when projectId exists
@@ -207,8 +216,23 @@ aiVisibilityProjectSchema.statics.findByProjectId = function(projectId) {
   return this.findOne({ projectId });
 };
 
+aiVisibilityProjectSchema.statics.findByProjectIdAndUser = function(projectId, userId) {
+  return this.findOne({ projectId, userId });
+};
+
+aiVisibilityProjectSchema.statics.findByIdAndUser = function(id, userId) {
+  return this.findOne({ _id: id, userId });
+};
+
 aiVisibilityProjectSchema.statics.findActive = function() {
   return this.find({
+    aiStatus: { $in: ['pending', 'running', 'analyzing', 'scoring'] }
+  }).sort({ lastActivityAt: -1 });
+};
+
+aiVisibilityProjectSchema.statics.findActiveByUser = function(userId) {
+  return this.find({
+    userId,
     aiStatus: { $in: ['pending', 'running', 'analyzing', 'scoring'] }
   }).sort({ lastActivityAt: -1 });
 };

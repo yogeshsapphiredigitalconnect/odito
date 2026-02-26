@@ -2577,6 +2577,16 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
       });
     }
 
+    // 🔒 SECURITY: Verify AI project ownership before accessing child collections
+    const AIVisibilityProject = (await import('../../ai_visibility/model/AIVisibilityProject.js')).default;
+    const aiProject = await AIVisibilityProject.findByIdAndUser(aiProjectId, req.user._id);
+    if (!aiProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: AI project not found or you do not have permission'
+      });
+    }
+
     const aiProjectIdObj = new mongoose.Types.ObjectId(aiProjectId);
     const pageNum = Math.max(parseInt(page), 1);
     const limitNum = Math.min(parseInt(limit), 100);
@@ -2797,6 +2807,16 @@ export const getPageScore = async (req, res) => {
       });
     }
 
+    // 🔒 SECURITY: Verify AI project ownership before accessing child collections
+    const AIVisibilityProject = (await import('../../ai_visibility/model/AIVisibilityProject.js')).default;
+    const aiProject = await AIVisibilityProject.findByIdAndUser(projectId, req.user._id);
+    if (!aiProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: AI project not found or you do not have permission'
+      });
+    }
+
     const projectIdObj = new mongoose.Types.ObjectId(projectId);
     
     // Robust URL normalization for matching
@@ -2951,6 +2971,16 @@ export const getAIVisibilityPageIssues = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'page_url parameter is required'
+      });
+    }
+
+    // 🔒 SECURITY: Verify AI project ownership before accessing child collections
+    const AIVisibilityProject = (await import('../../ai_visibility/model/AIVisibilityProject.js')).default;
+    const aiProject = await AIVisibilityProject.findByIdAndUser(projectId, req.user._id);
+    if (!aiProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: AI project not found or you do not have permission'
       });
     }
 

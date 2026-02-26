@@ -29,7 +29,7 @@ export class AIVisibilityProjectService {
   /**
    * Create AI project for existing SeoProject
    */
-  static async createForExistingProject(projectId, config = {}) {
+  static async createForExistingProject(projectId, userId, config = {}) {
     try {
       // Verify AI project doesn't already exist
       const existingProject = await AIVisibilityProject.findOne({ projectId });
@@ -37,10 +37,15 @@ export class AIVisibilityProjectService {
         throw new Error(`AI project already exists for projectId: ${projectId}`);
       }
 
-      // Fetch SEO project to get URL
-      const seoProject = await SeoProject.findById(projectId).select('main_url');
+      // Fetch SEO project to get URL and verify ownership
+      const seoProject = await SeoProject.findById(projectId).select('main_url user_id');
       if (!seoProject) {
         throw new Error(`SEO project not found: ${projectId}`);
+      }
+
+      // Verify user owns the SEO project
+      if (seoProject.user_id.toString() !== userId.toString()) {
+        throw new Error(`Access denied: User does not own this SEO project`);
       }
 
       // Validate SEO project has URL
@@ -49,6 +54,7 @@ export class AIVisibilityProjectService {
       }
 
       const aiProject = new AIVisibilityProject({
+        userId,
         projectId,
         isStandalone: false,
         aiStatus: 'pending',
@@ -64,7 +70,7 @@ export class AIVisibilityProjectService {
       this.validateConfigUrl(aiProject.config, aiProject.isStandalone, projectId);
 
       await aiProject.save();
-      console.log(`[AI_PROJECT] Created for existing project | projectId=${projectId} | aiProjectId=${aiProject._id} | url=${seoProject.main_url}`);
+      console.log(`[AI_PROJECT] Created for existing project | projectId=${projectId} | userId=${userId} | aiProjectId=${aiProject._id} | url=${seoProject.main_url}`);
 
       return aiProject;
     } catch (error) {
@@ -76,16 +82,21 @@ export class AIVisibilityProjectService {
   /**
    * Create standalone AI project
    */
-  static async createStandalone(url, config = {}) {
+  static async createStandalone(url, userId, config = {}) {
     try {
       if (!url) {
         throw new Error('URL is required for standalone AI project');
+      }
+
+      if (!userId) {
+        throw new Error('User ID is required for standalone AI project');
       }
 
       // Normalize URL
       const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
 
       const aiProject = new AIVisibilityProject({
+        userId,
         projectId: null,
         isStandalone: true,
         aiStatus: 'pending',
@@ -101,7 +112,7 @@ export class AIVisibilityProjectService {
       this.validateConfigUrl(aiProject.config, aiProject.isStandalone);
 
       await aiProject.save();
-      console.log(`[AI_PROJECT] Created standalone | url=${normalizedUrl} | aiProjectId=${aiProject._id}`);
+      console.log(`[AI_PROJECT] Created standalone | url=${normalizedUrl} | userId=${userId} | aiProjectId=${aiProject._id}`);
 
       return aiProject;
     } catch (error) {

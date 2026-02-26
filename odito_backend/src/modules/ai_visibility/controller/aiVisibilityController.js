@@ -217,6 +217,7 @@ export const startAiVisibility = async (req, res) => {
 
       aiProject = await AIVisibilityProjectService.createForExistingProject(
         projectId,
+        req.user._id,
         {
           analysisDepth: "standard",
 
@@ -238,7 +239,7 @@ export const startAiVisibility = async (req, res) => {
 
       // Create standalone AI project with PENDING status
 
-      aiProject = await AIVisibilityProjectService.createStandalone(url, {
+      aiProject = await AIVisibilityProjectService.createStandalone(url, req.user._id, {
         analysisDepth: "standard",
 
         includeSchemaValidation: true,
@@ -334,13 +335,14 @@ export const getAiProject = async (req, res) => {
       });
     }
 
-    const aiProject = await AIVisibilityProjectService.getById(id);
+    // 🔒 SECURITY: Verify ownership before fetching
+    const aiProject = await AIVisibilityProject.findByIdAndUser(id, req.user._id);
 
     if (!aiProject) {
-      return res.status(404).json({
+      return res.status(403).json({
         success: false,
 
-        message: "AI project not found",
+        message: "Access denied: AI project not found or you don't have permission",
       });
     }
 
@@ -414,14 +416,15 @@ export const getAiProjectByProjectId = async (req, res) => {
       });
     }
 
+    // 🔒 SECURITY: Verify ownership before fetching
     const aiProject =
-      await AIVisibilityProjectService.getByProjectId(projectId);
+      await AIVisibilityProject.findByProjectIdAndUser(projectId, req.user._id);
 
     if (!aiProject) {
-      return res.status(404).json({
+      return res.status(403).json({
         success: false,
 
-        message: "AI project not found for this project",
+        message: "Access denied: AI project not found or you don't have permission",
       });
     }
 
@@ -485,7 +488,8 @@ export const getAiProjectByProjectId = async (req, res) => {
 
 export const getActiveAiProjects = async (req, res) => {
   try {
-    const projects = await AIVisibilityProjectService.getActiveProjects();
+    // 🔒 SECURITY: Only return active projects for authenticated user
+    const projects = await AIVisibilityProject.findActiveByUser(req.user._id);
 
     return res.json({
       success: true,
@@ -551,13 +555,14 @@ export const cancelAiProject = async (req, res) => {
       });
     }
 
-    const aiProject = await AIVisibilityProjectService.getById(id);
+    // 🔒 SECURITY: Verify ownership before cancellation
+    const aiProject = await AIVisibilityProject.findByIdAndUser(id, req.user._id);
 
     if (!aiProject) {
-      return res.status(404).json({
+      return res.status(403).json({
         success: false,
 
-        message: "AI project not found",
+        message: "Access denied: AI project not found or you don't have permission",
       });
     }
 
@@ -615,7 +620,12 @@ export const cancelAiProject = async (req, res) => {
 
 export const getAiVisibilityProjects = async (req, res) => {
   try {
-    const latestProject = await AIVisibilityProjectService.getLatestProject();
+    // 🔒 SECURITY: Only return projects for authenticated user
+    const latestProject = await AIVisibilityProject
+      .findOne({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate('projectId', 'main_url')
+      .exec();
 
     return res.status(200).json({
       success: true,
@@ -660,7 +670,16 @@ export const getWebsiteOptimization = async (req, res) => {
       });
     }
 
-    // Call aggregation service
+    // 🔒 SECURITY: Verify AI project ownership before accessing child collections
+    const aiProject = await AIVisibilityProject.findByIdAndUser(projectId, req.user._id);
+    if (!aiProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: AI project not found or you do not have permission',
+      });
+    }
+
+    // Call aggregation service with verified projectId
     const aggregationResult = await getWebsiteOptimizationAggregation(projectId);
 
     // Handle case where no pages found
