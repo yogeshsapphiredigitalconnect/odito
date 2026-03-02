@@ -52,6 +52,110 @@ class RecursiveSitemapDiscovery:
             'recursion_depth_used': 0
         }
     
+    def is_strict_business_content_url(self, url: str) -> bool:
+        """
+        Strict URL-level filter for business content only.
+        Prevents custom post types, templates, builder artifacts from database.
+        
+        Architectural note: This is a second line of defense (URL-level).
+        Primary filter is at sitemap-file level in is_valid_business_sitemap().
+        This catches cases where custom post types are embedded in normal sitemaps.
+        """
+        url_lower = url.lower()
+        
+        # Blocked path segments (custom post types, builder artifacts, transactional pages)
+        blocked_segments = [
+            '/pxl-template/',            # Panda template engine
+            '/pxl-templates/',           # Plural variant
+            '/elementor_library/',       # Elementor templates
+            '/elementor-template/',      # Elementor user templates
+            '/fl-builder/',              # Beaver Builder
+            '/divi-template/',           # Divi theme
+            '/extra-template/',          # Extra theme
+            '/wp-admin/',                # Admin pages
+            '/wp-json/',                 # API endpoints
+            '/wp-includes/',             # System files
+            '/wp-content/plugins/',      # Plugin files
+            '/draft/',                   # Draft posts
+            '/revision/',                # Post revisions
+            '/trash/',                   # Trash items
+            '/wp-template/',             # Gutenberg templates
+            '/wp-templates/',            # Gutenberg templates plural
+            '/acf-template/',            # ACF Custom post type
+            '/template-part/',           # Template parts
+            '/wp-custom-css/',           # Custom CSS storage
+            '/sample-post/',             # Sample/placeholder posts
+            '/staging/',                 # Staging URLs
+            '/test/',                    # Test URLs
+            '/preview/',                 # Preview URLs
+            '/login/',                   # Login pages
+            '/register/',                # Registration pages
+            '/signup/',                  # Signup pages
+            '/checkout/',                # Checkout pages
+            '/cart/',                    # Shopping cart
+            '/account/',                 # Account pages
+            '/my-account/',              # WooCommerce account
+            '/user/',                    # User pages
+        ]
+        
+        for segment in blocked_segments:
+            if segment in url_lower:
+                logger.debug(f"[DISCOVERY] Filtered junk URL: {url} (blocked segment: {segment})")
+                return False
+        
+        return True
+    
+    def is_valid_business_sitemap(self, sitemap_url: str) -> bool:
+        """
+        Validate that sitemap is business content, not theme/builder artifacts.
+        Filters junk custom post types at sitemap-file level (primary defense).
+        
+        Returns False for template/builder sitemaps to prevent processing.
+        """
+        url_lower = sitemap_url.lower()
+        
+        # Junk sitemap filename patterns (comprehensive CMS coverage)
+        junk_patterns = [
+            # Panda template engine
+            'pxl-template',
+            # Elementor builder
+            'elementor_library',
+            'elementor-template',
+            # Beaver Builder
+            'fl-builder',
+            'fl-template',
+            # Divi / Extra theme
+            'divi-template',
+            'extra-template',
+            # Generic theme artifacts
+            '-template-sitemap',
+            '-builder-sitemap',
+            '-templates-sitemap',
+            # WooCommerce product templates/variations
+            'wp-product-template',
+            'woo-template',
+            # ACF (Advanced Custom Fields) template posts
+            'acf-template',
+            # Custom taxonomy templates
+            '/draft-sitemap',
+            '/revision-sitemap',
+            '/trash-sitemap',
+            # Gutenberg templates
+            '/wp-templates',
+            # Exclude common test/preview sitemaps
+            'test-sitemap',
+            'preview-sitemap',
+            'staging-sitemap',
+            '-sample-sitemap'
+        ]
+        
+        for pattern in junk_patterns:
+            if pattern in url_lower:
+                logger.info(f"[DISCOVERY] Filtered junk sitemap: {sitemap_url} (matched pattern: {pattern})")
+                return False
+        
+        return True
+    
     def is_valid_internal_url(self, url: str) -> bool:
         """Check if URL belongs to the target domain"""
         try:
@@ -260,17 +364,24 @@ class RecursiveSitemapDiscovery:
                 self.process_sitemap_recursive(child_sitemap_url, current_depth + 1)
         
         elif sitemap_type == 'urlset':
-            # Process page URLs
+            # Process page URLs with strict business content filtering
             internal_urls = []
+            filtered_count = 0
             
             for url in urls:
                 if self.is_valid_internal_url(url):
                     normalized_url = self.normalize_url(url)
+                    
+                    # Apply strict content filtering (second line of defense)
+                    if not self.is_strict_business_content_url(normalized_url):
+                        filtered_count += 1
+                        continue
+                    
                     if normalized_url not in self.discovered_urls:
                         self.discovered_urls.add(normalized_url)
                         internal_urls.append(normalized_url)
             
-            logger.info(f"[DISCOVERY] Added {len(internal_urls)} internal URLs from {sitemap_url}")
+            logger.info(f"[DISCOVERY] Added {len(internal_urls)} internal URLs from {sitemap_url} ({filtered_count} filtered)")
             self.stats['total_urls'] += len(internal_urls)
         
         else:
@@ -278,7 +389,7 @@ class RecursiveSitemapDiscovery:
             self.stats['failed_sitemaps'] += 1
     
     def discover_sitemaps_from_robots(self) -> List[str]:
-        """Extract sitemap URLs from robots.txt"""
+        """Extract sitemap URLs from robots.txt (with junk filtering)"""
         robots_url = urljoin(self.base_url, '/robots.txt')
         sitemaps = []
         
@@ -291,10 +402,10 @@ class RecursiveSitemapDiscovery:
                     line = line.strip()
                     if line.lower().startswith('sitemap:'):
                         sitemap_url = line.split(':', 1)[1].strip()
-                        if sitemap_url:
+                        if sitemap_url and self.is_valid_business_sitemap(sitemap_url):
                             sitemaps.append(sitemap_url)
                 
-                logger.info(f"[DISCOVERY] Found {len(sitemaps)} sitemaps in robots.txt")
+                logger.info(f"[DISCOVERY] Found {len(sitemaps)} valid business sitemaps in robots.txt")
             
         except Exception as e:
             logger.warning(f"[DISCOVERY] Failed to fetch robots.txt: {e}")
@@ -302,10 +413,10 @@ class RecursiveSitemapDiscovery:
         return sitemaps
     
     def discover_initial_sitemaps(self) -> List[str]:
-        """Find initial sitemap URLs using multiple strategies"""
+        """Find initial sitemap URLs using multiple strategies (with junk filtering)"""
         sitemaps = []
         
-        # Strategy 1: robots.txt
+        # Strategy 1: robots.txt (filtering already applied in discover_sitemaps_from_robots)
         robots_sitemaps = self.discover_sitemaps_from_robots()
         sitemaps.extend(robots_sitemaps)
         
@@ -321,7 +432,7 @@ class RecursiveSitemapDiscovery:
         
         for location in common_locations:
             sitemap_url = self.base_url + location
-            if sitemap_url not in sitemaps:
+            if sitemap_url not in sitemaps and self.is_valid_business_sitemap(sitemap_url):
                 # Quick HEAD check to avoid fetching content twice
                 try:
                     response = self.session.head(sitemap_url, timeout=5)
@@ -331,7 +442,7 @@ class RecursiveSitemapDiscovery:
                 except:
                     continue
         
-        # Strategy 3: Check for WordPress-style sitemaps
+        # Strategy 3: Check for WordPress-style sitemaps (with filtering)
         wp_sitemap_patterns = [
             '/wp-sitemap.xml',
             '/wp-sitemaps.xml'
@@ -339,7 +450,7 @@ class RecursiveSitemapDiscovery:
         
         for pattern in wp_sitemap_patterns:
             sitemap_url = self.base_url + pattern
-            if sitemap_url not in sitemaps:
+            if sitemap_url not in sitemaps and self.is_valid_business_sitemap(sitemap_url):
                 try:
                     response = self.session.head(sitemap_url, timeout=5)
                     if response.status_code == 200:
@@ -348,7 +459,7 @@ class RecursiveSitemapDiscovery:
                 except:
                     continue
         
-        logger.info(f"[DISCOVERY] Initial sitemap discovery found {len(sitemaps)} sitemaps")
+        logger.info(f"[DISCOVERY] Initial sitemap discovery found {len(sitemaps)} valid business sitemaps")
         return sitemaps
     
     def discover_all_urls(self) -> Set[str]:

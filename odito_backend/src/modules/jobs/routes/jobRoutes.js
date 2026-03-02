@@ -2,6 +2,7 @@ import express from 'express';
 import { completeJob, failJob, claimJob, validateCompleteJob, validateFailJob, validateClaimJob } from '../controller/jobController.js';
 import { JobService } from '../service/jobService.js';
 import auditProgressService from '../service/auditProgressService.js';
+import DomainTechnicalReport from '../model/DomainTechnicalReport.js';
 
 const router = express.Router();
 const jobService = new JobService();
@@ -14,9 +15,9 @@ const jobService = new JobService();
 router.get('/:jobId/status', async (req, res) => {
   try {
     const { jobId } = req.params;
-    
+
     console.log(`🔍 Status check for job: ${jobId}`);
-    
+
     // Get job from database
     const job = await jobService.getJobById(jobId);
     if (!job) {
@@ -28,7 +29,7 @@ router.get('/:jobId/status', async (req, res) => {
     }
 
     console.log(`✅ Job found: ${jobId}, status: ${job.status}`);
-    
+
     // Return job status and relevant data
     res.json({
       success: true,
@@ -78,7 +79,7 @@ router.post('/:jobId/summary', async (req, res) => {
   try {
     const { jobId } = req.params;
     const { projectId, seo_jobId, crawl_summary } = req.body;
-    
+
     // Input validation
     if (!jobId) {
       console.log(`⚠️ Summary endpoint missing jobId`);
@@ -103,9 +104,9 @@ router.post('/:jobId/summary', async (req, res) => {
         error: 'Missing crawl_summary data'
       });
     }
-    
+
     console.log(`[API] Crawl summary received | jobId=${jobId} | projectId=${projectId} | duration=${Math.round((crawl_summary.timing.total_crawl_duration_ms || 0) / 1000)}s`);
-    
+
     // Validate job exists and is PAGE_ANALYSIS type
     const job = await jobService.getJobById(jobId);
     if (!job) {
@@ -201,10 +202,61 @@ router.post('/:jobId/summary', async (req, res) => {
 
   } catch (error) {
     console.error('[ERROR] Error processing crawl summary:', error);
-    
+
     // IMPORTANT: Return 200 OK to prevent Python crawl lifecycle failure
     return res.status(200).json({
       success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Domain Technical Report endpoint (for Python TECHNICAL_DOMAIN worker)
+ */
+
+// POST /jobs/domain-technical-report - Store domain technical report data
+router.post('/domain-technical-report', async (req, res) => {
+  try {
+    const { projectId, domain, robotsStatus, robotsExists, robotsContent, sitemapStatus, sitemapExists, sitemapContent, parsedSitemapUrlCount } = req.body;
+
+    if (!projectId || !domain) {
+      return res.status(400).json({
+        success: false,
+        message: 'projectId and domain are required'
+      });
+    }
+
+    // Upsert the report (one per project)
+    const report = await DomainTechnicalReport.findOneAndUpdate(
+      { projectId },
+      {
+        projectId,
+        domain,
+        robotsStatus: robotsStatus || null,
+        robotsExists: robotsExists || false,
+        robotsContent: robotsContent || '',
+        sitemapStatus: sitemapStatus || null,
+        sitemapExists: sitemapExists || false,
+        sitemapContent: sitemapContent || '',
+        parsedSitemapUrlCount: parsedSitemapUrlCount || 0,
+        createdAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(`[API] Domain technical report stored | projectId=${projectId} | domain=${domain} | robotsExists=${robotsExists} | sitemapExists=${sitemapExists}`);
+
+    return res.json({
+      success: true,
+      message: 'Domain technical report stored',
+      data: { reportId: report._id }
+    });
+  } catch (error) {
+    console.error(`[ERROR] Failed to store domain technical report:`, error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to store domain technical report',
       error: error.message
     });
   }
@@ -219,9 +271,9 @@ router.post('/:jobId/progress', async (req, res) => {
   try {
     const { jobId } = req.params;
     const { percentage, step, message, subtext } = req.body;
-    
+
     console.log(`📊 Progress update for job ${jobId}:`, { percentage, step, message });
-    
+
     // Validate job exists
     const job = await jobService.getJobById(jobId);
     if (!job) {

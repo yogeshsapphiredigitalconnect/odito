@@ -15,9 +15,10 @@ from .seo import (
 )
 from .schema import extract_structured_data
 from .utils import create_content_hash
+from .intelligence import extract_seo_intelligence
 
 
-def extract_comprehensive_seo_data(html: str, base_url: str) -> dict:
+def extract_comprehensive_seo_data(html: str, base_url: str, response_headers: dict = None) -> dict:
     """
     Extract ALL SEO data from HTML without duplicates.
     Production-grade extraction following enterprise SEO crawler patterns.
@@ -67,6 +68,13 @@ def extract_comprehensive_seo_data(html: str, base_url: str) -> dict:
         if seo_data.get("tracking"):
             seo_data["tracking"].update(tracking_updates)
         
+        # 10. SEO INTELLIGENCE (advanced analysis across 7 groups)
+        # Uses a fresh soup to avoid issues with decomposed elements from content analysis
+        intelligence_soup = BeautifulSoup(html, "lxml")
+        seo_data["seo_intelligence"] = extract_seo_intelligence(
+            html, intelligence_soup, seo_data, response_headers or {}, base_url
+        )
+        
         return seo_data
         
     except Exception as e:
@@ -85,15 +93,19 @@ def scrape_page_data(url: str) -> dict:
     """
     try:
         # Use existing fetch_html function (includes JS detection and Selenium fallback)
-        html, status_code, response_time = fetch_html(url, timeout=10)
+        html, status_code, response_time, response_headers = fetch_html(url, timeout=10)
         
         if status_code != 200 or not html:
             return None
         
-        # Extract SEO data
-        seo_data = extract_comprehensive_seo_data(html, url)
+        # Extract SEO data (including intelligence layer)
+        seo_data = extract_comprehensive_seo_data(html, url, response_headers)
         seo_data["http_status_code"] = status_code
         seo_data["response_time_ms"] = response_time
+        
+        # Store raw HTML if size is acceptable
+        if html and len(html.encode("utf-8")) < 15 * 1024 * 1024:
+            seo_data["raw_html"] = html
         
         return seo_data
         

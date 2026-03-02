@@ -19,24 +19,27 @@ const jobService = new JobService();
  */
 async function createNextJobAtomically(sourceJob, nextJobType, requestId) {
   const Job = mongoose.model('Job');
-  
+
   console.log(`[GUARD:${requestId}] Creating next job atomically | sourceJobId=${sourceJob._id} | nextJobType=${nextJobType}`);
-  
+
   // Check if next job already exists for this source job
   const existingNextJob = await Job.findOne({
     'input_data.source_job_id': sourceJob._id.toString(),
     jobType: nextJobType,
     status: { $in: ['pending', 'processing', 'retrying'] }
   });
-  
+
   if (existingNextJob) {
     console.log(`[GUARD:${requestId}] Next job already exists | jobId=${existingNextJob._id} | status=${existingNextJob.status}`);
     return existingNextJob;
   }
-  
+
   // Create next job atomically
   let nextJob;
   switch (nextJobType) {
+    case JOB_TYPES.TECHNICAL_DOMAIN:
+      nextJob = await jobService.createAndDispatchTechnicalDomainJob(sourceJob);
+      break;
     case JOB_TYPES.PAGE_SCRAPING:
       nextJob = await jobService.createAndDispatchPageScrapingJob(sourceJob);
       break;
@@ -55,13 +58,13 @@ async function createNextJobAtomically(sourceJob, nextJobType, requestId) {
     default:
       throw new Error(`Unsupported next job type: ${nextJobType}`);
   }
-  
+
   if (nextJob) {
     console.log(`[GUARD:${requestId}] Next job created atomically | jobId=${nextJob._id} | jobType=${nextJobType}`);
   } else {
     console.log(`[GUARD:${requestId}] Next job creation returned null | jobType=${nextJobType}`);
   }
-  
+
   return nextJob;
 }
 
@@ -125,7 +128,7 @@ export const completeJobSafely = async (req, res) => {
 
   } catch (error) {
     console.error(`[ERROR:${requestId}] Job completion failed | jobId=${jobId} | reason="${error.message}"`);
-    
+
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
@@ -149,29 +152,33 @@ async function chainNextJobs(updatedJob, stats, requestId) {
       case JOB_TYPES.LINK_DISCOVERY:
         await handleLinkDiscoveryCompletion(updatedJob, stats, requestId);
         break;
-        
+
+      case JOB_TYPES.TECHNICAL_DOMAIN:
+        await handleTechnicalDomainCompletion(updatedJob, stats, requestId);
+        break;
+
       case JOB_TYPES.PAGE_SCRAPING:
         await handlePageScrapingCompletion(updatedJob, stats, requestId);
         break;
-        
+
       case JOB_TYPES.PERFORMANCE_MOBILE:
         await handlePerformanceMobileCompletion(updatedJob, stats, requestId);
         break;
-        
+
       case JOB_TYPES.PERFORMANCE_DESKTOP:
         await handlePerformanceDesktopCompletion(updatedJob, stats, requestId);
         break;
-        
+
       case JOB_TYPES.PAGE_ANALYSIS:
         await handlePageAnalysisCompletion(updatedJob, stats, requestId);
         break;
-        
+
       default:
         console.log(`[CHAINING:${requestId}] No chaining for jobType=${updatedJob.jobType}`);
     }
-    
+
     console.log(`[CHAINING:${requestId}] Job chaining completed | jobType=${updatedJob.jobType}`);
-    
+
   } catch (error) {
     console.error(`[CHAINING_ERROR:${requestId}] Job chaining failed | jobType=${updatedJob.jobType} | reason="${error.message}"`);
     throw error;
@@ -195,18 +202,78 @@ async function handleLinkDiscoveryCompletion(updatedJob, stats, requestId) {
     console.error(`[CHAINING_ERROR:${requestId}] Project status update failed | reason="${statusError.message}"`);
   }
 
-  // Create and dispatch PAGE_SCRAPING job with atomic guard
+  // Create and dispatch TECHNICAL_DOMAIN job with atomic guard
   try {
-    const pageScrapingJob = await createNextJobAtomically(updatedJob, JOB_TYPES.PAGE_SCRAPING, requestId);
+    const technicalDomainJob = await createNextJobAtomically(updatedJob, JOB_TYPES.TECHNICAL_DOMAIN, requestId);
+    if (technicalDomainJob) {
+      const dispatchedJob = await jobService.atomicallyDispatchJob(technicalDomainJob._id);
+      if (dispatchedJob) {
+        auditProgressService.emitStageChanged(updatedJob._id.toString(), {
+          from: 'LINK_DISCOVERY',
+          to: 'TECHNICAL_DOMAIN',
+          newJobId: technicalDomainJob._id.toString()
+        });
+
+        await jobDispatcher.dispatchTechnicalDomainJob(dispatchedJob);
+        console.log(`[CHAINING:${requestId}] TECHNICAL_DOMAIN dispatched | jobId=${dispatchedJob._id}`);
+      } else {
+        console.log(`[CHAINING:${requestId}] TECHNICAL_DOMAIN already dispatched | jobId=${technicalDomainJob._id}`);
+      }
+    }
+  } catch (error) {
+    console.error(`[CHAINING_ERROR:${requestId}] TECHNICAL_DOMAIN creation failed | reason="${error.message}"`);
+
+    // FALLBACK: Skip TECHNICAL_DOMAIN and create PAGE_SCRAPING directly
+    console.log(`[FALLBACK:${requestId}] Skipping TECHNICAL_DOMAIN, creating PAGE_SCRAPING directly`);
+    try {
+      const pageScrapingJob = await createNextJobAtomically(updatedJob, JOB_TYPES.PAGE_SCRAPING, requestId);
+      if (pageScrapingJob) {
+        const dispatchedJob = await jobService.atomicallyDispatchJob(pageScrapingJob._id);
+        if (dispatchedJob) {
+          auditProgressService.emitStageChanged(updatedJob._id.toString(), {
+            from: 'LINK_DISCOVERY',
+            to: 'PAGE_SCRAPING',
+            newJobId: pageScrapingJob._id.toString()
+          });
+          await jobDispatcher.dispatchPageScrapingJob(dispatchedJob);
+          console.log(`[FALLBACK:${requestId}] PAGE_SCRAPING dispatched | jobId=${dispatchedJob._id}`);
+        }
+      }
+    } catch (fallbackError) {
+      console.error(`[CHAINING_ERROR:${requestId}] Fallback PAGE_SCRAPING also failed | reason="${fallbackError.message}"`);
+    }
+  }
+}
+
+/**
+ * TECHNICAL_DOMAIN completion handler
+ * Chains to PAGE_SCRAPING using the original LINK_DISCOVERY job data
+ */
+async function handleTechnicalDomainCompletion(updatedJob, stats, requestId) {
+  console.log(`[CHAINING:${requestId}] Processing TECHNICAL_DOMAIN completion`);
+
+  try {
+    // Get the source LINK_DISCOVERY job to access discovered URLs
+    const sourceJobId = updatedJob.input_data?.source_job_id;
+    let sourceJob = updatedJob;
+
+    if (sourceJobId) {
+      const linkDiscoveryJob = await jobService.getJobById(sourceJobId);
+      if (linkDiscoveryJob) {
+        sourceJob = linkDiscoveryJob;
+      }
+    }
+
+    const pageScrapingJob = await createNextJobAtomically(sourceJob, JOB_TYPES.PAGE_SCRAPING, requestId);
     if (pageScrapingJob) {
       const dispatchedJob = await jobService.atomicallyDispatchJob(pageScrapingJob._id);
       if (dispatchedJob) {
         auditProgressService.emitStageChanged(updatedJob._id.toString(), {
-          from: 'LINK_DISCOVERY',
+          from: 'TECHNICAL_DOMAIN',
           to: 'PAGE_SCRAPING',
           newJobId: pageScrapingJob._id.toString()
         });
-        
+
         await jobDispatcher.dispatchPageScrapingJob(dispatchedJob);
         console.log(`[CHAINING:${requestId}] PAGE_SCRAPING dispatched | jobId=${dispatchedJob._id}`);
       } else {
@@ -214,7 +281,7 @@ async function handleLinkDiscoveryCompletion(updatedJob, stats, requestId) {
       }
     }
   } catch (error) {
-    console.error(`[CHAINING_ERROR:${requestId}] PAGE_SCRAPING creation failed | reason="${error.message}"`);
+    console.error(`[CHAINING_ERROR:${requestId}] PAGE_SCRAPING creation failed after TECHNICAL_DOMAIN | reason="${error.message}"`);
   }
 }
 
@@ -248,13 +315,13 @@ async function handlePageScrapingCompletion(updatedJob, stats, requestId) {
 async function createPerformanceJob(sourceJob, jobType, requestId) {
   try {
     let performanceJob;
-    
+
     if (jobType === 'PERFORMANCE_MOBILE') {
       performanceJob = await jobService.createAndDispatchPerformanceMobileJob(sourceJob);
     } else if (jobType === 'PERFORMANCE_DESKTOP') {
       performanceJob = await jobService.createAndDispatchPerformanceDesktopJob(sourceJob);
     }
-    
+
     if (performanceJob) {
       const dispatchedJob = await jobService.atomicallyDispatchJob(performanceJob._id);
       if (dispatchedJob) {
@@ -263,7 +330,7 @@ async function createPerformanceJob(sourceJob, jobType, requestId) {
           to: jobType,
           newJobId: performanceJob._id.toString()
         });
-        
+
         if (jobType === 'PERFORMANCE_MOBILE') {
           await jobDispatcher.dispatchPerformanceMobileJob(dispatchedJob);
         } else if (jobType === 'PERFORMANCE_DESKTOP') {
@@ -271,13 +338,13 @@ async function createPerformanceJob(sourceJob, jobType, requestId) {
           // Create PAGE_ANALYSIS after desktop completes
           await createPageAnalysisJob(sourceJob, requestId);
         }
-        
+
         console.log(`[CHAINING:${requestId}] ${jobType} dispatched | jobId=${dispatchedJob._id}`);
       }
     }
   } catch (error) {
     console.error(`[CHAINING_ERROR:${requestId}] ${jobType} creation failed | reason="${error.message}"`);
-    
+
     // Fallback: Create PAGE_ANALYSIS directly if performance jobs fail
     if (jobType === 'PERFORMANCE_MOBILE') {
       await createPageAnalysisJob(sourceJob, requestId);
@@ -299,7 +366,7 @@ async function createPageAnalysisJob(sourceJob, requestId) {
           to: 'PAGE_ANALYSIS',
           newJobId: pageAnalysisJob._id.toString()
         });
-        
+
         await jobDispatcher.dispatchPageAnalysisJob(dispatchedJob);
         console.log(`[CHAINING:${requestId}] PAGE_ANALYSIS dispatched | jobId=${dispatchedJob._id}`);
       }
@@ -352,7 +419,7 @@ async function handlePageAnalysisCompletion(updatedJob, stats, requestId) {
   try {
     const project = await SeoProject.findById(updatedJob.project_id);
     const analysisCompletionTime = new Date();
-    const auditDurationMs = project?.audit_started_at 
+    const auditDurationMs = project?.audit_started_at
       ? analysisCompletionTime.getTime() - project.audit_started_at.getTime()
       : 0;
 
@@ -379,7 +446,7 @@ async function handlePageAnalysisCompletion(updatedJob, stats, requestId) {
           to: 'SEO_SCORING',
           newJobId: seoScoringJob._id.toString()
         });
-        
+
         await jobDispatcher.dispatchSeoScoringJob(dispatchedJob);
         console.log(`[CHAINING:${requestId}] SEO_SCORING dispatched | jobId=${dispatchedJob._id}`);
       } else {

@@ -4,18 +4,18 @@ const jobSchema = new mongoose.Schema({
   jobType: {
     type: String,
     required: true,
-    enum: ['LINK_DISCOVERY', 'PAGE_SCRAPING', 'PAGE_ANALYSIS', 'PERFORMANCE_MOBILE', 'PERFORMANCE_DESKTOP', 'SEO_SCORING', 'AI_VISIBILITY', 'AI_VISIBILITY_SCORING', 'AI_LINK_DISCOVERY']
+    enum: ['LINK_DISCOVERY', 'TECHNICAL_DOMAIN', 'PAGE_SCRAPING', 'PAGE_ANALYSIS', 'PERFORMANCE_MOBILE', 'PERFORMANCE_DESKTOP', 'SEO_SCORING', 'AI_VISIBILITY', 'AI_VISIBILITY_SCORING', 'AI_LINK_DISCOVERY']
   },
   project_id: {
     type: mongoose.Schema.Types.ObjectId,
-    required: function() {
+    required: function () {
       return !this.input_data?.aiProjectId; // Required for SEO jobs, optional for AI jobs
     },
     ref: 'SeoProject'
   },
   entityType: {
     type: String,
-    required: function() {
+    required: function () {
       return !this.input_data?.aiProjectId; // Required for SEO jobs, optional for AI jobs
     },
     enum: ['project'],
@@ -23,7 +23,7 @@ const jobSchema = new mongoose.Schema({
   },
   entityId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: function() {
+    required: function () {
       return !this.input_data?.aiProjectId; // Required for SEO jobs, optional for AI jobs
     },
     ref: 'SeoProject'
@@ -92,12 +92,12 @@ jobSchema.index({ entityType: 1, entityId: 1, status: 1 });
 
 // AI Visibility duplicate prevention index
 jobSchema.index(
-  { 
-    project_id: 1, 
-    jobType: 1, 
-    status: 1 
-  }, 
-  { 
+  {
+    project_id: 1,
+    jobType: 1,
+    status: 1
+  },
+  {
     unique: true,
     partialFilterExpression: {
       jobType: 'AI_VISIBILITY',

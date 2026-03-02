@@ -153,7 +153,7 @@ def execute_ai_link_discovery(job: AiLinkDiscoveryJob):
             print(f"[WORKER] No sitemap links found, trying main page extraction")
             
             try:
-                main_html, status_code, response_time = fetch_html(normalized_url, timeout=10)
+                main_html, status_code, response_time, _ = fetch_html(normalized_url, timeout=10)
                 if status_code == 200 and main_html:
                     main_internal_links, _, _ = extract_all_links_from_html(main_html, normalized_url, base_domain)
                     

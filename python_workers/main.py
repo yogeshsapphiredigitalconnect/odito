@@ -23,6 +23,7 @@ from api.seo_scoring import router as seo_scoring_router
 from api.ai_visibility import router as ai_visibility_router
 from api.ai_visibility_scoring_v2 import router as ai_visibility_scoring_v2_router, AIVisibilityScoringV2Job
 from api.ai_link_discovery import router as ai_link_discovery_router
+from api.technical_domain import router as technical_domain_router
 from scraper.workers.ai.ai_visibility.ai_visibility import execute_ai_visibility, AIVisibilityJob
 
 # Configure logging to suppress third-party errors
@@ -41,6 +42,7 @@ app.include_router(seo_scoring_router, prefix="/api", tags=["seo_scoring"])
 app.include_router(ai_visibility_router, prefix="/api", tags=["ai_visibility"])
 app.include_router(ai_visibility_scoring_v2_router, prefix="/api", tags=["ai_visibility_scoring_v2"])
 app.include_router(ai_link_discovery_router, prefix="/api", tags=["ai_link_discovery"])
+app.include_router(technical_domain_router, prefix="/api", tags=["technical_domain"])
 
 # Global set to track cancelled jobs
 cancelled_jobs = set()

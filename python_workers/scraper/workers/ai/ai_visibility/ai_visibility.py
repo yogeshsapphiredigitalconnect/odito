@@ -3557,7 +3557,7 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
             }
         
         # Fetch HTML (HTTP-only mode)
-        html, status_code, response_time_ms = fetch_html(url, timeout=10)
+        html, status_code, response_time_ms, _ = fetch_html(url, timeout=10)
         
         # Skip non-HTML content
         if status_code != 200:

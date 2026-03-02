@@ -56,6 +56,9 @@ seo_ai_page_scores = db["seo_ai_page_scores"]
 # collection for AI visibility issues (derived from rule_breakdown)
 seo_ai_visibility_issues = db["seo_ai_visibility_issues"]
 
+# collection for domain-level technical data (robots.txt, sitemap.xml)
+domain_technical_reports = db["domain_technical_reports"]
+
 # Create unique index to prevent duplicate performance records
 # Ensures one record per (projectId, page_url, device_type)
 try:
@@ -183,6 +186,20 @@ except Exception as e:
         print("✅ Indexes on seo_ai_visibility_issues already exist")
     else:
         print(f"⚠️ Failed to create indexes on seo_ai_visibility_issues: {e}")
+
+# Create unique index for domain technical reports (one per project)
+try:
+    domain_technical_reports.create_index(
+        [("projectId", 1)],
+        unique=True,
+        name="unique_project_domain_report"
+    )
+    print("✅ Created unique index on domain_technical_reports (projectId)")
+except Exception as e:
+    if "already exists" in str(e):
+        print("✅ Unique index on domain_technical_reports already exists")
+    else:
+        print(f"⚠️ Failed to create index on domain_technical_reports: {e}")
 
 # Note: Python workers do NOT create projects or jobs
 # They only write link discovery results to the collections above

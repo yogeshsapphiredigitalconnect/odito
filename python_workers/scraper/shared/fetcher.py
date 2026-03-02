@@ -75,7 +75,7 @@ def needs_js_rendering(html: str) -> bool:
     return len(words) < 50 and has_js_markers
 
 
-def fetch_html_selenium(url: str, timeout: int = 30) -> tuple[str, int, int]:
+def fetch_html_selenium(url: str, timeout: int = 30) -> tuple[str, int, int, dict]:
     """Fetch HTML using Selenium for JavaScript rendering."""
     if not SELENIUM_AVAILABLE:
         raise RuntimeError("Selenium not installed")
@@ -105,7 +105,7 @@ def fetch_html_selenium(url: str, timeout: int = 30) -> tuple[str, int, int]:
             pass
 
         response_time_ms = int((time.time() - start_time) * 1000)
-        return driver.page_source, 200, response_time_ms
+        return driver.page_source, 200, response_time_ms, {}
 
     except WebDriverException as e:
         raise RuntimeError(str(e))
@@ -118,8 +118,9 @@ def fetch_html_selenium(url: str, timeout: int = 30) -> tuple[str, int, int]:
             SELENIUM_SEMAPHORE.release()
 
 
-def fetch_html(url: str, timeout: int = 8) -> tuple[str, int, int]:
-    """Primary HTML fetching with JS detection and Selenium fallback - SAFE VERSION"""
+def fetch_html(url: str, timeout: int = 8) -> tuple[str, int, int, dict]:
+    """Primary HTML fetching with JS detection and Selenium fallback - SAFE VERSION
+    Returns: (html, status_code, response_time_ms, response_headers)"""
     
     # === PHASE 1 SAFETY ADDITION ===
     # Large HTML protection
@@ -144,7 +145,8 @@ def fetch_html(url: str, timeout: int = 8) -> tuple[str, int, int]:
         raise ValueError(f"URL parsing failed: {url} - {e}")
 
     if SELENIUM_AVAILABLE and _is_js_cached(url):
-        return fetch_html_selenium(url, timeout * 3)
+        html, status, rt, _ = fetch_html_selenium(url, timeout * 3)
+        return html, status, rt, {}
 
     headers = {
         "User-Agent": random.choice(USER_AGENTS),
@@ -173,6 +175,7 @@ def fetch_html(url: str, timeout: int = 8) -> tuple[str, int, int]:
             res = requests.get(url, headers=headers, timeout=timeout)
             res.raise_for_status()
             html = res.text
+            resp_headers = dict(res.headers)
             response_time_ms = int((time.time() - start_time) * 1000)
             
             # === PHASE 1 SAFETY ADDITION ===
@@ -185,20 +188,20 @@ def fetch_html(url: str, timeout: int = 8) -> tuple[str, int, int]:
             print(f"[DEBUG] Response received: status={res.status_code}, size={len(html)}")
 
             if SELENIUM_AVAILABLE and needs_js_rendering(html):
-                html, status = fetch_html_selenium(url, timeout * 3)
+                html, status, _, _ = fetch_html_selenium(url, timeout * 3)
                 _cache_js_domain(url)
-                return html, status, response_time_ms
+                return html, status, response_time_ms, resp_headers
 
-            return html, res.status_code, response_time_ms
+            return html, res.status_code, response_time_ms, resp_headers
             
         except requests.RequestException as e:
             print(f"[DEBUG] Request failed (attempt {attempt + 1}/3): {e}")
             if attempt == 2:  # Final attempt
                 if SELENIUM_AVAILABLE:
                     print(f"[DEBUG] Falling back to Selenium after {attempt + 1} failed attempts")
-                    html, status, response_time_ms = fetch_html_selenium(url, timeout * 3)
+                    html, status, response_time_ms, _ = fetch_html_selenium(url, timeout * 3)
                     _cache_js_domain(url)
-                    return html, status, response_time_ms
+                    return html, status, response_time_ms, {}
                 raise
             else:
                 # Exponential backoff: 0.5s, 1s, 2s

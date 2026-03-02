@@ -52,6 +52,8 @@ from scraper.shared.fetcher import fetch_html
 
 from scraper.shared.screenshots import capture_homepage_screenshot
 
+from scraper.shared.recursive_sitemap import discover_all_sitemap_urls
+
 
 from db import seo_internal_links, seo_external_links, seo_social_links, seo_page_data, seo_page_issues, db
 
@@ -234,73 +236,84 @@ def execute_link_discovery(job: LinkDiscoveryJob):
 
         
 
-        # 2. Extract links from main URL first
-
+        # 2. Extract links from main URL first with final redirect handling
         try:
-
-            main_html, main_status, main_response_time = fetch_html(url, timeout=10)
+            main_html, main_status, main_response_time, final_url = fetch_html(url, timeout=10, allow_redirects=True)
+            
+            # Use final redirected URL for normalization
+            if final_url:
+                normalized_main_url = normalize_url(final_url)
+                print(f"[WORKER] Main URL redirected | original={url} | final={final_url} | normalized={normalized_main_url}")
+                url = normalized_main_url  # Update working URL to normalized final URL
+            else:
+                normalized_main_url = normalize_url(url)
+                url = normalized_main_url
 
             if main_status == 200 and main_html:
-
                 main_internal_links, main_external_links, main_social_links = extract_all_links_from_html(main_html, url, base_domain)
-
                 
-
                 # Add main page internal links to both collections
-
                 for link in main_internal_links:
-
                     normalized_link = normalize_url(link) if isinstance(link, str) else normalize_url(link.get("url", ""))
 
                     if normalized_link:
-
                         all_internal_urls.add(normalized_link)
-
                         all_internal_links.append(normalized_link)  # Add to accumulator for iteration
-
                         
-
                 print(f"📊 Main page extracted: {len(main_internal_links)} internal, {len(main_external_links)} external, {len(main_social_links)} social links")
-
         except Exception as main_error:
-
             print(f"⚠️ Failed to extract from main URL: {main_error}")
 
         
 
-        # 3. Get sitemap URLs using basic extraction
-        print(f"[WORKER] Starting basic sitemap extraction | jobId={job.jobId} | url={url}")
+        # 3. Get sitemap URLs using universal recursive discovery with strict filtering
+        print(f"[WORKER] Starting universal recursive sitemap discovery | jobId={job.jobId} | url={url}")
         
         try:
-            sitemap_urls = extract_links_from_sitemap(url)
-            sitemap_discovery_stats = {
-                'sitemaps_processed': 1,
-                'sitemap_indexes_found': 0,
-                'urlsets_found': 1,
-                'failed_sitemaps': 0,
-                'recursion_depth_used': 0,
-                'total_urls': len(sitemap_urls)
-            }
+            # Use new recursive sitemap discovery with built-in strict filtering
+            discovered_sitemap_urls, sitemap_discovery_stats = discover_all_sitemap_urls(
+                url,  # Use normalized main URL
+                max_depth=5,
+                max_sitemaps=50
+            )
             
-            print(f"[WORKER] Basic sitemap extraction completed | jobId={job.jobId} | urls={len(sitemap_urls)}")
+            print(f"[WORKER] Recursive sitemap discovery completed | jobId={job.jobId}")
+            print(f"[WORKER] Sitemaps processed: {sitemap_discovery_stats['sitemaps_processed']}")
+            print(f"[WORKER] Total URLs discovered: {len(discovered_sitemap_urls)}")
             
-            # Add discovered URLs to our collections
-            for sitemap_url in sitemap_urls:
-                normalized = normalize_url(sitemap_url)
-                all_internal_urls.add(normalized)
-                all_internal_links.append(normalized)  # Add to accumulator for iteration
+            # Add discovered URLs to our collections (already filtered by recursive discovery)
+            for sitemap_url in discovered_sitemap_urls:
+                normalized_sitemap_url = normalize_url(sitemap_url)  # Normalize sitemap URLs too
+                all_internal_urls.add(normalized_sitemap_url)
+                all_internal_links.append(normalized_sitemap_url)
                 
         except Exception as sitemap_error:
-            print(f"[WORKER] Basic sitemap extraction failed | jobId={job.jobId} | error=\"{str(sitemap_error)}\"")
-            sitemap_urls = []
-            sitemap_discovery_stats = {
-                'sitemaps_processed': 0,
-                'sitemap_indexes_found': 0,
-                'urlsets_found': 0,
-                'failed_sitemaps': 1,
-                'recursion_depth_used': 0,
-                'total_urls': 0
-            }
+            print(f"[WORKER] Recursive sitemap discovery failed | jobId={job.jobId} | error=\"{str(sitemap_error)}\"")
+            # Fallback to basic extraction if recursive discovery fails
+            try:
+                sitemap_urls = extract_links_from_sitemap(url)
+                for sitemap_url in sitemap_urls:
+                    normalized = normalize_url(sitemap_url)
+                    all_internal_urls.add(normalized)
+                    all_internal_links.append(normalized)
+                sitemap_discovery_stats = {
+                    'sitemaps_processed': 1,
+                    'sitemap_indexes_found': 0,
+                    'urlsets_found': 1,
+                    'failed_sitemaps': 0,
+                    'recursion_depth_used': 0,
+                    'total_urls': len(sitemap_urls)
+                }
+            except Exception as fallback_error:
+                print(f"[WORKER] Fallback sitemap extraction also failed | jobId={job.jobId} | error=\"{str(fallback_error)}\"")
+                sitemap_discovery_stats = {
+                    'sitemaps_processed': 0,
+                    'sitemap_indexes_found': 0,
+                    'urlsets_found': 0,
+                    'failed_sitemaps': 1,
+                    'recursion_depth_used': 0,
+                    'total_urls': 0
+                }
 
         # Check cancellation during sitemap processing
         if is_job_cancelled(job.jobId):
@@ -343,39 +356,31 @@ def execute_link_discovery(job: LinkDiscoveryJob):
 
         
 
-        # 4. Store all discovered internal links using bulk insert
-
+        # 4. Store all discovered internal links using bulk insert with deduplication
         internal_docs = []
-
+        
         for link in all_internal_links:
-
             # all_internal_links contains string URLs, not dict objects
-
             link_url = link if isinstance(link, str) else link.get("url", "")
-
-            if link_url and link_url not in seen_internal:
-
-                seen_internal.add(link_url)
-
-                internal_docs.append({
-
-                    "url": link_url,
-
-                    "sourceUrl": url,  # Use main URL as source for discovered internal links
-
-                    "seo_jobId": ObjectId(job.jobId),
-
-                    "projectId": ObjectId(job.projectId),
-
-                    "discoveredAt": datetime.utcnow()
-
-                })
-
-                if is_job_cancelled(job.jobId):
-
-                    print(f"🛑 Job {job.jobId} cancelled during internal link processing")
-
-                    return {"status": "cancelled", "jobId": job.jobId, "message": "Job cancelled by user"}
+            
+            # Normalize every URL before deduplication check
+            if link_url:
+                normalized_link_url = normalize_url(link_url)
+                
+                if normalized_link_url and normalized_link_url not in seen_internal:
+                    seen_internal.add(normalized_link_url)
+                    
+                    internal_docs.append({
+                        "url": normalized_link_url,
+                        "sourceUrl": url,  # Use normalized main URL as source
+                        "seo_jobId": ObjectId(job.jobId),
+                        "projectId": ObjectId(job.projectId),
+                        "discoveredAt": datetime.utcnow()
+                    })
+                    
+                    if is_job_cancelled(job.jobId):
+                        print(f"🛑 Job {job.jobId} cancelled during internal link processing")
+                        return {"status": "cancelled", "jobId": job.jobId, "message": "Job cancelled by user"}
 
         
 
@@ -437,7 +442,7 @@ def execute_link_discovery(job: LinkDiscoveryJob):
 
                 else:
 
-                    page_html, page_status, page_response_time = fetch_html(internal_url, timeout=8)  # Reduced timeout
+                    page_html, page_status, page_response_time, _ = fetch_html(internal_url, timeout=8)  # Reduced timeout
 
                     if page_status != 200:
 
@@ -448,42 +453,29 @@ def execute_link_discovery(job: LinkDiscoveryJob):
                 
 
                 # Extract all links using centralized function
-
                 page_internal_links, external_links, social_links = extract_all_links_from_html(page_html, internal_url, base_domain)
-
                 
-
+                # Normalize all discovered links
+                normalized_page_internal = [normalize_url(link) if isinstance(link, str) else normalize_url(link.get("url", "")) for link in page_internal_links]
+                normalized_external = [{**link_data, "url": normalize_url(link_data["url"])} for link_data in external_links]
+                normalized_social = [{**link_data, "url": normalize_url(link_data["url"])} for link_data in social_links]
+                
                 # Update progress after each page
-
                 processed_pages += 1
-
                 
-
                 # Update total links found count
-
                 total_links_found = len(seen_internal) + len(seen_external) + len(seen_social)
-
                 
-
                 progress_percentage = 30 + int((processed_pages / total_pages) * 60)  # 30% to 90%
-
                 send_progress_update(
-
                     job.jobId, 
-
                     progress_percentage, 
-
                     "Analyze", 
-
                     "Analyzing all links", 
-
                     f"Discovered {total_links_found} links so far..."
-
                 )
-
                 
-
-                return internal_url, external_links, social_links, page_internal_links
+                return internal_url, normalized_external, normalized_social, normalized_page_internal
 
                 
 

@@ -14,7 +14,7 @@ export class JobService {
    */
   async claimJob(job_type) {
     console.log(`🔍 claimJob called with type: ${job_type}`);
-    
+
     const query = {
       jobType: job_type,
       status: { $in: ['pending', 'retrying'] },
@@ -50,7 +50,7 @@ export class JobService {
       }
       return job;
     } catch (error) {
-    console.log(`[ERROR] Job claiming failed | jobType=${job_type} | reason="${error.message}"`);
+      console.log(`[ERROR] Job claiming failed | jobType=${job_type} | reason="${error.message}"`);
       return null;
     }
   }
@@ -69,7 +69,7 @@ export class JobService {
 
     // Get config
     const config = JOB_TYPE_CONFIG[jobType];
-    
+
     const job = new Job({
       user_id,
       project_id: seo_project_id,
@@ -90,10 +90,10 @@ export class JobService {
       console.error(error);
       throw error; // Re-throw the error to ensure the caller knows it failed
     }
-    
+
     // Update project stats
     await this.updateProjectJobStats(seo_project_id);
-    
+
     console.log(`✅ Job created: ${job._id} (${jobType})`);
     return job;
   }
@@ -137,7 +137,7 @@ export class JobService {
         });
       }
       console.log('--- END FETCH ---\n');
-      
+
       return jobs;
     } catch (error) {
       console.error('❌ Error in fetchPendingJobs:', error.message);
@@ -153,7 +153,7 @@ export class JobService {
   async lockJob(job_id) {
     console.log(`\n--- LOCKING JOB ---`);
     console.log(`Job ID: ${job_id}`);
-    
+
     const lockQuery = {
       _id: job_id,
       status: 'pending',
@@ -162,7 +162,7 @@ export class JobService {
         { last_attempted_at: { $lt: new Date(Date.now() - 5 * 60 * 1000) } }
       ]
     };
-    
+
     console.log(`Lock Query:`, JSON.stringify(lockQuery, null, 2));
 
     try {
@@ -187,7 +187,7 @@ export class JobService {
         console.log(`⚠️ Lock failed - job doesn't match query conditions`);
         console.log(`Job may already be locked or not in pending status`);
       }
-      
+
       console.log(`--- END LOCK ---\n`);
       return result;
     } catch (error) {
@@ -210,7 +210,7 @@ export class JobService {
       updateData.completed_at = new Date();
       // Keep claimed_at to preserve when job was processed
     }
-    
+
     if (status === 'failed') {
       updateData.failed_at = data.failed_at || new Date();
       updateData.last_attempted_at = data.last_attempted_at || new Date();
@@ -344,7 +344,7 @@ export class JobService {
 
       // Get the project to include keyword count
       const project = await SeoProject.findById(seo_project_id);
-      
+
       const jobStats = {
         totalJobs: 0,
         pendingJobs: 0,
@@ -378,7 +378,7 @@ export class JobService {
    */
   async retryJob(job_id) {
     const job = await Job.findById(job_id);
-    
+
     if (!job) throw new Error('Job not found');
     if (job.job_status !== 'failed') throw new Error('Only failed jobs can be retried');
 
@@ -402,7 +402,7 @@ export class JobService {
    */
   async deleteOldCompletedJobs(daysOld = 30) {
     const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
-    
+
     const result = await Job.deleteMany({
       status: 'completed',
       completed_at: { $lt: cutoffDate }
@@ -418,7 +418,7 @@ export class JobService {
   async createAndDispatchPerformanceMobileJob(pageScrapingJob) {
     try {
       console.log(`[DEBUG] createAndDispatchPerformanceMobileJob called with pageScrapingJob._id=${pageScrapingJob._id}`);
-      
+
       // Create PERFORMANCE_MOBILE job with source job reference
       const performanceMobileJob = await this.createJob({
         user_id: pageScrapingJob.user_id,
@@ -429,11 +429,11 @@ export class JobService {
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.PERFORMANCE_MOBILE].priority
       });
-      
+
       console.log(`[QUEUE] PERFORMANCE_MOBILE job queued | jobId=${performanceMobileJob._id} | sourceJobId=${pageScrapingJob._id}`);
-      
+
       return performanceMobileJob;
-      
+
     } catch (error) {
       console.error(`[ERROR] PERFORMANCE_MOBILE creation failed | sourceJobId=${pageScrapingJob._id} | reason="${error.message}"`);
       console.error(`[ERROR] Full error stack: ${error.stack}`);
@@ -448,7 +448,7 @@ export class JobService {
   async createAndDispatchPerformanceDesktopJob(pageScrapingJob) {
     try {
       console.log(`[DEBUG] createAndDispatchPerformanceDesktopJob called with pageScrapingJob._id=${pageScrapingJob._id}`);
-      
+
       // Create PERFORMANCE_DESKTOP job with source job reference
       const performanceDesktopJob = await this.createJob({
         user_id: pageScrapingJob.user_id,
@@ -459,11 +459,11 @@ export class JobService {
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.PERFORMANCE_DESKTOP].priority
       });
-      
+
       console.log(`[QUEUE] PERFORMANCE_DESKTOP job queued | jobId=${performanceDesktopJob._id} | sourceJobId=${pageScrapingJob._id}`);
-      
+
       return performanceDesktopJob;
-      
+
     } catch (error) {
       console.error(`[ERROR] PERFORMANCE_DESKTOP creation failed | sourceJobId=${pageScrapingJob._id} | reason="${error.message}"`);
       console.error(`[ERROR] Full error stack: ${error.stack}`);
@@ -487,11 +487,11 @@ export class JobService {
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.PAGE_ANALYSIS].priority
       });
-      
+
       console.log(`[QUEUE] PAGE_ANALYSIS job queued | jobId=${pageAnalysisJob._id} | sourceJobId=${pageScrapingJob._id}`);
-      
+
       return pageAnalysisJob;
-      
+
     } catch (error) {
       console.error(`[ERROR] PAGE_ANALYSIS creation failed | sourceJobId=${pageScrapingJob._id} | reason="${error.message}"`);
       throw error;
@@ -514,11 +514,11 @@ export class JobService {
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.SEO_SCORING].priority
       });
-      
+
       console.log(`[QUEUE] SEO_SCORING job queued | jobId=${seoScoringJob._id} | sourceJobId=${pageAnalysisJob._id}`);
-      
+
       return seoScoringJob;
-      
+
     } catch (error) {
       console.error(`[ERROR] SEO_SCORING creation failed | sourceJobId=${pageAnalysisJob._id} | reason="${error.message}"`);
       throw error;
@@ -542,34 +542,72 @@ export class JobService {
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.AI_VISIBILITY_SCORING].priority
       });
-      
+
       console.log(`[QUEUE] AI_VISIBILITY_SCORING job queued | jobId=${aiVisibilityScoringJob._id} | sourceJobId=${aiVisibilityAnalysisJob._id}`);
-      
+
       return aiVisibilityScoringJob;
-      
+
     } catch (error) {
       console.error(`[ERROR] AI_VISIBILITY_SCORING creation failed | sourceJobId=${aiVisibilityAnalysisJob._id} | reason="${error.message}"`);
       throw error;
     }
   }
+  /**
+   * Atomically create and dispatch TECHNICAL_DOMAIN job
+   * CRITICAL: This is a pure data-collection step, no scoring or rule logic
+   */
+  async createAndDispatchTechnicalDomainJob(linkDiscoveryJob) {
+    try {
+      // Extract domain from the LINK_DISCOVERY job's main_url
+      const mainUrl = linkDiscoveryJob.input_data?.main_url || '';
+      let domain = mainUrl;
+      try {
+        const urlObj = new URL(mainUrl);
+        domain = urlObj.origin; // e.g. "https://example.com"
+      } catch (e) {
+        // If URL parsing fails, use the raw main_url
+        console.log(`[WARN] Could not parse main_url for domain extraction: ${mainUrl}`);
+      }
+
+      const technicalDomainJob = await this.createJob({
+        user_id: linkDiscoveryJob.user_id,
+        seo_project_id: linkDiscoveryJob.project_id,
+        jobType: JOB_TYPES.TECHNICAL_DOMAIN,
+        input_data: {
+          source_job_id: linkDiscoveryJob._id.toString(),
+          domain: domain,
+          main_url: mainUrl
+        },
+        priority: JOB_TYPE_CONFIG[JOB_TYPES.TECHNICAL_DOMAIN].priority
+      });
+
+      console.log(`[QUEUE] TECHNICAL_DOMAIN job queued | jobId=${technicalDomainJob._id} | sourceJobId=${linkDiscoveryJob._id} | domain=${domain}`);
+
+      return technicalDomainJob;
+    } catch (error) {
+      console.error(`[ERROR] TECHNICAL_DOMAIN creation failed | sourceJobId=${linkDiscoveryJob._id} | reason="${error.message}"`);
+      throw error;
+    }
+  }
+
   async createAndDispatchPageScrapingJob(linkDiscoveryJob) {
     try {
       // Get MongoDB connection to access discovered URLs
       const db = mongoose.connection.db;
-      
+
       // Query internal links discovered by LINK_DISCOVERY job
       const internalLinks = await db.collection('seo_internal_links')
         .find({ seo_jobId: linkDiscoveryJob._id })
         .project({ url: 1, _id: 0 })
         .toArray();
-      
+
       if (internalLinks.length === 0) {
         return null;
       }
-      
+
       // Extract URLs for PAGE_SCRAPING job input
       const urls = internalLinks.map(link => link.url);
-      
+
       // Create PAGE_SCRAPING job with URLs as input data
       const pageScrapingJob = await this.createJob({
         user_id: linkDiscoveryJob.user_id,
@@ -581,11 +619,11 @@ export class JobService {
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.PAGE_SCRAPING].priority
       });
-      
+
       console.log(`[QUEUE] PAGE_SCRAPING job queued | jobId=${pageScrapingJob._id}`);
-      
+
       return pageScrapingJob;
-      
+
     } catch (error) {
       console.error(`[ERROR] PAGE_SCRAPING creation failed | sourceJobId=${linkDiscoveryJob._id} | reason="${error.message}"`);
       throw error;
@@ -599,19 +637,19 @@ export class JobService {
    */
   async atomicallyDispatchJob(jobId) {
     const Job = mongoose.model('Job');
-    
+
     console.log(`[DISPATCH] Atomic dispatch requested | jobId=${jobId}`);
-    
+
     // Atomic operation: find PENDING job and mark as DISPATCHED
     // Status guard prevents duplicate dispatch of same job
     const job = await Job.findOneAndUpdate(
-      { 
-        _id: jobId, 
+      {
+        _id: jobId,
         status: 'pending',           // CRITICAL: Only dispatch pending jobs
         dispatchedAt: null           // CRITICAL: Never dispatched before
       },
-      { 
-        $set: { 
+      {
+        $set: {
           status: 'processing',      // Mark as processing
           dispatchedAt: new Date(),  // Track dispatch time
           started_at: new Date(),
@@ -620,13 +658,13 @@ export class JobService {
       },
       { new: true }                  // Return updated document
     );
-    
+
     if (job) {
       console.log(`[DISPATCH] Atomic dispatch successful | jobId=${jobId} | dispatchedAt=${job.dispatchedAt}`);
     } else {
       console.log(`[DISPATCH] Atomic dispatch failed | jobId=${jobId} | job already dispatched or not pending`);
     }
-    
+
     return job; // null if already dispatched/processed
   }
 
@@ -668,16 +706,16 @@ export class JobService {
       console.log("🔍 [DEBUG] Updating project with:", updateData);
       console.log("🔍 [DEBUG] last_crawl_summary value:", updateData.last_crawl_summary);
       console.log("🔍 [DEBUG] last_crawl_summary type:", typeof updateData.last_crawl_summary);
-      
+
       const project = await SeoProject.findByIdAndUpdate(
         projectId,
         { $set: updateData },
         { new: true }
       );
-      
+
       console.log("🔍 [DEBUG] After update DB value:", project.last_crawl_summary);
       console.log("🔍 [DEBUG] Full project object keys:", Object.keys(project.toObject()));
-      
+
       return project;
     } catch (error) {
       console.error(`[ERROR] Project update failed | projectId=${projectId} | reason="${error.message}"`);
@@ -690,7 +728,7 @@ export class JobService {
    */
   async getComprehensiveJobStats(projectId) {
     try {
-      const jobs = await Job.find({ 
+      const jobs = await Job.find({
         project_id: projectId,
         status: 'completed'
       }).sort({ created_at: 1 }).lean();
@@ -713,7 +751,7 @@ export class JobService {
             completed_at: job.completed_at
           };
         }
-        
+
         if (job.jobType === 'PAGE_SCRAPING' && job.result_data) {
           stats.PAGE_SCRAPING = {
             totalUrls: job.result_data.totalUrls || 0,
@@ -724,7 +762,7 @@ export class JobService {
             completed_at: job.completed_at
           };
         }
-        
+
         if (job.jobType === 'PAGE_ANALYSIS' && job.result_data) {
           stats.PAGE_ANALYSIS = {
             pagesAnalyzed: job.result_data.pagesAnalyzed || 0,
@@ -763,12 +801,12 @@ export class JobService {
       // Check if this is a standalone AI project
       let isStandalone = false;
       let aiProjectData = null;
-      
+
       try {
         const AIVisibilityProject = require('../ai_visibility/model/AIVisibilityProject.js');
         aiProjectData = await AIVisibilityProject.findOne({ _id: projectId });
         isStandalone = aiProjectData?.isStandalone || false;
-        
+
         if (isStandalone) {
           console.log(`[AI_PROJECT] Detected standalone AI project | projectId=${projectId}`);
         }
@@ -808,9 +846,9 @@ export class JobService {
         }
       } else {
         // Original logic for SEO projects
-        discoveredTotal = (jobStats.LINK_DISCOVERY?.internalLinksCount || 0) + 
-                         (jobStats.LINK_DISCOVERY?.externalLinksCount || 0) + 
-                         (jobStats.LINK_DISCOVERY?.socialLinksCount || 0);
+        discoveredTotal = (jobStats.LINK_DISCOVERY?.internalLinksCount || 0) +
+          (jobStats.LINK_DISCOVERY?.externalLinksCount || 0) +
+          (jobStats.LINK_DISCOVERY?.socialLinksCount || 0);
 
         // Create enhanced summary object
         const baseDiscoveredLinks = crawlSummary?.discovered_links || {};
@@ -861,7 +899,7 @@ export class JobService {
         ? Math.round((crawledSuccessful / crawledTotal) * 100)
         : (crawlSummary?.crawled_pages?.success_rate ?? jobStats.PAGE_SCRAPING?.successRate ?? 100);
 
-      const totalDurationMs = isStandalone 
+      const totalDurationMs = isStandalone
         ? (crawlSummary?.timing?.total_crawl_duration_ms ?? 60000) // Default 1 minute for AI projects
         : (crawlSummary?.timing?.total_crawl_duration_ms ?? (jobStats.crawlDuration * 1000) ?? 0);
 
@@ -907,7 +945,7 @@ export class JobService {
       console.log(`[SAFETY] Enhanced summary | projectId=${projectId} | data=${JSON.stringify(enhancedSummary, null, 2)}`);
 
       console.log(`[API] Enhanced crawl summary | projectId=${projectId} | discovered=${enhancedSummary.discovered_links.total} | crawled=${enhancedSummary.crawled_pages.successful} | analyzed=${enhancedSummary.analysis_results.pages_analyzed}`);
-      
+
       return enhancedSummary;
     } catch (error) {
       console.error(`[ERROR] Failed to enhance crawl summary | projectId=${projectId} | reason="${error.message}"`);
@@ -920,7 +958,7 @@ export class JobService {
    */
   async cleanupStaleLocks(lockTimeoutMs = 10 * 60 * 1000) { // 10 minutes default
     const staleTime = new Date(Date.now() - lockTimeoutMs);
-    
+
     const result = await Job.updateMany(
       {
         job_status: 'processing',

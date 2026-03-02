@@ -57,3 +57,23 @@ SOCIAL_MEDIA_INDICATORS = ["facebook", "instagram", "social media", "marketing",
 ENABLE_PAGE_SCREENSHOTS = True
 SCREENSHOT_STORAGE_PATH = "./screenshots"
 MAX_SCREENSHOTS_PER_JOB = 300
+
+# SEO Intelligence: Filler words for title/content analysis
+FILLER_WORDS = [
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "shall",
+    "should", "may", "might", "must", "can", "could", "of", "in", "to",
+    "for", "with", "on", "at", "by", "from", "and", "or", "but", "not",
+    "this", "that", "it", "its", "we", "our", "your", "you", "they"
+]
+
+# SEO Intelligence: Question words for heading detection
+QUESTION_WORDS = [
+    "what", "why", "how", "when", "where", "which", "who", "whom",
+    "whose", "can", "do", "does", "is", "are", "should", "would", "could"
+]
+
+# SEO Intelligence: Deprecated schema types
+DEPRECATED_SCHEMA_TYPES = [
+    "DataFeed", "DataCatalog", "Residence", "CivicStructure"
+]

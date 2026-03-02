@@ -4,7 +4,7 @@ import re
 import hashlib
 import requests
 import os
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urlunparse, unquote
 from config.config import SOCIAL_DOMAINS
 
 
@@ -53,17 +53,57 @@ def send_failure_callback(job_id, error_message):
 
 
 def normalize_url(url: str) -> str:
-    """Normalize URL for consistent processing."""
-    parsed = urlparse(url)
-    
-    # Lowercase scheme + host
-    scheme = parsed.scheme.lower()
-    netloc = parsed.netloc.lower()
-    
-    # Remove fragment and trailing slash
-    path = parsed.path.rstrip("/")
-    
-    return f"{scheme}://{netloc}{path}"
+    """Normalize URL for consistent processing with HTTPS enforcement and trailing slash handling."""
+    try:
+        # Decode URL encoding first
+        url = unquote(url)
+        
+        parsed = urlparse(url)
+        
+        # Force HTTPS scheme
+        scheme = "https"
+        
+        # Lowercase domain only
+        netloc = parsed.netloc.lower()
+        
+        # Remove tracking parameters (utm, fbclid, etc.)
+        # Keep only essential query parameters
+        query_params = []
+        if parsed.query:
+            for param in parsed.query.split('&'):
+                if '=' in param:
+                    key, value = param.split('=', 1)
+                    # Skip tracking parameters
+                    if not any(tracking in key.lower() for tracking in ['utm_', 'fbclid', 'gclid', 'msclkid', 'campaign', 'source', 'medium']):
+                        query_params.append(f"{key}={value}")
+        
+        query = '&'.join(query_params) if query_params else ''
+        
+        # Handle path - remove trailing slash except for root, preserve original case
+        path = parsed.path.rstrip("/")
+        if path == "":
+            path = "/"
+        
+        # Remove fragment
+        fragment = ''
+        
+        # Reconstruct URL
+        normalized = urlunparse((scheme, netloc, path, '', query, fragment))
+        
+        return normalized
+        
+    except Exception:
+        # Fallback to basic normalization if anything fails
+        try:
+            parsed = urlparse(url)
+            scheme = "https"
+            netloc = parsed.netloc.lower()
+            path = parsed.path.rstrip("/")
+            if path == "":
+                path = "/"
+            return f"{scheme}://{netloc}{path}"
+        except:
+            return url
 
 
 def get_registrable_domain(url: str) -> str:

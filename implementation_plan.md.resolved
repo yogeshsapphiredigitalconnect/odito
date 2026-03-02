@@ -1,0 +1,208 @@
+# TECHNICAL_DOMAIN_WORKER Implementation Plan
+
+Add a pure data-collection worker `TECHNICAL_DOMAIN` that runs once per project after `LINK_DISCOVERY`, fetches `/robots.txt` and `/sitemap.xml`, stores raw data in MongoDB, and continues the pipeline to `PAGE_SCRAPING`. It must **not** touch scoring, rules, or performance logic, and must **not** block the pipeline on failure.
+
+## Proposed Changes
+
+### Job Constants & Model
+
+#### [MODIFY] [jobTypes.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/constants/jobTypes.js)
+
+Add `TECHNICAL_DOMAIN` to `JOB_TYPES` enum (after `LINK_DISCOVERY`) and add its config entry:
+
+```diff
+   LINK_DISCOVERY: 'LINK_DISCOVERY',
++  TECHNICAL_DOMAIN: 'TECHNICAL_DOMAIN',
+   PAGE_SCRAPING: 'PAGE_SCRAPING',
+```
+
+Config:
+```js
+[JOB_TYPES.TECHNICAL_DOMAIN]: {
+  maxAttempts: 1,
+  timeout: 60000,        // 1 minute
+  priority: 1,
+  workerType: 'technical_domain'
+},
+```
+
+#### [MODIFY] [Job.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/model/Job.js)
+
+Add `'TECHNICAL_DOMAIN'` to the `jobType` enum array.
+
+#### [NEW] [DomainTechnicalReport.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/model/DomainTechnicalReport.js)
+
+New Mongoose model:
+```js
+{
+  projectId: ObjectId (ref: 'SeoProject', required, indexed),
+  domain: String (required),
+  robotsStatus: Number,
+  robotsExists: Boolean,
+  robotsContent: String,
+  sitemapStatus: Number,
+  sitemapExists: Boolean,
+  sitemapContent: String,
+  parsedSitemapUrlCount: Number,
+  createdAt: Date (default: Date.now)
+}
+```
+Collection: `domain_technical_reports`.
+
+---
+
+### Job Service
+
+#### [MODIFY] [jobService.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/service/jobService.js)
+
+Add `createAndDispatchTechnicalDomainJob(linkDiscoveryJob)` method. Pattern mirrors [createAndDispatchPageScrapingJob()](file:///d:/new/Odito/odito_backend/src/modules/jobs/service/jobService.js#555-594) but simpler — passes `projectId` and `domain` (extracted from `input_data.main_url`) as input data.
+
+---
+
+### Job Dispatcher
+
+#### [MODIFY] [jobDispatcher.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/service/jobDispatcher.js)
+
+Add `dispatchTechnicalDomainJob(job)` method — HTTP POST to `${pythonBaseURL}/api/jobs/technical-domain` with `{ jobId, projectId, userId, domain }`. Timeout: 60s.
+
+---
+
+### Pipeline Chaining (Critical)
+
+#### [MODIFY] [jobController.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobController.js)
+
+**LINK_DISCOVERY completion (lines ~60–96)**: Change to create `TECHNICAL_DOMAIN` job instead of `PAGE_SCRAPING`.
+
+```diff
+- const pageScrapingJob = await jobService.createAndDispatchPageScrapingJob(updatedJob);
++ const technicalDomainJob = await jobService.createAndDispatchTechnicalDomainJob(updatedJob);
+```
+
+Stage emit: `from: 'LINK_DISCOVERY', to: 'TECHNICAL_DOMAIN'`
+
+**Add new `TECHNICAL_DOMAIN` completion handler**: After the existing `LINK_DISCOVERY` block, add a new `else if` for `JOB_TYPES.TECHNICAL_DOMAIN`. On completion, create and dispatch `PAGE_SCRAPING` job (copy the existing pattern from the old LINK_DISCOVERY handler). This preserves the full pipeline chain.
+
+> [!IMPORTANT]
+> If `TECHNICAL_DOMAIN` fails, the pipeline must still proceed to `PAGE_SCRAPING`. The failure handler in [failJob](file:///d:/new/Odito/odito_backend/src/modules/jobs/service/jobService.js#234-282) should also create `PAGE_SCRAPING` as a fallback.
+
+#### [MODIFY] [jobCompletionHandler.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobCompletionHandler.js)
+
+Same changes applied to the async completion handler:
+1. [handleLinkDiscoveryCompletion](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobCompletionHandler.js#181-220) → create `TECHNICAL_DOMAIN` instead of `PAGE_SCRAPING`
+2. Add `handleTechnicalDomainCompletion` → create `PAGE_SCRAPING`
+3. Update [chainNextJobs](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobCompletionHandler.js#140-180) switch to include `JOB_TYPES.TECHNICAL_DOMAIN`
+4. Update [createNextJobAtomically](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobCompletionHandler.js#16-67) switch to include `JOB_TYPES.TECHNICAL_DOMAIN`
+
+---
+
+### Python API Router
+
+#### [NEW] [technical_domain.py](file:///d:/new/Odito/python_workers/api/technical_domain.py)
+
+FastAPI router at `POST /api/jobs/technical-domain`. Pydantic model: `TechnicalDomainJob(jobId, projectId, userId, domain)`. Calls `execute_technical_domain` worker function.
+
+#### [MODIFY] [main.py](file:///d:/new/Odito/python_workers/main.py)
+
+Register the new router:
+```python
+from api.technical_domain import router as technical_domain_router
+app.include_router(technical_domain_router, prefix="/api", tags=["technical_domain"])
+```
+
+---
+
+### Python Worker
+
+#### [NEW] `scraper/workers/seo/technical_domain/` folder
+
+| File | Purpose |
+|------|---------|
+| [__init__.py](file:///d:/new/Odito/python_workers/scraper/__init__.py) | Package init |
+| [worker.py](file:///d:/new/Odito/python_workers/scraper/workers/ai/ai_scoring_v2/ai_scoring_v2_worker.py) | Orchestrator: fetches robots + sitemap, stores via backend API, reports completion |
+| `robots_fetcher.py` | `fetch_robots(domain)` → `{ status, exists, content }` |
+| `sitemap_fetcher.py` | `fetch_sitemap(domain)` → `{ status, exists, content, urlCount }` |
+
+**Key behaviors:**
+- HTTP GET to `domain/robots.txt` and `domain/sitemap.xml` with 10s timeout
+- On fetch failure: log error, return default empty result (never raise)
+- Store results via `POST /api/domain-technical-report` to Node.js backend
+- Report job completion via `POST /api/jobs/{jobId}/complete`
+- Always returns success status so pipeline continues
+
+---
+
+### Backend API for Storing Report
+
+#### [MODIFY] [jobRoutes.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/routes/jobRoutes.js)
+
+Add `POST /api/jobs/domain-technical-report` route to store `DomainTechnicalReport` data.
+
+#### [MODIFY] [jobController.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobController.js)
+
+Add `storeDomainTechnicalReport` handler that validates and upserts the report into MongoDB.
+
+---
+
+## API Contract
+
+### Node → Python (Dispatch)
+```
+POST http://127.0.0.1:8000/api/jobs/technical-domain
+{
+  "jobId": "string",
+  "projectId": "string",
+  "userId": "string",
+  "domain": "string"   // e.g. "https://example.com"
+}
+```
+
+### Python → Node (Store Report)
+```
+POST http://localhost:5000/api/jobs/domain-technical-report
+{
+  "projectId": "string",
+  "domain": "string",
+  "robotsStatus": 200,
+  "robotsExists": true,
+  "robotsContent": "...",
+  "sitemapStatus": 200,
+  "sitemapExists": true,
+  "sitemapContent": "...",
+  "parsedSitemapUrlCount": 45
+}
+```
+
+### Python → Node (Job Completion)
+```
+POST http://localhost:5000/api/jobs/{jobId}/complete
+{
+  "stats": {
+    "robotsExists": true,
+    "sitemapExists": true,
+    "parsedSitemapUrlCount": 45
+  }
+}
+```
+
+## Safety Confirmation
+
+| Concern | Status |
+|---------|--------|
+| Scoring logic untouched | ✅ No changes to scoring files |
+| Rule engine untouched | ✅ No changes to rules/ |
+| Performance logic untouched | ✅ No changes to performance workers |
+| Architecture preserved | ✅ Same PUSH model, same chaining pattern |
+| Pipeline continues on failure | ✅ Fallback to PAGE_SCRAPING on TECHNICAL_DOMAIN failure |
+
+## Verification Plan
+
+### Manual Verification
+Since there are no existing automated tests in this codebase, verification will be manual:
+
+1. **Static review**: Verify all modified files compile/parse without errors
+2. **Pipeline chain integrity**: Trace the chain `LINK_DISCOVERY → TECHNICAL_DOMAIN → PAGE_SCRAPING` through both [jobController.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobController.js) and [jobCompletionHandler.js](file:///d:/new/Odito/odito_backend/src/modules/jobs/controller/jobCompletionHandler.js) to confirm no broken paths
+3. **Failure resilience**: Confirm that [failJob](file:///d:/new/Odito/odito_backend/src/modules/jobs/service/jobService.js#234-282) handler creates `PAGE_SCRAPING` as fallback when `TECHNICAL_DOMAIN` fails
+4. **No scoring contamination**: `grep` for any references to scoring, rules, or performance in the new code to confirm zero contamination
+
+> [!NOTE]
+> Full end-to-end testing requires running both Node.js and Python servers with a MongoDB instance. I recommend you test this after deployment by triggering an audit on a test project.

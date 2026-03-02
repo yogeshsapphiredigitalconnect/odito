@@ -68,35 +68,93 @@ export const completeJob = async (req, res) => {
       } catch (statusError) {
         console.error(`[ERROR] Failed to update crawl_status after LINK_DISCOVERY | projectId=${updatedJob.project_id} | reason="${statusError.message}"`);
       }
-      
+
+      // Chain to TECHNICAL_DOMAIN (data collection step)
       try {
-        // Create PAGE_SCRAPING job
-        const pageScrapingJob = await jobService.createAndDispatchPageScrapingJob(updatedJob);
-        
-        if (pageScrapingJob) {
+        const technicalDomainJob = await jobService.createAndDispatchTechnicalDomainJob(updatedJob);
+
+        if (technicalDomainJob) {
           // Atomic dispatch - prevents duplicates
-          const dispatchedJob = await jobService.atomicallyDispatchJob(pageScrapingJob._id);
-          
+          const dispatchedJob = await jobService.atomicallyDispatchJob(technicalDomainJob._id);
+
           if (dispatchedJob) {
             // Emit stage change event for frontend
             auditProgressService.emitStageChanged(jobId, {
               from: 'LINK_DISCOVERY',
+              to: 'TECHNICAL_DOMAIN',
+              newJobId: technicalDomainJob._id.toString()
+            });
+
+            // Dispatch to Python worker (fire-and-forget)
+            jobDispatcher.dispatchTechnicalDomainJob(dispatchedJob).catch(error => {
+              console.error(`[ERROR] TECHNICAL_DOMAIN dispatch failed | jobId=${dispatchedJob._id} | reason="${error.message}"`);
+            });
+          }
+        }
+      } catch (chainingError) {
+        console.error(`[ERROR] TECHNICAL_DOMAIN creation failed | sourceJobId=${updatedJob._id} | reason="${chainingError.message}"`);
+
+        // FALLBACK: If TECHNICAL_DOMAIN fails to create, skip directly to PAGE_SCRAPING
+        console.log(`[FALLBACK] Skipping TECHNICAL_DOMAIN, creating PAGE_SCRAPING directly`);
+        try {
+          const pageScrapingJob = await jobService.createAndDispatchPageScrapingJob(updatedJob);
+          if (pageScrapingJob) {
+            const dispatchedJob = await jobService.atomicallyDispatchJob(pageScrapingJob._id);
+            if (dispatchedJob) {
+              auditProgressService.emitStageChanged(jobId, {
+                from: 'LINK_DISCOVERY',
+                to: 'PAGE_SCRAPING',
+                newJobId: pageScrapingJob._id.toString()
+              });
+              jobDispatcher.dispatchPageScrapingJob(dispatchedJob).catch(error => {
+                console.error(`[ERROR] PAGE_SCRAPING dispatch failed | jobId=${dispatchedJob._id} | reason="${error.message}"`);
+              });
+            }
+          }
+        } catch (fallbackError) {
+          console.error(`[ERROR] Fallback PAGE_SCRAPING creation also failed | reason="${fallbackError.message}"`);
+        }
+      }
+    } else if (updatedJob.jobType === JOB_TYPES.TECHNICAL_DOMAIN) {
+      // TECHNICAL_DOMAIN completed → chain to PAGE_SCRAPING
+      console.log(`[API] TECHNICAL_DOMAIN completion received | jobId=${jobId}`);
+
+      try {
+        // Use the original LINK_DISCOVERY job data to create PAGE_SCRAPING
+        // We need the source LINK_DISCOVERY job to get discovered URLs
+        const sourceJobId = updatedJob.input_data?.source_job_id;
+        let sourceJob = updatedJob;
+
+        if (sourceJobId) {
+          const linkDiscoveryJob = await jobService.getJobById(sourceJobId);
+          if (linkDiscoveryJob) {
+            sourceJob = linkDiscoveryJob;
+          }
+        }
+
+        const pageScrapingJob = await jobService.createAndDispatchPageScrapingJob(sourceJob);
+
+        if (pageScrapingJob) {
+          const dispatchedJob = await jobService.atomicallyDispatchJob(pageScrapingJob._id);
+
+          if (dispatchedJob) {
+            auditProgressService.emitStageChanged(jobId, {
+              from: 'TECHNICAL_DOMAIN',
               to: 'PAGE_SCRAPING',
               newJobId: pageScrapingJob._id.toString()
             });
-            
-            // Dispatch to Python worker (fire-and-forget)
+
             jobDispatcher.dispatchPageScrapingJob(dispatchedJob).catch(error => {
               console.error(`[ERROR] PAGE_SCRAPING dispatch failed | jobId=${dispatchedJob._id} | reason="${error.message}"`);
             });
           }
         }
       } catch (chainingError) {
-        console.error(`[ERROR] PAGE_SCRAPING creation failed | sourceJobId=${updatedJob._id} | reason="${chainingError.message}"`);
+        console.error(`[ERROR] PAGE_SCRAPING creation failed after TECHNICAL_DOMAIN | sourceJobId=${updatedJob._id} | reason="${chainingError.message}"`);
       }
     } else if (updatedJob.jobType === JOB_TYPES.PAGE_SCRAPING) {
       console.log(`[API] PAGE_SCRAPING completion received | jobId=${jobId}`);
-      
+
       // Update project crawl_status to CRAWLED after PAGE_SCRAPING completes
       try {
         await SeoProject.findByIdAndUpdate(updatedJob.project_id, {
@@ -107,22 +165,22 @@ export const completeJob = async (req, res) => {
       } catch (statusError) {
         console.error(`[ERROR] Failed to update crawl_status after PAGE_SCRAPING | projectId=${updatedJob.project_id} | reason="${statusError.message}"`);
       }
-      
+
       try {
         console.log(`[DEBUG] Creating PERFORMANCE_MOBILE job for sourceJobId=${updatedJob._id}`);
         console.log(`[DEBUG] pageScrapingJob.user_id=${updatedJob.user_id}`);
         console.log(`[DEBUG] pageScrapingJob.project_id=${updatedJob.project_id}`);
-        
+
         // Create PERFORMANCE_MOBILE job first
         const performanceMobileJob = await jobService.createAndDispatchPerformanceMobileJob(updatedJob);
-        
+
         console.log(`[DEBUG] PERFORMANCE_MOBILE job creation returned | result=${performanceMobileJob ? 'SUCCESS' : 'NULL'}`);
-        
+
         if (performanceMobileJob) {
           console.log(`[DEBUG] PERFORMANCE_MOBILE job created successfully | jobId=${performanceMobileJob._id}`);
           // Atomic dispatch - prevents duplicates
           const dispatchedMobileJob = await jobService.atomicallyDispatchJob(performanceMobileJob._id);
-          
+
           if (dispatchedMobileJob) {
             console.log(`[DEBUG] PERFORMANCE_MOBILE job dispatched successfully | jobId=${dispatchedMobileJob._id}`);
             // Emit stage change event for frontend
@@ -131,30 +189,30 @@ export const completeJob = async (req, res) => {
               to: 'PERFORMANCE_MOBILE',
               newJobId: performanceMobileJob._id.toString()
             });
-            
+
             // Dispatch to Python worker (fire-and-forget)
             jobDispatcher.dispatchPerformanceMobileJob(dispatchedMobileJob).catch(error => {
               console.error(`[ERROR] PERFORMANCE_MOBILE dispatch failed | jobId=${dispatchedMobileJob._id} | reason="${error.message}"`);
             });
-            
+
             // Create PERFORMANCE_DESKTOP job after mobile is dispatched
             console.log(`[DEBUG] Creating PERFORMANCE_DESKTOP job for sourceJobId=${updatedJob._id}`);
             const performanceDesktopJob = await jobService.createAndDispatchPerformanceDesktopJob(updatedJob);
-            
+
             if (performanceDesktopJob) {
               console.log(`[DEBUG] PERFORMANCE_DESKTOP job created successfully | jobId=${performanceDesktopJob._id}`);
               // Atomic dispatch - prevents duplicates
               const dispatchedDesktopJob = await jobService.atomicallyDispatchJob(performanceDesktopJob._id);
-              
+
               if (dispatchedDesktopJob) {
                 console.log(`[DEBUG] PERFORMANCE_DESKTOP job dispatched successfully | jobId=${dispatchedDesktopJob._id}`);
                 // Emit stage change event for frontend
                 auditProgressService.emitStageChanged(jobId, {
                   from: 'PERFORMANCE_MOBILE',
-                  to: 'PERFORMANCE_DESKTOP', 
+                  to: 'PERFORMANCE_DESKTOP',
                   newJobId: performanceDesktopJob._id.toString()
                 });
-                
+
                 // Dispatch to Python worker (fire-and-forget)
                 jobDispatcher.dispatchPerformanceDesktopJob(dispatchedDesktopJob).catch(error => {
                   console.error(`[ERROR] PERFORMANCE_DESKTOP dispatch failed | jobId=${dispatchedDesktopJob._id} | reason="${error.message}"`);
@@ -175,7 +233,7 @@ export const completeJob = async (req, res) => {
         console.error(`[ERROR] Performance job creation failed | sourceJobId=${updatedJob._id} | reason="${chainingError.message}"`);
         console.error(`[ERROR] Error type: ${chainingError.constructor.name}`);
         console.error(`[ERROR] Full error stack: ${chainingError.stack}`);
-        
+
         // Fallback: Create PAGE_ANALYSIS directly if performance jobs fail
         console.log(`[FALLBACK] Creating PAGE_ANALYSIS directly due to performance job failure`);
         try {
@@ -198,22 +256,22 @@ export const completeJob = async (req, res) => {
           console.error(`[ERROR] Fallback PAGE_ANALYSIS creation also failed | reason="${fallbackError.message}"`);
         }
       }
-      
+
     } else if (updatedJob.jobType === JOB_TYPES.PERFORMANCE_MOBILE) {
       console.log(`[API] PERFORMANCE_MOBILE completion received | jobId=${jobId}`);
       // PAGE_ANALYSIS will be created after PERFORMANCE_DESKTOP completes
-      
+
     } else if (updatedJob.jobType === JOB_TYPES.PERFORMANCE_DESKTOP) {
       console.log(`[API] PERFORMANCE_DESKTOP completion received | jobId=${jobId}`);
-      
+
       try {
         // Create PAGE_ANALYSIS job only after both performance jobs complete
         const pageAnalysisJob = await jobService.createAndDispatchPageAnalysisJob(updatedJob);
-        
+
         if (pageAnalysisJob) {
           // Atomic dispatch - prevents duplicates
           const dispatchedJob = await jobService.atomicallyDispatchJob(pageAnalysisJob._id);
-          
+
           if (dispatchedJob) {
             // Emit stage change event for frontend
             auditProgressService.emitStageChanged(jobId, {
@@ -221,7 +279,7 @@ export const completeJob = async (req, res) => {
               to: 'PAGE_ANALYSIS',
               newJobId: pageAnalysisJob._id.toString()
             });
-            
+
             // Dispatch to Python worker (fire-and-forget)
             jobDispatcher.dispatchPageAnalysisJob(dispatchedJob).catch(error => {
               console.error(`[ERROR] PAGE_ANALYSIS dispatch failed | jobId=${dispatchedJob._id} | reason="${error.message}"`);
@@ -233,7 +291,7 @@ export const completeJob = async (req, res) => {
       }
     } else if (updatedJob.jobType === JOB_TYPES.PAGE_ANALYSIS) {
       console.log(`[API] PAGE_ANALYSIS completion received | jobId=${jobId}`);
-      
+
       // 🔥 CRITICAL: Emit completion event FIRST (never block on DB)
       try {
         auditProgressService.emitCompleted(updatedJob.project_id, {
@@ -250,15 +308,15 @@ export const completeJob = async (req, res) => {
       } catch (emitError) {
         console.error(`[ERROR] Failed to emit completion event | projectId=${updatedJob.project_id} | reason="${emitError.message}"`);
       }
-      
+
       // Update project crawl_status to COMPLETED after PAGE_ANALYSIS completes (best-effort)
       try {
         // Get project to calculate accurate audit duration using lifecycle timestamps
         const project = await SeoProject.findById(updatedJob.project_id);
         const analysisCompletionTime = new Date();
-        
+
         // 🎯 TRUE audit duration = last_analysis_at - audit_started_at (lifecycle, not worker timing)
-        const auditDurationMs = project?.audit_started_at 
+        const auditDurationMs = project?.audit_started_at
           ? analysisCompletionTime.getTime() - project.audit_started_at.getTime()
           : 0;
 
@@ -277,11 +335,11 @@ export const completeJob = async (req, res) => {
       try {
         // Create SEO_SCORING job after PAGE_ANALYSIS completes successfully
         const seoScoringJob = await jobService.createAndDispatchSeoScoringJob(updatedJob);
-        
+
         if (seoScoringJob) {
           // Atomic dispatch - prevents duplicates
           const dispatchedJob = await jobService.atomicallyDispatchJob(seoScoringJob._id);
-          
+
           if (dispatchedJob) {
             // Emit stage change event for frontend
             auditProgressService.emitStageChanged(jobId, {
@@ -289,7 +347,7 @@ export const completeJob = async (req, res) => {
               to: 'SEO_SCORING',
               newJobId: seoScoringJob._id.toString()
             });
-            
+
             // Dispatch to Python worker (fire-and-forget)
             jobDispatcher.dispatchSeoScoringJob(dispatchedJob).catch(error => {
               console.error(`[ERROR] SEO_SCORING dispatch failed | jobId=${dispatchedJob._id} | reason="${error.message}"`);
@@ -301,14 +359,14 @@ export const completeJob = async (req, res) => {
       }
     } else if (updatedJob.jobType === JOB_TYPES.AI_VISIBILITY_SCORING && updatedJob.status === 'completed') {
       console.log(`[API] AI_VISIBILITY_SCORING completion received | jobId=${jobId}`);
-      
+
       // 🔥 CRITICAL: Update AIVisibilityProject with final scoring results
       try {
         // Extract aiProjectId from job input_data
         const aiProjectId = updatedJob.input_data?.aiProjectId;
-        
+
         console.log('[SCORING COMPLETION LOOKUP]', { jobId: updatedJob._id, aiProjectId });
-        
+
         if (!aiProjectId) {
           console.error(`[AI_PROJECT] CRITICAL: No aiProjectId in job input_data | jobId=${updatedJob._id}`);
           return res.json({
@@ -316,7 +374,7 @@ export const completeJob = async (req, res) => {
             message: 'Job marked as completed (AI project update skipped)'
           });
         }
-        
+
         // Get current version first for optimistic locking
         const currentProject = await AIVisibilityProject.findById(aiProjectId);
         if (!currentProject) {
@@ -343,7 +401,7 @@ export const completeJob = async (req, res) => {
             },
             { new: true }
           );
-          
+
           if (aiProjectUpdate) {
             console.log(`[AI_PROJECT] Final scoring completed | aiProjectId=${aiProjectUpdate._id} | score=${stats?.overallScore || 0} | version=${aiProjectUpdate.version}`);
           } else {
@@ -359,7 +417,7 @@ export const completeJob = async (req, res) => {
       } catch (updateError) {
         console.error(`[AI_PROJECT] Failed to update final scoring | jobId=${updatedJob._id}:`, updateError);
       }
-      
+
       // 🔥 CRITICAL: Emit clean completion event (no old AI fields)
       try {
         auditProgressService.emitCompleted(updatedJob.project_id, {
@@ -383,14 +441,14 @@ export const completeJob = async (req, res) => {
       try {
         // Explicitly extract aiProjectId to guarantee propagation
         const aiProjectId = updatedJob.input_data.aiProjectId;
-        
+
         if (!aiProjectId) {
           console.error(`[ERROR] AI_LINK_DISCOVERY missing aiProjectId in input_data | jobId=${updatedJob._id}`);
           throw new Error('AI_LINK_DISCOVERY job missing aiProjectId for chaining');
         }
-        
+
         console.log(`[CHAINING] Creating AI_VISIBILITY with aiProjectId=${aiProjectId}`);
-        
+
         const nextJob = await jobService.createJob({
           user_id: updatedJob.user_id,
           seo_project_id: aiProjectId,
@@ -402,7 +460,7 @@ export const completeJob = async (req, res) => {
         });
 
         console.log(`[CHAINING] AI_VISIBILITY job queued | jobId=${nextJob._id} | sourceJobId=${updatedJob._id}`);
-        
+
         // 🔥 CRITICAL: Emit stage change event for frontend (AI chaining)
         try {
           await auditProgressService.emitStageChanged(updatedJob._id.toString(), {
@@ -417,7 +475,7 @@ export const completeJob = async (req, res) => {
         } catch (emitError) {
           console.error(`[ERROR] Failed to emit AI stage change event | oldJobId=${updatedJob._id} | reason="${emitError.message}"`);
         }
-        
+
         // Update AI project with latest job ID
         try {
           await AIVisibilityProject.updateOne(
@@ -428,7 +486,7 @@ export const completeJob = async (req, res) => {
         } catch (e) {
           console.error(`[ERROR] Failed to update AI project aiJobId: ${e.message}`);
         }
-        
+
         // Dispatch to Python worker (fire-and-forget)
         await jobService.atomicallyDispatchJob(nextJob._id);
         jobDispatcher.dispatchAiVisibilityJob(nextJob).catch(error => {
@@ -450,7 +508,7 @@ export const completeJob = async (req, res) => {
         const aiScoringJob = await jobService.createAndDispatchAiVisibilityScoringJob(updatedJob);
 
         console.log(`[CHAINING] AI_VISIBILITY_SCORING job queued | jobId=${aiScoringJob._id} | sourceJobId=${updatedJob._id}`);
-        
+
         // 🔥 CRITICAL: Emit stage change event for frontend (AI chaining)
         try {
           await auditProgressService.emitStageChanged(updatedJob._id.toString(), {
@@ -465,7 +523,7 @@ export const completeJob = async (req, res) => {
         } catch (emitError) {
           console.error(`[ERROR] Failed to emit AI stage change event | oldJobId=${updatedJob._id} | reason="${emitError.message}"`);
         }
-        
+
         // Update AI project with latest job ID
         try {
           await AIVisibilityProject.updateOne(
@@ -476,7 +534,7 @@ export const completeJob = async (req, res) => {
         } catch (e) {
           console.error(`[ERROR] Failed to update AI project aiJobId: ${e.message}`);
         }
-        
+
         // 🔥 CRITICAL: Dispatch to Python worker (fire-and-forget)
         jobDispatcher.dispatchAiVisibilityScoringJob(aiScoringJob).catch(error => {
           console.error(`[ERROR] AI_VISIBILITY_SCORING dispatch failed | jobId=${aiScoringJob._id} | reason="${error.message}"`);
@@ -554,7 +612,7 @@ export const failJob = async (req, res) => {
 
     // 🔥 CRITICAL: Update AIVisibilityProject status for AI jobs
     if (updatedJob.jobType && (
-      updatedJob.jobType === JOB_TYPES.AI_VISIBILITY || 
+      updatedJob.jobType === JOB_TYPES.AI_VISIBILITY ||
       updatedJob.jobType === JOB_TYPES.AI_VISIBILITY_SCORING
     )) {
       try {
@@ -569,14 +627,14 @@ export const failJob = async (req, res) => {
               'error.lastError': errorObj.message,
               lastActivityAt: new Date()
             },
-            $inc: { 
+            $inc: {
               version: 1,
               'error.retryCount': 1
             }
           },
           { new: true }
         );
-        
+
         if (aiProjectUpdate) {
           console.log(`[AI_PROJECT] Marked as failed | aiProjectId=${aiProjectUpdate._id} | error="${errorObj.message}"`);
         } else {
@@ -585,6 +643,53 @@ export const failJob = async (req, res) => {
       } catch (updateError) {
         console.error(`[AI_PROJECT] Failed to mark as failed | jobId=${updatedJob._id}:`, updateError);
       }
+    }
+
+    // 🔥 CRITICAL: If TECHNICAL_DOMAIN fails, continue pipeline to PAGE_SCRAPING
+    if (updatedJob.jobType === JOB_TYPES.TECHNICAL_DOMAIN) {
+      console.log(`[FALLBACK] TECHNICAL_DOMAIN failed, continuing pipeline to PAGE_SCRAPING | jobId=${jobId}`);
+      try {
+        const sourceJobId = updatedJob.input_data?.source_job_id;
+        let sourceJob = updatedJob;
+
+        if (sourceJobId) {
+          const linkDiscoveryJob = await jobService.getJobById(sourceJobId);
+          if (linkDiscoveryJob) {
+            sourceJob = linkDiscoveryJob;
+          }
+        }
+
+        const pageScrapingJob = await jobService.createAndDispatchPageScrapingJob(sourceJob);
+        if (pageScrapingJob) {
+          const dispatchedJob = await jobService.atomicallyDispatchJob(pageScrapingJob._id);
+          if (dispatchedJob) {
+            auditProgressService.emitStageChanged(jobId, {
+              from: 'TECHNICAL_DOMAIN',
+              to: 'PAGE_SCRAPING',
+              newJobId: pageScrapingJob._id.toString()
+            });
+            jobDispatcher.dispatchPageScrapingJob(dispatchedJob).catch(error => {
+              console.error(`[ERROR] PAGE_SCRAPING dispatch failed | jobId=${dispatchedJob._id} | reason="${error.message}"`);
+            });
+            console.log(`[FALLBACK] PAGE_SCRAPING created after TECHNICAL_DOMAIN failure | jobId=${pageScrapingJob._id}`);
+          }
+        }
+      } catch (fallbackError) {
+        console.error(`[ERROR] Fallback PAGE_SCRAPING creation failed after TECHNICAL_DOMAIN failure | reason="${fallbackError.message}"`);
+      }
+
+      // Return early - don't reset project to draft for TECHNICAL_DOMAIN failure
+      return res.json({
+        success: true,
+        message: 'Job marked as failed (pipeline continues)',
+        data: {
+          job_id: jobId,
+          status: 'failed',
+          failed_at: updatedJob.failed_at,
+          error: errorObj.message,
+          stats: stats || {}
+        }
+      });
     }
 
     // CRITICAL: Update project status to draft when job fails

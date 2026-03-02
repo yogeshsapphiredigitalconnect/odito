@@ -15,7 +15,7 @@ class JobDispatcher {
    */
   async queueLinkDiscoveryJob(job) {
     this.jobQueue.push(job);
-    
+
     // Start processing if not already running
     if (!this.isProcessing) {
       this.processQueue();
@@ -31,25 +31,25 @@ class JobDispatcher {
     }
 
     this.isProcessing = true;
-    
+
     while (this.jobQueue.length > 0) {
       const job = this.jobQueue.shift();
-      
+
       // CRITICAL: Only LINK_DISCOVERY jobs should ever be in the queue
       if (job.jobType !== 'LINK_DISCOVERY') {
         continue; // Silent skip - no logs for internal queue operations
       }
-      
+
       try {
         await this.dispatchLinkDiscoveryJob(job);
       } catch (error) {
         console.error(`[ERROR] LINK_DISCOVERY processing failed | jobId=${job._id} | reason="${error.message}"`);
       }
-      
+
       // Small delay between jobs
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
-    
+
     this.isProcessing = false;
     // REMOVED: "Queue processing completed" log - this is internal detail
   }
@@ -78,20 +78,20 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] LINK_DISCOVERY dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch job to Python worker',
@@ -120,20 +120,20 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] PAGE_SCRAPING dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch PAGE_SCRAPING job to Python worker',
@@ -162,20 +162,20 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] PAGE_ANALYSIS dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch PAGE_ANALYSIS job to Python worker',
@@ -204,20 +204,20 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] SEO_SCORING dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch SEO_SCORING job to Python worker',
@@ -234,10 +234,10 @@ class JobDispatcher {
   async dispatchPerformanceMobileJob(job) {
     try {
       console.log(`[DEBUG] dispatchPerformanceMobileJob called with jobId=${job._id}`);
-      
+
       const dispatchUrl = `${this.pythonBaseURL}/api/jobs/performance-mobile`;
       console.log(`[DEBUG] Dispatching PERFORMANCE_MOBILE to URL: ${dispatchUrl}`);
-      
+
       // Job should already be marked as dispatched atomically
       // Just send the HTTP request to Python
       const response = await axios.post(dispatchUrl, {
@@ -251,9 +251,9 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log(`[DEBUG] PERFORMANCE_MOBILE HTTP response status: ${response.status}`);
-      
+
       return {
         success: true,
         jobId: job._id
@@ -261,13 +261,13 @@ class JobDispatcher {
     } catch (error) {
       console.error(`[ERROR] PERFORMANCE_MOBILE dispatch failed | jobId=${job._id} | reason="${error.message}"`);
       console.error(`[ERROR] Full error stack: ${error.stack}`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch PERFORMANCE_MOBILE job to Python worker',
@@ -284,10 +284,10 @@ class JobDispatcher {
   async dispatchPerformanceDesktopJob(job) {
     try {
       console.log(`[DEBUG] dispatchPerformanceDesktopJob called with jobId=${job._id}`);
-      
+
       const dispatchUrl = `${this.pythonBaseURL}/api/jobs/performance-desktop`;
       console.log(`[DEBUG] Dispatching PERFORMANCE_DESKTOP to URL: ${dispatchUrl}`);
-      
+
       // Job should already be marked as dispatched atomically
       // Just send the HTTP request to Python
       const response = await axios.post(dispatchUrl, {
@@ -301,9 +301,9 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log(`[DEBUG] PERFORMANCE_DESKTOP HTTP response status: ${response.status}`);
-      
+
       return {
         success: true,
         jobId: job._id
@@ -311,13 +311,13 @@ class JobDispatcher {
     } catch (error) {
       console.error(`[ERROR] PERFORMANCE_DESKTOP dispatch failed | jobId=${job._id} | reason="${error.message}"`);
       console.error(`[ERROR] Full error stack: ${error.stack}`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch PERFORMANCE_DESKTOP job to Python worker',
@@ -345,20 +345,20 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] AI_LINK_DISCOVERY dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch AI_LINK_DISCOVERY job to Python worker',
@@ -381,13 +381,13 @@ class JobDispatcher {
         userId: job.user_id.toString(),
         aiProjectId: job.input_data?.aiProjectId?.toString() || null
       };
-      
+
       console.log("[DISPATCH] AI_VISIBILITY payload:", {
         projectId: payload.projectId,
         aiProjectId: payload.aiProjectId,
         hasInputData: !!job.input_data
       });
-      
+
       // Job should already be marked as dispatched atomically
       // Just send the HTTP request to Python
       const response = await axios.post(`${this.pythonBaseURL}/api/jobs/ai-visibility`, payload, {
@@ -396,20 +396,20 @@ class JobDispatcher {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] AI_VISIBILITY dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch AI_VISIBILITY job to Python worker',
@@ -430,31 +430,71 @@ class JobDispatcher {
         sourceJobId: job.input_data?.source_job_id || '',
         aiProjectId: job.input_data?.aiProjectId || null
       };
-      
+
       console.log('[SCORING DISPATCH PAYLOAD]', payload);
-      
+
       const response = await axios.post(`${this.pythonBaseURL}/api/jobs/ai-visibility-scoring`, payload, {
         timeout: 300000,
         headers: {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
       console.error(`[ERROR] AI_VISIBILITY_SCORING dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-      
+
       await jobService.updateJobStatus(job._id, 'FAILED', {
         completed_at: new Date(),
         error_message: `Dispatch failed: ${error.message}`
       });
-      
+
       return {
         success: false,
         message: 'Failed to dispatch AI_VISIBILITY_SCORING job to Python worker',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Dispatch TECHNICAL_DOMAIN job directly to Python worker via HTTP
+   * This is PUSH model - Node actively calls Python
+   * CRITICAL: Pure data collection - no scoring or rule logic
+   */
+  async dispatchTechnicalDomainJob(job) {
+    try {
+      const response = await axios.post(`${this.pythonBaseURL}/api/jobs/technical-domain`, {
+        jobId: job._id.toString(),
+        projectId: job.project_id.toString(),
+        userId: job.user_id.toString(),
+        domain: job.input_data.domain
+      }, {
+        timeout: 60000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return {
+        success: true,
+        jobId: job._id
+      };
+    } catch (error) {
+      console.error(`[ERROR] TECHNICAL_DOMAIN dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+
+      // Mark job as failed if dispatch fails
+      await jobService.updateJobStatus(job._id, 'FAILED', {
+        completed_at: new Date(),
+        error_message: `Dispatch failed: ${error.message}`
+      });
+
+      return {
+        success: false,
+        message: 'Failed to dispatch TECHNICAL_DOMAIN job to Python worker',
         error: error.message
       };
     }

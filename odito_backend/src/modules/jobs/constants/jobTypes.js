@@ -17,6 +17,7 @@ export const JOB_TYPES = {
   
   // 🆕 NEW SCRAPING PIPELINE
   LINK_DISCOVERY: 'LINK_DISCOVERY',
+  TECHNICAL_DOMAIN: 'TECHNICAL_DOMAIN',
   PAGE_SCRAPING: 'PAGE_SCRAPING',
   PAGE_ANALYSIS: 'PAGE_ANALYSIS',
   SEO_SCORING: 'SEO_SCORING',
@@ -86,6 +87,12 @@ export const JOB_TYPE_CONFIG = {
     timeout: 1800000,      // 30 minutes
     priority: 1,            // 🔥 HIGHEST PRIORITY
     workerType: 'crawl'
+  },
+  [JOB_TYPES.TECHNICAL_DOMAIN]: {
+    maxAttempts: 1,
+    timeout: 60000,        // 1 minute
+    priority: 1,
+    workerType: 'technical_domain'
   },
   [JOB_TYPES.PAGE_SCRAPING]: {
     maxAttempts: 2,
