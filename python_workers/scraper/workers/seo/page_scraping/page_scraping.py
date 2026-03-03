@@ -3,6 +3,10 @@
 
 
 import os
+import re
+import difflib
+import random
+from urllib.parse import urlparse, urljoin
 
 import threading
 
@@ -21,6 +25,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 import requests
+from bs4 import BeautifulSoup
 
 
 
@@ -30,7 +35,10 @@ from scraper.shared.orchestrator import scrape_page_data
 
 from scraper.shared.screenshots import clear_screenshot_registry, take_page_screenshot
 
+from scraper.shared.utils import normalize_url, get_registrable_domain
+
 from db import seo_internal_links, seo_page_data
+from config.config import USER_AGENTS
 
 
 
@@ -102,6 +110,173 @@ def is_job_cancelled(job_id: str) -> bool:
 
         return job_id in cancelled_jobs
 
+
+
+# ---------------------------------------------------------------------------
+# Feature 1 — Cloaking Detection (Rule 216)
+# ---------------------------------------------------------------------------
+def _extract_visible_text(html: str) -> str:
+    """Extract and normalize visible text from HTML for cloaking comparison."""
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        # Remove non-visible elements
+        for tag in soup.find_all(["script", "style", "noscript", "head"]):
+            tag.decompose()
+        text = soup.get_text(separator=" ")
+        # Normalize whitespace
+        text = re.sub(r"\s+", " ", text).strip().lower()
+        return text
+    except Exception:
+        return ""
+
+
+def detect_cloaking(raw_html: str, rendered_html: str) -> dict:
+    """
+    Compare raw server HTML vs JS-rendered HTML to detect cloaking.
+    Pure comparison function — caller provides both HTML versions.
+    Flags cloaking if text similarity < 70%.
+    """
+    try:
+        raw_text = _extract_visible_text(raw_html)
+        rendered_text = _extract_visible_text(rendered_html)
+
+        # Edge case: both empty or very short — skip comparison
+        if len(raw_text) < 50 and len(rendered_text) < 50:
+            return {
+                "cloaking_checked": True,
+                "cloaking_similarity_score": 1.0,
+                "cloaking_flagged": False,
+                "note": "insufficient_text_for_comparison"
+            }
+
+        similarity = difflib.SequenceMatcher(None, raw_text, rendered_text).ratio()
+
+        return {
+            "cloaking_checked": True,
+            "cloaking_similarity_score": round(similarity, 4),
+            "cloaking_flagged": similarity < 0.70
+        }
+    except Exception as e:
+        return {
+            "cloaking_checked": False,
+            "error": str(e)
+        }
+
+
+def _fetch_raw_html_only(url: str, timeout: int = 8) -> str:
+    """
+    Lightweight raw HTTP GET — no Selenium, no JS detection.
+    Used to capture raw server HTML for cloaking comparison.
+    """
+    try:
+        headers = {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "text/html"
+        }
+        res = requests.get(url, headers=headers, timeout=timeout)
+        res.raise_for_status()
+        return res.text
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# Feature 2 — Media Detection (Rules 237, 238)
+# ---------------------------------------------------------------------------
+def detect_media_elements(html: str) -> dict:
+    """
+    Parse DOM to detect video/audio elements and accessibility compliance.
+    Returns structured media analysis object.
+    """
+    try:
+        soup = BeautifulSoup(html, "lxml")
+
+        has_video = bool(soup.find("video"))
+        has_audio = bool(soup.find("audio"))
+        has_captions = bool(soup.find("track", attrs={"kind": "captions"}))
+
+        # Check for transcript links (anchor tags containing "transcript" in text or href)
+        has_transcript = False
+        for a_tag in soup.find_all("a", href=True):
+            link_text = (a_tag.get_text() or "").lower()
+            link_href = (a_tag.get("href") or "").lower()
+            if "transcript" in link_text or "transcript" in link_href:
+                has_transcript = True
+                break
+
+        return {
+            "has_video": has_video,
+            "has_audio": has_audio,
+            "has_captions": has_captions,
+            "has_transcript": has_transcript
+        }
+    except Exception as e:
+        return {
+            "has_video": False,
+            "has_audio": False,
+            "has_captions": False,
+            "has_transcript": False,
+            "error": str(e)
+        }
+
+
+# ---------------------------------------------------------------------------
+# Internal Link Extraction for CRAWL_GRAPH
+# ---------------------------------------------------------------------------
+_EXCLUDED_SCHEMES = frozenset(["mailto:", "tel:", "javascript:"])
+
+
+def extract_internal_links(soup, page_url: str) -> list:
+    """
+    Extract normalized same-domain internal links from a BeautifulSoup object.
+    Lightweight — no HTTP calls, operates on already-parsed HTML.
+
+    Returns a deduplicated list of normalized internal URLs.
+    Always returns a list (empty if no links found).
+    """
+    try:
+        parsed_page = urlparse(page_url)
+        page_domain = get_registrable_domain(page_url)
+        if not page_domain:
+            return []
+
+        seen = set()
+        results = []
+
+        for anchor in soup.find_all("a", href=True):
+            href = (anchor.get("href") or "").strip()
+
+            # Skip empty, fragment-only, and excluded schemes
+            if not href or href.startswith("#"):
+                continue
+            if any(href.lower().startswith(s) for s in _EXCLUDED_SCHEMES):
+                continue
+
+            # Resolve relative URLs
+            try:
+                absolute_url = urljoin(page_url, href)
+            except Exception:
+                continue
+
+            # Remove fragment
+            parsed = urlparse(absolute_url)
+            if not parsed.netloc:
+                continue
+
+            # Same-domain check
+            link_domain = get_registrable_domain(absolute_url)
+            if link_domain != page_domain:
+                continue
+
+            # Normalize and deduplicate
+            normalized = normalize_url(absolute_url)
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                results.append(normalized)
+
+        return results
+    except Exception:
+        return []
 
 
 def execute_page_scraping_logic(job: PageScrapingJob):
@@ -226,7 +401,39 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
                     )
 
-                    
+                    # --- Internal Link Extraction for CRAWL_GRAPH ---
+                    try:
+                        raw_html_for_links = page_data.get("raw_html", "")
+                        if raw_html_for_links:
+                            link_soup = BeautifulSoup(raw_html_for_links, "lxml")
+                            page_data["internal_links"] = extract_internal_links(link_soup, url)
+                        else:
+                            page_data["internal_links"] = []
+                    except Exception as link_err:
+                        print(f"[WARNING] Internal link extraction failed for {url}: {link_err}")
+                        page_data["internal_links"] = []
+
+                    # --- Feature 1: Cloaking Detection ---
+                    try:
+                        # page_data["raw_html"] is the "best" HTML from fetch_html()
+                        # (possibly Selenium-rendered). Get raw server HTML separately.
+                        raw_server_html = _fetch_raw_html_only(url)
+                        rendered_html = page_data.get("raw_html", "")
+                        if raw_server_html and rendered_html:
+                            page_data["cloaking_analysis"] = detect_cloaking(raw_server_html, rendered_html)
+                        else:
+                            page_data["cloaking_analysis"] = {"cloaking_checked": False, "note": "html_unavailable"}
+                    except Exception as cloak_err:
+                        print(f"[WARNING] Cloaking detection failed for {url}: {cloak_err}")
+                        page_data["cloaking_analysis"] = {"cloaking_checked": False, "error": str(cloak_err)}
+
+                    # --- Feature 2: Media Detection ---
+                    try:
+                        html_for_media = page_data.get("raw_html", "")
+                        if html_for_media:
+                            page_data["media_analysis"] = detect_media_elements(html_for_media)
+                    except Exception as media_err:
+                        print(f"[WARNING] Media detection failed for {url}: {media_err}")
 
                     return page_data
 
@@ -278,7 +485,9 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
                         "http_status_code": page_data.get("http_status_code"),
 
-                        "response_time_ms": page_data.get("response_time_ms")
+                        "response_time_ms": page_data.get("response_time_ms"),
+
+                        "internal_links": []
 
                     }
 
@@ -328,7 +537,9 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
                     "error": str(e),
 
-                    "screenshot_path": None
+                    "screenshot_path": None,
+
+                    "internal_links": []
 
                 }       
 

@@ -327,6 +327,107 @@ class JobDispatcher {
   }
 
   /**
+   * Dispatch HEADLESS_ACCESSIBILITY job directly to Python worker via HTTP
+   * This is PUSH model - Node actively calls Python
+   * CRITICAL: Job must already be atomically marked as dispatched
+   */
+  async dispatchHeadlessAccessibilityJob(job) {
+    try {
+      console.log(`[DEBUG] dispatchHeadlessAccessibilityJob called with jobId=${job._id}`);
+
+      const dispatchUrl = `${this.pythonBaseURL}/api/jobs/headless-accessibility`;
+      console.log(`[DEBUG] Dispatching HEADLESS_ACCESSIBILITY to URL: ${dispatchUrl}`);
+
+      // Job should already be marked as dispatched atomically
+      // Just send the HTTP request to Python
+      const response = await axios.post(dispatchUrl, {
+        jobId: job._id.toString(),
+        projectId: job.project_id.toString(),
+        userId: job.user_id.toString(),
+        sourceJobId: job.input_data.source_job_id,
+        urls: job.input_data.urls || []
+      }, {
+        timeout: 300000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`[DEBUG] HEADLESS_ACCESSIBILITY HTTP response status: ${response.status}`);
+
+      return {
+        success: true,
+        jobId: job._id
+      };
+    } catch (error) {
+      console.error(`[ERROR] HEADLESS_ACCESSIBILITY dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+      console.error(`[ERROR] Full error stack: ${error.stack}`);
+
+      // Mark job as failed if dispatch fails
+      await jobService.updateJobStatus(job._id, 'FAILED', {
+        completed_at: new Date(),
+        error_message: `Dispatch failed: ${error.message}`
+      });
+
+      return {
+        success: false,
+        message: 'Failed to dispatch HEADLESS_ACCESSIBILITY job to Python worker',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Dispatch CRAWL_GRAPH job directly to Python worker via HTTP
+   * This is PUSH model - Node actively calls Python
+   * CRITICAL: Pure computation — no HTTP crawling, reads from MongoDB only
+   */
+  async dispatchCrawlGraphJob(job) {
+    try {
+      console.log(`[DEBUG] dispatchCrawlGraphJob called with jobId=${job._id}`);
+
+      const dispatchUrl = `${this.pythonBaseURL}/api/jobs/crawl-graph`;
+      console.log(`[DEBUG] Dispatching CRAWL_GRAPH to URL: ${dispatchUrl}`);
+
+      // Job should already be marked as dispatched atomically
+      // Just send the HTTP request to Python
+      const response = await axios.post(dispatchUrl, {
+        jobId: job._id.toString(),
+        projectId: job.project_id.toString(),
+        userId: job.user_id.toString(),
+        sourceJobId: job.input_data.source_job_id
+      }, {
+        timeout: 60000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`[DEBUG] CRAWL_GRAPH HTTP response status: ${response.status}`);
+
+      return {
+        success: true,
+        jobId: job._id
+      };
+    } catch (error) {
+      console.error(`[ERROR] CRAWL_GRAPH dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+      console.error(`[ERROR] Full error stack: ${error.stack}`);
+
+      // Mark job as failed if dispatch fails
+      await jobService.updateJobStatus(job._id, 'FAILED', {
+        completed_at: new Date(),
+        error_message: `Dispatch failed: ${error.message}`
+      });
+
+      return {
+        success: false,
+        message: 'Failed to dispatch CRAWL_GRAPH job to Python worker',
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Dispatch AI_LINK_DISCOVERY job directly to Python worker via HTTP
    */
   async dispatchAiLinkDiscoveryJob(job) {

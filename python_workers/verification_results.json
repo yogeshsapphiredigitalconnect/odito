@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-03-03T12:02:33.300183",
+  "tests": {
+    "database_connectivity": {
+      "seo_page_data": {
+        "exists": true,
+        "document_count": 20
+      },
+      "seo_page_performance": {
+        "exists": true,
+        "document_count": 40
+      },
+      "seo_headless_data": {
+        "exists": true,
+        "document_count": 19
+      },
+      "seo_crawl_graph": {
+        "exists": true,
+        "document_count": 20
+      },
+      "domain_technical_reports": {
+        "exists": true,
+        "document_count": 1
+      },
+      "seo_page_issues": {
+        "exists": true,
+        "document_count": 212
+      }
+    },
+    "rule_engine_import": {
+      "error": "No module named 'rules'"
+    },
+    "rule_execution": {
+      "error": "No module named 'rules'"
+    },
+    "data_flow_structure": {
+      "error": "[Errno 2] No such file or directory: 'workers/seo/page_analysis/page_analysis.py'"
+    },
+    "real_project_analysis": {
+      "error": "No module named 'page_analysis'"
+    }
+  },
+  "summary": {
+    "database_safe": true,
+    "engine_loaded": false,
+    "rules_executing": false,
+    "data_flow_safe": false,
+    "real_data_working": false
+  },
+  "final_verdict": "RISKY"
+}

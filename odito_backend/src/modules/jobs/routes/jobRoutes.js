@@ -1,5 +1,6 @@
 import express from 'express';
-import { completeJob, failJob, claimJob, validateCompleteJob, validateFailJob, validateClaimJob } from '../controller/jobController.js';
+import { failJob, claimJob, validateCompleteJob, validateFailJob, validateClaimJob } from '../controller/jobController.js';
+import completeJobSafely from '../controller/jobCompletionHandler.js';
 import { JobService } from '../service/jobService.js';
 import auditProgressService from '../service/auditProgressService.js';
 import DomainTechnicalReport from '../model/DomainTechnicalReport.js';
@@ -62,7 +63,7 @@ router.get('/:jobId/status', async (req, res) => {
  */
 
 // POST /jobs/:jobId/complete - Mark job as completed
-router.post('/:jobId/complete', validateCompleteJob, completeJob);
+router.post('/:jobId/complete', validateCompleteJob, completeJobSafely);
 
 // POST /jobs/:jobId/fail - Mark job as failed  
 router.post('/:jobId/fail', validateFailJob, failJob);
@@ -257,6 +258,79 @@ router.post('/domain-technical-report', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to store domain technical report',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Headless Accessibility Report endpoint (for Python HEADLESS_ACCESSIBILITY worker)
+ */
+
+// POST /jobs/headless-accessibility-report - Store headless accessibility scan results
+router.post('/headless-accessibility-report', async (req, res) => {
+  try {
+    const { projectId, seo_jobId, results } = req.body;
+
+    // Input validation
+    if (!projectId || !seo_jobId || !Array.isArray(results)) {
+      console.log(`⚠️ Headless accessibility report missing required fields | projectId=${projectId} | seo_jobId=${seo_jobId} | resultsType=${typeof results}`);
+      return res.status(400).json({
+        success: false,
+        message: 'projectId, seo_jobId, and results array are required'
+      });
+    }
+
+    console.log(`[API] Storing headless accessibility report | projectId=${projectId} | seo_jobId=${seo_jobId} | resultsCount=${results.length}`);
+
+    // Import model dynamically to avoid circular dependencies
+    const HeadlessData = (await import('../model/HeadlessData.js')).default;
+
+    // Prepare documents for bulk insert
+    const documents = results.map(result => ({
+      projectId,
+      jobId: seo_jobId,
+      url: result.url,
+      render_status: result.render_status,
+      statusCode: result.statusCode,
+      axeViolations: result.axeViolations || [],
+      axeViolationCount: result.axeViolationCount || 0,
+      axePassedCount: result.axePassedCount || 0,
+      domMetrics: result.domMetrics || {},
+      error: result.error || null,
+      keyboard_analysis: result.keyboard_analysis || null,
+      scannedAt: result.scannedAt ? new Date(result.scannedAt) : new Date()
+    }));
+
+    // Use bulkWrite for better performance and duplicate handling
+    const bulkOps = documents.map(doc => ({
+      updateOne: {
+        filter: { projectId: doc.projectId, url: doc.url },
+        update: { $set: doc },
+        upsert: true
+      }
+    }));
+
+    const bulkResult = await HeadlessData.bulkWrite(bulkOps);
+
+    console.log(`[API] Headless accessibility report stored | projectId=${projectId} | inserted=${bulkResult.upsertedCount} | modified=${bulkResult.modifiedCount} | matched=${bulkResult.matchedCount}`);
+
+    res.json({
+      success: true,
+      message: 'Headless accessibility report stored',
+      data: {
+        projectId,
+        insertedCount: bulkResult.upsertedCount,
+        modifiedCount: bulkResult.modifiedCount,
+        totalProcessed: results.length
+      }
+    });
+
+  } catch (error) {
+    console.error(`[ERROR] Failed to store headless accessibility report:`, error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to store headless accessibility report',
       error: error.message
     });
   }

@@ -472,6 +472,67 @@ export class JobService {
   }
 
   /**
+   * Atomically create and dispatch HEADLESS_ACCESSIBILITY job
+   * CRITICAL: This operation must be atomic to prevent duplicates
+   */
+  async createAndDispatchHeadlessAccessibilityJob(pageScrapingJob) {
+    try {
+      console.log(`[DEBUG] createAndDispatchHeadlessAccessibilityJob called with pageScrapingJob._id=${pageScrapingJob._id}`);
+
+      // Create HEADLESS_ACCESSIBILITY job with source job reference
+      const headlessA11yJob = await this.createJob({
+        user_id: pageScrapingJob.user_id,
+        seo_project_id: pageScrapingJob.project_id,
+        jobType: JOB_TYPES.HEADLESS_ACCESSIBILITY,
+        input_data: {
+          source_job_id: pageScrapingJob._id.toString(),
+          urls: pageScrapingJob.input_data?.urls || []
+        },
+        priority: JOB_TYPE_CONFIG[JOB_TYPES.HEADLESS_ACCESSIBILITY].priority
+      });
+
+      console.log(`[QUEUE] HEADLESS_ACCESSIBILITY job queued | jobId=${headlessA11yJob._id} | sourceJobId=${pageScrapingJob._id}`);
+
+      return headlessA11yJob;
+
+    } catch (error) {
+      console.error(`[ERROR] HEADLESS_ACCESSIBILITY creation failed | sourceJobId=${pageScrapingJob._id} | reason="${error.message}"`);
+      console.error(`[ERROR] Full error stack: ${error.stack}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically create and dispatch CRAWL_GRAPH job
+   * CRITICAL: This is a pure computation step — no HTTP crawling
+   */
+  async createAndDispatchCrawlGraphJob(pageScrapingJob) {
+    try {
+      console.log(`[DEBUG] createAndDispatchCrawlGraphJob called with pageScrapingJob._id=${pageScrapingJob._id}`);
+
+      // Create CRAWL_GRAPH job with source job reference
+      const crawlGraphJob = await this.createJob({
+        user_id: pageScrapingJob.user_id,
+        seo_project_id: pageScrapingJob.project_id,
+        jobType: JOB_TYPES.CRAWL_GRAPH,
+        input_data: {
+          source_job_id: pageScrapingJob._id.toString()
+        },
+        priority: JOB_TYPE_CONFIG[JOB_TYPES.CRAWL_GRAPH].priority
+      });
+
+      console.log(`[QUEUE] CRAWL_GRAPH job queued | jobId=${crawlGraphJob._id} | sourceJobId=${pageScrapingJob._id}`);
+
+      return crawlGraphJob;
+
+    } catch (error) {
+      console.error(`[ERROR] CRAWL_GRAPH creation failed | sourceJobId=${pageScrapingJob._id} | reason="${error.message}"`);
+      console.error(`[ERROR] Full error stack: ${error.stack}`);
+      throw error;
+    }
+  }
+
+  /**
    * Atomically create and dispatch PAGE_ANALYSIS job
    * CRITICAL: This operation must be atomic to prevent duplicates
    */

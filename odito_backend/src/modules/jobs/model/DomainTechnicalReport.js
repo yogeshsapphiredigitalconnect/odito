@@ -39,6 +39,14 @@ const domainTechnicalReportSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  sitemapDeepValidation: {
+    total_urls_checked: { type: Number, default: 0 },
+    non_200_urls: { type: Number, default: 0 },
+    redirected_urls: { type: Number, default: 0 },
+    canonical_mismatches: { type: Number, default: 0 },
+    non_indexable_urls: { type: Number, default: 0 },
+    validation_complete: { type: Boolean, default: false }
+  },
   createdAt: {
     type: Date,
     default: Date.now

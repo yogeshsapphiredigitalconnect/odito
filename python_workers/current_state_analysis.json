@@ -1,0 +1,308 @@
+{
+  "timestamp": "2026-03-03T12:03:01.394848",
+  "analysis": {
+    "database_connectivity": {
+      "seo_page_data": {
+        "exists": true,
+        "document_count": 20,
+        "sample_keys": [
+          "_id",
+          "url",
+          "seo_jobId",
+          "projectId",
+          "sourceJobId",
+          "scrapedAt",
+          "scrape_status",
+          "error",
+          "screenshot_path",
+          "http_status_code",
+          "response_time_ms",
+          "internal_links"
+        ],
+        "has_data": true
+      },
+      "seo_page_performance": {
+        "exists": true,
+        "document_count": 40,
+        "sample_keys": [
+          "_id",
+          "projectId",
+          "seo_jobId",
+          "page_url",
+          "device_type",
+          "analyzed_at",
+          "performance_score",
+          "first_contentful_paint",
+          "largest_contentful_paint",
+          "cumulative_layout_shift",
+          "total_blocking_time",
+          "speed_index",
+          "time_to_interactive",
+          "status",
+          "error",
+          "render_blocking_analysis"
+        ],
+        "has_data": true
+      },
+      "seo_headless_data": {
+        "exists": true,
+        "document_count": 19,
+        "sample_keys": [
+          "_id",
+          "projectId",
+          "url",
+          "__v",
+          "axePassedCount",
+          "axeViolationCount",
+          "axeViolations",
+          "createdAt",
+          "domMetrics",
+          "error",
+          "jobId",
+          "keyboard_analysis",
+          "render_status",
+          "scannedAt",
+          "statusCode",
+          "updatedAt"
+        ],
+        "has_data": true
+      },
+      "seo_crawl_graph": {
+        "exists": true,
+        "document_count": 20,
+        "sample_keys": [
+          "_id",
+          "projectId",
+          "jobId",
+          "url",
+          "inboundLinks",
+          "outboundLinks",
+          "clickDepthFromHomepage",
+          "isOrphan",
+          "analyzedAt"
+        ],
+        "has_data": true
+      },
+      "domain_technical_reports": {
+        "exists": true,
+        "document_count": 1,
+        "sample_keys": [
+          "_id",
+          "projectId",
+          "__v",
+          "createdAt",
+          "domain",
+          "parsedSitemapUrlCount",
+          "robotsContent",
+          "robotsExists",
+          "robotsStatus",
+          "sitemapContent",
+          "sitemapDeepValidation",
+          "sitemapExists",
+          "sitemapStatus"
+        ],
+        "has_data": true
+      },
+      "seo_page_issues": {
+        "exists": true,
+        "document_count": 212,
+        "sample_keys": [
+          "_id",
+          "projectId",
+          "seo_jobId",
+          "page_url",
+          "rule_no",
+          "category",
+          "severity",
+          "issue_code",
+          "rule_id",
+          "issue_message",
+          "detected_value",
+          "expected_value",
+          "data_key",
+          "data_path",
+          "created_at"
+        ],
+        "has_data": true
+      }
+    },
+    "code_structure": {
+      "file_exists": true,
+      "file_size": 29784,
+      "references_modular_engine": true,
+      "has_old_execute_rule": false,
+      "has_seo_rules_import": false,
+      "bulk_collections_pattern": 4,
+      "insert_many_usage": 1,
+      "insert_one_usage": 1,
+      "rule_context_construction": true,
+      "all_issues_aggregation": true,
+      "performance_lookup": true,
+      "headless_lookup": true,
+      "crawl_graph_lookup": true,
+      "technical_report": true
+    },
+    "seo_rules_metadata": {
+      "total_rules": 36,
+      "categories": [
+        "Performance",
+        "Technical",
+        "Content",
+        "Social",
+        "International",
+        "Accessibility",
+        "Tracking",
+        "Schema"
+      ],
+      "severities": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "scorable_rules": 36,
+      "sample_rules": [
+        "TITLE_MISSING",
+        "TITLE_TOO_SHORT",
+        "TITLE_TOO_LONG",
+        "META_DESC_MISSING",
+        "META_DESC_TOO_SHORT"
+      ]
+    },
+    "modular_engine_exists": {
+      "engine_exists": true,
+      "file_status": {
+        "scraper/workers/seo/page_analysis/rules/seo_rule_engine.py": true,
+        "scraper/workers/seo/page_analysis/rules/seo_rule_registry.py": true,
+        "scraper/workers/seo/page_analysis/rules/base_seo_rule.py": true,
+        "scraper/workers/seo/page_analysis/rules/categories/__init__.py": true
+      }
+    },
+    "data_flow_pattern": {
+      "passed_checks": 11,
+      "total_checks": 12,
+      "pass_rate": 91.66666666666666,
+      "detailed_analysis": {
+        "fetches_seo_page_data_once": true,
+        "fetches_performance_once": true,
+        "fetches_headless_once": true,
+        "fetches_crawl_graph_once": true,
+        "fetches_technical_once": true,
+        "builds_performance_lookup": true,
+        "builds_headless_lookup": true,
+        "builds_crawl_graph_lookup": true,
+        "creates_rule_context": true,
+        "aggregates_issues_in_memory": true,
+        "bulk_insert_at_end": true,
+        "no_per_page_db_inserts": false
+      }
+    },
+    "execution_method": {
+      "method": "modular_engine_functional",
+      "has_modular_reference": true,
+      "has_hardcoded_execute_rule": false,
+      "has_inline_loop": false
+    },
+    "real_data_impact": {
+      "project_found": true,
+      "pages_tested": 3,
+      "normalization_success_rate": 100.0,
+      "normalization_results": [
+        {
+          "url": "https://www.sapphiredigitalconnect.com/thank-you",
+          "normalization_success": true,
+          "normalized_keys": [
+            "url",
+            "title",
+            "meta_description",
+            "content_text",
+            "word_count",
+            "viewport",
+            "headings",
+            "images",
+            "image_analysis",
+            "og_tags",
+            "scripts",
+            "structured_data",
+            "canonical",
+            "hreflangs",
+            "tracking",
+            "meta_tags",
+            "social",
+            "doctype",
+            "html_lang",
+            "review_schema_present",
+            "theme_color_present",
+            "hreflang_present"
+          ],
+          "has_title": false,
+          "has_content": false,
+          "has_headings": false
+        },
+        {
+          "url": "https://www.sapphiredigitalconnect.com/sitemap",
+          "normalization_success": true,
+          "normalized_keys": [
+            "url",
+            "title",
+            "meta_description",
+            "content_text",
+            "word_count",
+            "viewport",
+            "headings",
+            "images",
+            "image_analysis",
+            "og_tags",
+            "scripts",
+            "structured_data",
+            "canonical",
+            "hreflangs",
+            "tracking",
+            "meta_tags",
+            "social",
+            "doctype",
+            "html_lang",
+            "review_schema_present",
+            "theme_color_present",
+            "hreflang_present"
+          ],
+          "has_title": true,
+          "has_content": true,
+          "has_headings": true
+        },
+        {
+          "url": "https://www.sapphiredigitalconnect.com/social-media-advertisement",
+          "normalization_success": true,
+          "normalized_keys": [
+            "url",
+            "title",
+            "meta_description",
+            "content_text",
+            "word_count",
+            "viewport",
+            "headings",
+            "images",
+            "image_analysis",
+            "og_tags",
+            "scripts",
+            "structured_data",
+            "canonical",
+            "hreflangs",
+            "tracking",
+            "meta_tags",
+            "social",
+            "doctype",
+            "html_lang",
+            "review_schema_present",
+            "theme_color_present",
+            "hreflang_present"
+          ],
+          "has_title": true,
+          "has_content": true,
+          "has_headings": true
+        }
+      ]
+    }
+  },
+  "critical_issues": [],
+  "final_verdict": "SAFE - Functioning Normally"
+}

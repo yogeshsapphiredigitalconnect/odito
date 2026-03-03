@@ -2,36 +2,42 @@ export const JOB_TYPES = {
   // Keyword Jobs
   KEYWORD_RESEARCH: 'KEYWORD_RESEARCH',
   KEYWORD_RANKING: 'KEYWORD_RANKING',
-  
+
   // Report Jobs
   REPORT_GENERATION: 'REPORT_GENERATION',
 
   // SEO Audit Jobs (migrated from AuditJob)
   SEO_AUDIT: 'SEO_AUDIT',
-  
+
   // Comprehensive SEO Crawl Jobs
   SEO_CRAWL: 'SEO_CRAWL',
-  
+
   // Individual SEO Page Crawl Jobs
   SEO_PAGE_CRAWL: 'SEO_PAGE_CRAWL',
-  
+
   // 🆕 NEW SCRAPING PIPELINE
   LINK_DISCOVERY: 'LINK_DISCOVERY',
   TECHNICAL_DOMAIN: 'TECHNICAL_DOMAIN',
   PAGE_SCRAPING: 'PAGE_SCRAPING',
   PAGE_ANALYSIS: 'PAGE_ANALYSIS',
   SEO_SCORING: 'SEO_SCORING',
-  
+
   // Performance Analysis Jobs
   PERFORMANCE_MOBILE: 'PERFORMANCE_MOBILE',
   PERFORMANCE_DESKTOP: 'PERFORMANCE_DESKTOP',
-  
+
+  // Headless Accessibility Analysis
+  HEADLESS_ACCESSIBILITY: 'HEADLESS_ACCESSIBILITY',
+
+  // Crawl Graph Analysis (internal link graph)
+  CRAWL_GRAPH: 'CRAWL_GRAPH',
+
   // AI Visibility Jobs
   AI_VISIBILITY: 'AI_VISIBILITY',
-  
+
   // AI Visibility Scoring (final stage)
   AI_VISIBILITY_SCORING: 'AI_VISIBILITY_SCORING',
-  
+
   // AI Link Discovery for new standalone projects
   AI_LINK_DISCOVERY: 'AI_LINK_DISCOVERY',
 };
@@ -125,6 +131,20 @@ export const JOB_TYPE_CONFIG = {
     priority: 4,            // 🔥 FOURTH PRIORITY
     workerType: 'performance'
   },
+  // Headless Accessibility Analysis Configuration
+  [JOB_TYPES.HEADLESS_ACCESSIBILITY]: {
+    maxAttempts: 2,
+    timeout: 180000,       // 3 minutes for accessibility analysis
+    priority: 4,            // 🔥 FOURTH PRIORITY (same as PERFORMANCE_DESKTOP)
+    workerType: 'headless'
+  },
+  // Crawl Graph Analysis Configuration
+  [JOB_TYPES.CRAWL_GRAPH]: {
+    maxAttempts: 1,
+    timeout: 60000,        // 1 minute for graph computation
+    priority: 2,            // Same priority as PAGE_SCRAPING (runs right after)
+    workerType: 'crawl_graph'
+  },
   // AI Visibility Job Configuration
   [JOB_TYPES.AI_VISIBILITY]: {
     maxAttempts: 2,
@@ -132,7 +152,7 @@ export const JOB_TYPE_CONFIG = {
     priority: 5,            // 🔥 FIFTH PRIORITY
     workerType: 'ai_visibility'
   },
-  
+
   // AI Visibility Scoring (final stage)
   [JOB_TYPES.AI_VISIBILITY_SCORING]: {
     maxAttempts: 3,
@@ -140,7 +160,7 @@ export const JOB_TYPE_CONFIG = {
     priority: 8,
     workerType: 'ai_visibility_scorer'
   },
-  
+
   // AI Link Discovery Configuration
   [JOB_TYPES.AI_LINK_DISCOVERY]: {
     maxAttempts: 2,

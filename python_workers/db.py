@@ -29,7 +29,13 @@ seo_mainurl_snapshot = db["seo_mainurl_snapshot"]
 
 # collections for page scraping and analysis results
 seo_page_data = db["seo_page_data"]
+
+# collection for crawl graph analysis results
+seo_crawl_graph = db["seo_crawl_graph"]
 seo_page_issues = db["seo_page_issues"]
+
+# collection for headless accessibility data
+seo_headless_data = db["seo_headless_data"]
 
 # collection for performance analysis results
 seo_page_performance = db["seo_page_performance"]
@@ -55,6 +61,9 @@ seo_ai_page_scores = db["seo_ai_page_scores"]
 
 # collection for AI visibility issues (derived from rule_breakdown)
 seo_ai_visibility_issues = db["seo_ai_visibility_issues"]
+
+# collection for SEO page analysis summaries
+seo_page_summary = db["seo_page_summary"]
 
 # collection for domain-level technical data (robots.txt, sitemap.xml)
 domain_technical_reports = db["domain_technical_reports"]
@@ -201,5 +210,47 @@ except Exception as e:
     else:
         print(f"⚠️ Failed to create index on domain_technical_reports: {e}")
 
+# Create unique index for headless accessibility data (one per project + URL)
+try:
+    seo_headless_data.create_index(
+        [("projectId", 1), ("url", 1)],
+        unique=True,
+        name="unique_project_url_accessibility"
+    )
+    print("✅ Created unique index on seo_headless_data (projectId, url)")
+except Exception as e:
+    if "already exists" in str(e):
+        print("✅ Unique index on seo_headless_data already exists")
+    else:
+        print(f"⚠️ Failed to create index on seo_headless_data: {e}")
+
 # Note: Python workers do NOT create projects or jobs
 # They only write link discovery results to the collections above
+
+# Create unique index for crawl graph data (one per project + URL)
+try:
+    seo_crawl_graph.create_index(
+        [("projectId", 1), ("url", 1)],
+        unique=True,
+        name="unique_project_url_crawl_graph"
+    )
+    print("✅ Created unique index on seo_crawl_graph (projectId, url)")
+except Exception as e:
+    if "already exists" in str(e):
+        print("✅ Unique index on seo_crawl_graph already exists")
+    else:
+        print(f"⚠️ Failed to create index on seo_crawl_graph: {e}")
+
+# Create index for SEO page summaries (for efficient querying)
+try:
+    seo_page_summary.create_index(
+        [("projectId", 1), ("seo_jobId", 1), ("page_url", 1)],
+        name="project_job_page_summary"
+    )
+    print("✅ Created index on seo_page_summary (projectId, seo_jobId, page_url)")
+except Exception as e:
+    if "already exists" in str(e):
+        print("✅ Index on seo_page_summary already exists")
+    else:
+        print(f"⚠️ Failed to create index on seo_page_summary: {e}")
+

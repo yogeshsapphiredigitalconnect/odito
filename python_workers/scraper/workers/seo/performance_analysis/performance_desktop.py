@@ -4,7 +4,107 @@ import os
 import requests
 from datetime import datetime
 from bson.objectid import ObjectId
+from bs4 import BeautifulSoup
 from db import seo_page_performance, seo_page_data
+
+
+# ---------------------------------------------------------------------------
+# Feature 3 — Render Blocking Detection (Rules 175, 180, 181)
+# ---------------------------------------------------------------------------
+def detect_render_blocking_resources(raw_html: str, lighthouse_data: dict = None) -> dict:
+    """
+    Detect render-blocking CSS and JS resources.
+    Prefers Lighthouse audit data if available; falls back to raw HTML parsing.
+
+    Args:
+        raw_html: Raw HTML string of the page.
+        lighthouse_data: Optional Lighthouse/PSI audit JSON with renderBlockingResources.
+
+    Returns:
+        Structured render-blocking analysis dict.
+    """
+    try:
+        # --- Prefer Lighthouse data if available ---
+        if lighthouse_data:
+            rb_audit = (
+                lighthouse_data
+                .get("lighthouseResult", {})
+                .get("audits", {})
+                .get("render-blocking-resources", {})
+            )
+            if rb_audit and rb_audit.get("details", {}).get("items"):
+                items = rb_audit["details"]["items"]
+                blocking_css = [i for i in items if i.get("url", "").endswith(".css")]
+                blocking_js = [i for i in items if i.get("url", "").endswith(".js")]
+                total = len(items)
+                return {
+                    "source": "lighthouse",
+                    "blocking_css_count": len(blocking_css),
+                    "blocking_js_count": len(blocking_js),
+                    "total_blocking_count": total,
+                    "render_blocking_flag": total > 3
+                }
+
+        # --- Fallback: raw HTML parsing ---
+        if not raw_html:
+            return {
+                "source": "none",
+                "blocking_css_count": 0,
+                "blocking_js_count": 0,
+                "total_blocking_count": 0,
+                "render_blocking_flag": False,
+                "note": "no_html_available"
+            }
+
+        soup = BeautifulSoup(raw_html, "lxml")
+        head = soup.find("head")
+        if not head:
+            return {
+                "source": "html_parse",
+                "blocking_css_count": 0,
+                "blocking_js_count": 0,
+                "total_blocking_count": 0,
+                "render_blocking_flag": False,
+                "note": "no_head_element"
+            }
+
+        # Count blocking JS: <script> in <head> without async or defer
+        blocking_js = 0
+        for script in head.find_all("script", src=True):
+            has_async = script.has_attr("async")
+            has_defer = script.has_attr("defer")
+            if not has_async and not has_defer:
+                blocking_js += 1
+
+        # Count blocking CSS: <link rel="stylesheet"> in <head>
+        # Exclude preload and print-only stylesheets
+        blocking_css = 0
+        for link in head.find_all("link", rel=True):
+            rel_values = [r.lower() for r in (link.get("rel") or [])]
+            media = (link.get("media") or "").lower()
+            if "stylesheet" in rel_values and "preload" not in rel_values:
+                # print-only stylesheets are not render-blocking
+                if media != "print":
+                    blocking_css += 1
+
+        total = blocking_css + blocking_js
+        return {
+            "source": "html_parse",
+            "blocking_css_count": blocking_css,
+            "blocking_js_count": blocking_js,
+            "total_blocking_count": total,
+            "render_blocking_flag": total > 3
+        }
+    except Exception as e:
+        return {
+            "source": "error",
+            "blocking_css_count": 0,
+            "blocking_js_count": 0,
+            "total_blocking_count": 0,
+            "render_blocking_flag": False,
+            "error": str(e)
+        }
+
 
 def send_progress_update(job_id: str, percentage: int, step: str, message: str, subtext: str = None):
     """Send progress update to Node.js backend"""
@@ -136,6 +236,14 @@ def execute_performance_desktop_logic(job):
                 }
                 
                 # Store in seo_page_performance collection
+                
+                # --- Feature 3: Render Blocking Detection ---
+                raw_html = page.get("raw_html", "")
+                try:
+                    performance_data["render_blocking_analysis"] = detect_render_blocking_resources(raw_html)
+                except Exception as rb_err:
+                    print(f"[WARNING] Render blocking detection failed | url={page_url} | error={rb_err}")
+                
                 seo_page_performance.insert_one(performance_data)
                 analyzed_pages.append(page_url)
                 

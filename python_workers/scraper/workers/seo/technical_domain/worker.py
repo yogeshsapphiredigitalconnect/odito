@@ -9,9 +9,11 @@ NO scoring logic. NO rule evaluation. NO parsing validation.
 """
 
 import os
+import re
 import requests
 from scraper.workers.seo.technical_domain.robots_fetcher import fetch_robots
 from scraper.workers.seo.technical_domain.sitemap_fetcher import fetch_sitemap
+
 
 
 def execute_technical_domain(job):

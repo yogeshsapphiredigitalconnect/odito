@@ -16,6 +16,7 @@ from .seo import (
 from .schema import extract_structured_data
 from .utils import create_content_hash
 from .intelligence import extract_seo_intelligence
+from .enhanced_seo_extraction import extract_enhanced_seo_signals
 
 
 def extract_comprehensive_seo_data(html: str, base_url: str, response_headers: dict = None) -> dict:
@@ -74,6 +75,10 @@ def extract_comprehensive_seo_data(html: str, base_url: str, response_headers: d
         seo_data["seo_intelligence"] = extract_seo_intelligence(
             html, intelligence_soup, seo_data, response_headers or {}, base_url
         )
+        
+        # 11. ENHANCED SEO SIGNALS (structured raw data extraction)
+        # Uses original soup to maintain DOM context for positioning analysis
+        seo_data["enhanced_signals"] = extract_enhanced_seo_signals(soup, html, base_url, response_headers or {})
         
         return seo_data
         
