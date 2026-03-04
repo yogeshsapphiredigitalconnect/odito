@@ -8,6 +8,7 @@ breadcrumbs, URL structure, and crawl efficiency.
 import re
 from urllib.parse import urlparse
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -92,15 +93,9 @@ class UrlContainsKeywordRule(BaseSEORuleV2):
     description = "URL should contain primary keyword"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        meta_tags = normalized.get("meta_tags", {})
-        keywords_list = meta_tags.get("keywords", [])
-        keyword = ""
-        if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-            kw = keywords_list[0]
-            if isinstance(kw, str):
-                keyword = kw.split(",")[0].strip().lower()
+        keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         page_url = normalized.get("url", "").lower()
         # Check if keyword (or hyphenated version) appears in URL
         keyword_slug = keyword.replace(" ", "-")
@@ -188,9 +183,9 @@ class RobotsTxtExistsRule(BaseSEORuleV2):
     description = "robots.txt must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        tech = normalized.get("technical_report", {})
-        if not tech:
-            return []
+        tech = normalized.get("technical_report")
+        if not tech or not isinstance(tech, dict):
+            return []  # External data unavailable
         robots = tech.get("robots_txt", {})
         if isinstance(robots, dict) and not robots.get("exists", True):
             return [self.create_issue(
@@ -210,9 +205,9 @@ class RobotsTxtNotBlockImportantRule(BaseSEORuleV2):
     description = "robots.txt must not block important pages"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        tech = normalized.get("technical_report", {})
-        if not tech:
-            return []
+        tech = normalized.get("technical_report")
+        if not tech or not isinstance(tech, dict):
+            return []  # External data unavailable
         robots = tech.get("robots_txt", {})
         if isinstance(robots, dict) and robots.get("blocks_important"):
             return [self.create_issue(
@@ -232,9 +227,9 @@ class RobotsTxtSitemapRefRule(BaseSEORuleV2):
     description = "robots.txt should reference sitemap"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        tech = normalized.get("technical_report", {})
-        if not tech:
-            return []
+        tech = normalized.get("technical_report")
+        if not tech or not isinstance(tech, dict):
+            return []  # External data unavailable
         robots = tech.get("robots_txt", {})
         if isinstance(robots, dict) and robots.get("exists"):
             if not robots.get("references_sitemap"):
@@ -255,9 +250,9 @@ class SitemapExistsRule(BaseSEORuleV2):
     description = "XML sitemap must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        tech = normalized.get("technical_report", {})
-        if not tech:
-            return []
+        tech = normalized.get("technical_report")
+        if not tech or not isinstance(tech, dict):
+            return []  # External data unavailable
         sitemap = tech.get("sitemap", {})
         if isinstance(sitemap, dict) and not sitemap.get("exists", True):
             return [self.create_issue(
@@ -277,9 +272,9 @@ class SitemapValidRule(BaseSEORuleV2):
     description = "Sitemap should return HTTP 200"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        tech = normalized.get("technical_report", {})
-        if not tech:
-            return []
+        tech = normalized.get("technical_report")
+        if not tech or not isinstance(tech, dict):
+            return []  # External data unavailable
         sitemap = tech.get("sitemap", {})
         if isinstance(sitemap, dict) and sitemap.get("exists"):
             status = sitemap.get("status_code")
@@ -301,9 +296,9 @@ class SitemapContainsPageRule(BaseSEORuleV2):
     description = "Current page should be listed in sitemap"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        tech = normalized.get("technical_report", {})
-        if not tech:
-            return []
+        tech = normalized.get("technical_report")
+        if not tech or not isinstance(tech, dict):
+            return []  # External data unavailable
         sitemap = tech.get("sitemap", {})
         if isinstance(sitemap, dict):
             urls = sitemap.get("urls", [])
@@ -332,10 +327,10 @@ class InternalLinksMinRule(BaseSEORuleV2):
     description = "Page should have ≥3 internal links"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        cg = normalized.get("crawl_graph", {})
-        if not cg:
+        graph = normalized.get("crawl_graph")
+        if not graph or not isinstance(graph, dict):
             return []
-        outbound = cg.get("outboundLinks", 0)
+        outbound = graph.get("outboundLinks", 0)
         if outbound < 3:
             return [self.create_issue(
                 job_id, project_id, url,
@@ -354,10 +349,10 @@ class InternalLinksMaxRule(BaseSEORuleV2):
     description = "Page should not have excessive internal links (≤100)"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        cg = normalized.get("crawl_graph", {})
-        if not cg:
+        graph = normalized.get("crawl_graph")
+        if not graph or not isinstance(graph, dict):
             return []
-        outbound = cg.get("outboundLinks", 0)
+        outbound = graph.get("outboundLinks", 0)
         if outbound > 100:
             return [self.create_issue(
                 job_id, project_id, url,
@@ -376,10 +371,10 @@ class ClickDepthMaxRule(BaseSEORuleV2):
     description = "Click depth from homepage should be ≤3"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        cg = normalized.get("crawl_graph", {})
-        if not cg:
+        graph = normalized.get("crawl_graph")
+        if not graph or not isinstance(graph, dict):
             return []
-        depth = cg.get("clickDepthFromHomepage")
+        depth = graph.get("clickDepthFromHomepage")
         if depth is not None and depth > 3:
             return [self.create_issue(
                 job_id, project_id, url,
@@ -398,10 +393,10 @@ class OrphanPageRule(BaseSEORuleV2):
     description = "Page should not be orphaned (0 inbound links)"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        cg = normalized.get("crawl_graph", {})
-        if not cg:
+        graph = normalized.get("crawl_graph")
+        if not graph or not isinstance(graph, dict):
             return []
-        if cg.get("isOrphan"):
+        if graph.get("isOrphan"):
             return [self.create_issue(
                 job_id, project_id, url,
                 "Page is orphaned (no inbound links)",

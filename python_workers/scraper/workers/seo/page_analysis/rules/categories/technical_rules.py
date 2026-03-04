@@ -199,6 +199,9 @@ class AppleTouchIconValidUrlRule(BaseSEORuleV2):
         return []
 
 
+# DISABLED: Cannot be implemented with current normalized data structure.
+# Rule is unregistered. See seo_rule_engine.py.
+# To re-enable: scraper must provide raw HTML icon size.
 class AppleTouchIconSizeRule(BaseSEORuleV2):
     rule_id = "APPLE_TOUCH_ICON_SIZE"
     rule_no = 64
@@ -287,7 +290,7 @@ def register_technical_rules(registry):
     # Apple Touch Icons (62–65)
     registry.register(AppleTouchIconPresentRule())
     registry.register(AppleTouchIconValidUrlRule())
-    registry.register(AppleTouchIconSizeRule())
+    # registry.register(AppleTouchIconSizeRule())  # DISABLED: rule_no 64
     registry.register(AppleTouchIconMultipleSizesRule())
     # Viewport + HTTPS
     registry.register(ViewportPresentRule())

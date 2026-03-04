@@ -8,6 +8,7 @@ lazy loading, duplicates, and optimization.
 import re
 from urllib.parse import urlparse
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -17,14 +18,7 @@ ALL_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico",
                      ".tiff", ".tif", ".webp", ".svg", ".avif"}
 
 
-def _keyword_from_context(normalized):
-    meta_tags = normalized.get("meta_tags", {})
-    keywords_list = meta_tags.get("keywords", [])
-    if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-        kw = keywords_list[0]
-        if isinstance(kw, str):
-            return kw.split(",")[0].strip().lower()
-    return ""
+# _keyword_from_context imported from seo_rule_utils
 
 
 def _get_image_ext(src):
@@ -187,7 +181,7 @@ class ImagesAltKeywordRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         images = normalized.get("images", [])
         if not images:
             return []

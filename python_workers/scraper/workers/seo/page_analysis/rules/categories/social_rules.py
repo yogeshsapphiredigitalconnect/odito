@@ -8,18 +8,12 @@ import re
 from urllib.parse import urlparse, urljoin
 from ..base_seo_rule import BaseSEORuleV2
 from ..utils import safe_str
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ── Helpers ───────────────────────────────────────────────────
 
-def _keyword_from_context(normalized):
-    meta_tags = normalized.get("meta_tags", {})
-    keywords_list = meta_tags.get("keywords", [])
-    if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-        kw = keywords_list[0]
-        if isinstance(kw, str):
-            return kw.split(",")[0].strip().lower()
-    return ""
+# _keyword_from_context imported from seo_rule_utils
 
 
 def _is_valid_url(url_str):
@@ -185,7 +179,7 @@ class OgContainsKeywordRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         og = normalized.get("og_tags", {})
         og_text = " ".join([
             safe_str(og.get("og:title", "")),
@@ -324,7 +318,7 @@ class PinterestDescKeywordRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         pinterest = normalized.get("social", {}).get("pinterest", {})
         desc = pinterest.get("pin:description") or pinterest.get("description") or ""
         if desc and keyword.lower() not in desc.lower():

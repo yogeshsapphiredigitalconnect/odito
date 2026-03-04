@@ -7,6 +7,7 @@ keyword placement, duplicates, readability, and accessibility.
 
 import re
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -36,14 +37,7 @@ def _heading_texts(headings, tag):
     return [h.get("text", "").strip() for h in headings if h.get("tag") == tag]
 
 
-def _keyword_from_context(normalized):
-    meta_tags = normalized.get("meta_tags", {})
-    keywords_list = meta_tags.get("keywords", [])
-    if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-        kw = keywords_list[0]
-        if isinstance(kw, str):
-            return kw.split(",")[0].strip().lower()
-    return ""
+# _keyword_from_context imported from seo_rule_utils
 
 
 def _secondary_keyword(normalized):
@@ -106,7 +100,7 @@ class H1LengthRule(BaseSEORuleV2):
 
 class H1ContainsKeywordRule(BaseSEORuleV2):
     rule_id = "H1_CONTAINS_KEYWORD"
-    rule_no = 86
+    rule_no = 90
     category = "Headings"
     severity = "high"
     description = "H1 must contain primary keyword"
@@ -114,7 +108,7 @@ class H1ContainsKeywordRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         h1s = _get_headings_by_tag(normalized.get("headings", []), "h1")
         for h in h1s:
             text = h.get("text", "").strip()
@@ -138,7 +132,7 @@ class H1KeywordAtBeginningRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         h1s = _get_headings_by_tag(normalized.get("headings", []), "h1")
         for h in h1s:
             text = h.get("text", "").strip()
@@ -227,7 +221,7 @@ class H2ContainsKeywordRule(BaseSEORuleV2):
         if not keyword:
             keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         h2_texts = _heading_texts(normalized.get("headings", []), "h2")
         if h2_texts and not any(keyword.lower() in t.lower() for t in h2_texts):
             return [self.create_issue(
@@ -615,7 +609,7 @@ class HeadingContainsKeywordRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         headings = normalized.get("headings", [])
         if not headings:
             return []
@@ -633,6 +627,9 @@ class HeadingContainsKeywordRule(BaseSEORuleV2):
         return []
 
 
+# DISABLED: Cannot be implemented with current normalized data structure.
+# Rule is unregistered. See seo_rule_engine.py.
+# To re-enable: scraper must provide raw HTML heading position data.
 class HeadingKeywordEarlyRule(BaseSEORuleV2):
     rule_id = "HEADING_KEYWORD_EARLY"
     rule_no = 115
@@ -655,7 +652,7 @@ class HeadingKeywordStuffingRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword or len(keyword) < 3:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         headings = normalized.get("headings", [])
         total_count = sum(
             h.get("text", "").lower().count(keyword.lower())
@@ -873,7 +870,7 @@ def register_heading_rules(registry):
     registry.register(HeadingExcessivePunctuationRule())
     registry.register(HeadingGenericPhraseRule())
     registry.register(HeadingContainsKeywordRule())
-    registry.register(HeadingKeywordEarlyRule())
+    # registry.register(HeadingKeywordEarlyRule())  # DISABLED: rule_no 115
     registry.register(HeadingKeywordStuffingRule())
     registry.register(HeadingVoiceSearchRule())
     registry.register(HeadingUniqueRule())

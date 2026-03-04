@@ -959,7 +959,7 @@ def _extract_link_intelligence(soup: BeautifulSoup, seo_data: dict, base_url: st
     for normalized_href, data in href_data.items():
         links.append({
             "href": data["href"],
-            "anchor_text": data["anchor_variations"][0],  # Primary anchor
+            "anchor_text": data["anchor_variations"][0] if data["anchor_variations"] else "",  # Primary anchor
             "anchor_variations": data["anchor_variations"],
             "occurrence_count": data["occurrence_count"],
             "rel_attributes": data["rel_attributes"],

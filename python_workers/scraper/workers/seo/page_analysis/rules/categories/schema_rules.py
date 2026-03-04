@@ -7,44 +7,16 @@ BreadcrumbList, Article/BlogPosting, and FAQPage schemas.
 
 from urllib.parse import urlparse
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import (
+    _keyword_from_context,
+    _get_schemas,
+    _find_schema_by_type,
+    _is_valid_https_url,
+)
 
 
-# ── Helpers ───────────────────────────────────────────────────
-
-def _get_schemas(normalized):
-    return normalized.get("structured_data", [])
-
-
-def _find_schema_by_type(schemas, type_name):
-    for s in schemas:
-        if isinstance(s, dict):
-            schema_type = s.get("@type", "")
-            if isinstance(schema_type, list):
-                if type_name in schema_type:
-                    return s
-            elif schema_type == type_name:
-                return s
-    return None
-
-
-def _is_valid_https_url(url_str):
-    if not url_str:
-        return False
-    try:
-        parsed = urlparse(str(url_str).strip())
-        return parsed.scheme == "https" and bool(parsed.netloc)
-    except Exception:
-        return False
-
-
-def _keyword_from_context(normalized):
-    meta_tags = normalized.get("meta_tags", {})
-    keywords_list = meta_tags.get("keywords", [])
-    if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-        kw = keywords_list[0]
-        if isinstance(kw, str):
-            return kw.split(",")[0].strip().lower()
-    return ""
+# Helpers (_get_schemas, _find_schema_by_type, _is_valid_https_url,
+# _keyword_from_context) imported from seo_rule_utils
 
 
 # List of deprecated schema types (per Google 2025+ guidance)
@@ -253,7 +225,7 @@ class SchemaDescriptionKeywordRule(BaseSEORuleV2):
     def evaluate(self, normalized, job_id, project_id, url):
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         for s in _get_schemas(normalized):
             if isinstance(s, dict):
                 desc = s.get("description", "")

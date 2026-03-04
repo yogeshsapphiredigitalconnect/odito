@@ -8,6 +8,7 @@ readability, and quality checks.
 import re
 from ..base_seo_rule import BaseSEORuleV2
 from ..utils import safe_str
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -33,26 +34,7 @@ def _word_count(text):
     return len(text.split()) if text else 0
 
 
-def _keyword_from_context(normalized):
-    """Extract primary keyword from meta keywords or first H1."""
-    meta_tags = normalized.get("meta_tags", {})
-    keywords_list = meta_tags.get("keywords", [])
-    if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-        kw = keywords_list[0]
-        if isinstance(kw, str):
-            # take first keyword if comma-separated
-            keyword = kw.split(",")[0].strip().lower()
-            # Validate keyword quality
-            if keyword and len(keyword) >= 3:
-                return keyword
-    # fallback: use H1 text
-    headings = normalized.get("headings", [])
-    for h in headings:
-        if h.get("tag") == "h1" and h.get("text", "").strip():
-            keyword = h["text"].strip().lower()
-            if keyword and len(keyword) >= 3:
-                return keyword
-    return None
+# _keyword_from_context imported from seo_rule_utils
 
 
 # ── Rule 1: Title must not be empty ──────────────────────────
@@ -77,6 +59,9 @@ class TitleEmptyRule(BaseSEORuleV2):
 
 # ── Rule 2: Exactly one title tag per page ───────────────────
 
+# DISABLED: Cannot be implemented with current normalized data structure.
+# Rule is unregistered. See seo_rule_engine.py.
+# To re-enable: scraper must provide raw HTML title tag count.
 class TitleMultipleRule(BaseSEORuleV2):
     rule_id = "TITLE_MULTIPLE"
     rule_no = 2
@@ -265,7 +250,7 @@ class TitleMissingKeywordRule(BaseSEORuleV2):
             return []
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []  # Cannot check without a valid keyword
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         if keyword.lower() not in title.lower():
             return [self.create_issue(
                 job_id, project_id, url,
@@ -291,7 +276,7 @@ class TitleKeywordPositionRule(BaseSEORuleV2):
             return []
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         pos = title.lower().find(keyword.lower())
         if pos > 0:  # keyword present but not at start
             # Warn if keyword doesn't start within first 30% of title
@@ -321,7 +306,7 @@ class TitleKeywordStuffingRule(BaseSEORuleV2):
             return []
         keyword = _keyword_from_context(normalized)
         if not keyword or len(keyword) < 3:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         count = title.lower().count(keyword.lower())
         if count >= 3:
             return [self.create_issue(
@@ -547,7 +532,7 @@ class TitleIsLinkRule(BaseSEORuleV2):
 def register_title_rules(registry):
     """Register all Title Tag category rules"""
     registry.register(TitleEmptyRule())
-    registry.register(TitleMultipleRule())
+    # registry.register(TitleMultipleRule())  # DISABLED: rule_no 2
     registry.register(TitleLengthRule())
     registry.register(TitleSingleWordRule())
     registry.register(TitleAllCapsRule())

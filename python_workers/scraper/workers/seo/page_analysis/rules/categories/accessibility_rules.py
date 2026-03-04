@@ -6,27 +6,12 @@ ARIA landmarks, form labels, and focus indicators.
 """
 
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import _get_axe, _get_dom_metrics, _get_keyboard
 
-
-# ── Helpers ───────────────────────────────────────────────────
+# Helpers (_get_axe, _get_dom_metrics, _get_keyboard) imported from seo_rule_utils
 
 def _get_headless(normalized):
     return normalized.get("headless", {})
-
-
-def _get_dom_metrics(normalized):
-    headless = _get_headless(normalized)
-    return headless.get("domMetrics", {})
-
-
-def _get_keyboard(normalized):
-    headless = _get_headless(normalized)
-    return headless.get("keyboard_analysis", {})
-
-
-def _get_axe(normalized):
-    headless = _get_headless(normalized)
-    return headless.get("axeViolations", [])
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -41,6 +26,9 @@ class AxeNoViolationsRule(BaseSEORuleV2):
     description = "No axe-core violations found"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         if violations:
             return [self.create_issue(
@@ -60,6 +48,9 @@ class AxeNoCriticalRule(BaseSEORuleV2):
     description = "No critical axe-core violations"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         critical = [v for v in violations if isinstance(v, dict) and v.get("impact") == "critical"]
         if critical:
@@ -80,6 +71,9 @@ class AxeNoSeriousRule(BaseSEORuleV2):
     description = "No serious axe-core violations"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         serious = [v for v in violations if isinstance(v, dict) and v.get("impact") == "serious"]
         if serious:
@@ -100,6 +94,9 @@ class AxeMaxModerateRule(BaseSEORuleV2):
     description = "Moderate violations ≤5"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         moderate = [v for v in violations if isinstance(v, dict) and v.get("impact") == "moderate"]
         if len(moderate) > 5:
@@ -148,6 +145,9 @@ class DomElementCountRule(BaseSEORuleV2):
     description = "Total DOM elements should be ≤1500"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         dm = _get_dom_metrics(normalized)
         total = dm.get("totalElements", 0)
         if total > 1500:
@@ -168,6 +168,9 @@ class FormLabelsRule(BaseSEORuleV2):
     description = "Form inputs should have labels"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         dm = _get_dom_metrics(normalized)
         inputs = dm.get("inputs", 0)
         forms = dm.get("forms", 0)
@@ -196,6 +199,9 @@ class AriaLandmarksRule(BaseSEORuleV2):
     description = "ARIA landmarks should be present"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         dm = _get_dom_metrics(normalized)
         landmarks = dm.get("ariaLandmarks", 0)
         if landmarks is None:
@@ -218,6 +224,9 @@ class ButtonsHaveLabelsRule(BaseSEORuleV2):
     description = "All buttons should have accessible labels"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         button_issues = [
             v for v in violations
@@ -250,28 +259,25 @@ class HeadingOrderLogicalRule(BaseSEORuleV2):
     description = "Heading order should be logical for accessibility"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        dm = _get_dom_metrics(normalized)
-        headings = dm.get("headings", {})
-        if isinstance(headings, dict):
-            h1 = headings.get("h1", 0)
-            h2 = headings.get("h2", 0)
-            h3 = headings.get("h3", 0)
-            h4 = headings.get("h4", 0)
-            # If H3 exists without H2, or H4 without H3, heading order is broken
-            if h3 > 0 and h2 == 0:
-                return [self.create_issue(
-                    job_id, project_id, url,
-                    "H3 used without H2 — heading hierarchy broken",
-                    f"H1:{h1} H2:{h2} H3:{h3}", "Sequential heading order (H1→H2→H3)",
-                    data_key="headless"
-                )]
-            if h4 > 0 and h3 == 0:
-                return [self.create_issue(
-                    job_id, project_id, url,
-                    "H4 used without H3 — heading hierarchy broken",
-                    f"H2:{h2} H3:{h3} H4:{h4}", "Sequential heading order",
-                    data_key="headless"
-                )]
+        """Only check axe-core accessibility heading violations.
+        Structural heading hierarchy is handled by Rule 229 (HeadingHierarchyLogicalRule).
+        """
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
+        violations = _get_axe(normalized)
+        heading_issues = [
+            v for v in violations
+            if isinstance(v, dict) and v.get("id") in ("heading-order", "page-has-heading-one")
+        ]
+        if heading_issues:
+            ids = [v.get("id", "?") for v in heading_issues]
+            return [self.create_issue(
+                job_id, project_id, url,
+                f"Accessibility heading violation(s): {', '.join(ids)}",
+                ", ".join(ids), "Fix axe-core heading-order / page-has-heading-one",
+                data_key="headless"
+            )]
         return []
 
 
@@ -287,6 +293,9 @@ class KeyboardNavigationCheckedRule(BaseSEORuleV2):
     description = "Keyboard navigation should be functional"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         kb = _get_keyboard(normalized)
         if kb and not kb.get("keyboard_navigation_checked"):
             return [self.create_issue(
@@ -306,6 +315,9 @@ class NoFocusTrapRule(BaseSEORuleV2):
     description = "No focus traps detected"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         kb = _get_keyboard(normalized)
         if kb and kb.get("focus_trap_detected"):
             return [self.create_issue(
@@ -325,6 +337,9 @@ class SmallClickTargetsRule(BaseSEORuleV2):
     description = "No small click targets (<24px)"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         kb = _get_keyboard(normalized)
         if kb:
             small = kb.get("small_click_targets", 0)
@@ -346,6 +361,9 @@ class FocusIndicatorRule(BaseSEORuleV2):
     description = "Focus indicators should be visible"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         kb = _get_keyboard(normalized)
         if kb:
             missing = kb.get("missing_focus_outline", 0)
@@ -367,6 +385,9 @@ class UnreachableElementsRule(BaseSEORuleV2):
     description = "All interactive elements should be keyboard-reachable"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         kb = _get_keyboard(normalized)
         if kb:
             unreachable = kb.get("unreachable_elements", 0)
@@ -389,6 +410,9 @@ class SkipNavigationRule(BaseSEORuleV2):
     description = "Skip navigation link should be present"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         skip_issues = [
             v for v in violations
@@ -430,6 +454,9 @@ class LinksHaveDescriptiveTextRule(BaseSEORuleV2):
     description = "Links should have descriptive text"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        headless = normalized.get("headless")
+        if not headless or not isinstance(headless, dict):
+            return []
         violations = _get_axe(normalized)
         link_issues = [
             v for v in violations

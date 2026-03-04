@@ -212,7 +212,11 @@ def execute_page_analysis_logic(job):
         technical_report = db.domain_technical_report.find_one({"projectId": ObjectId(job.projectId)}) or {}
 
         headless_data_list = list(db.seo_headless_data.find({"projectId": ObjectId(job.projectId)}))
-        headless_lookup = {_normalize_lookup_url(h.get("page_url", "")): h for h in headless_data_list}
+        headless_lookup = {_normalize_lookup_url(h.get("url", "")): h for h in headless_data_list}
+        
+        # DEBUG: Show headless lookup info
+        print(f"[DEBUG] headless_lookup keys: {list(headless_lookup.keys())[:5]}")
+        print(f"[DEBUG] headless_lookup total: {len(headless_lookup)} entries")
 
         crawl_graph_list = list(db.seo_crawl_graph.find({"projectId": ObjectId(job.projectId)}))
         crawl_graph_lookup = {_normalize_lookup_url(c.get("page_url", "")): c for c in crawl_graph_list}
@@ -726,57 +730,63 @@ def normalize_page_data(page):
                 pass  # Keep original value if conversion fails
         images_normalized.append(normalized_img)
 
-    # Normalize all fields with proper fallbacks
-
+    # Normalize all fields with proper fallbacks - FIXED MAPPING
     return {
-
+        # Top-level fields (correct as-is)
         "url": normalize_text(page.get("url")),
-
         "title": normalize_text(page.get("title")),
-
-        "meta_description": normalize_text(page.get("meta_tags", {}).get("description", [None])[0] if page.get("meta_tags", {}).get("description") else None),
-
-        "content_text": normalize_text(page.get("content", {}).get("text")),
-
-        "word_count": page.get("content", {}).get("word_count", 0),
-
-        "viewport": normalize_text(page.get("meta_tags", {}).get("viewport", [None])[0] if page.get("meta_tags", {}).get("viewport") else None),
-
-        "headings": headings_list,  # Now properly normalized
-
-        "images": images_normalized,
-
-        "image_analysis": page.get("image_analysis", {}),
-
-        "og_tags": page.get("social", {}).get("open_graph", {}),
-
-        "scripts": scripts_list,  # Now properly derived from tracking
-
-        "structured_data": page.get("structured_data", []),
-
         "canonical": normalize_text(page.get("canonical")),
-
-        "hreflangs": page.get("hreflangs", []),
-
-        "tracking": tracking,  # Keep original for advanced rules
-
-        "meta_tags": page.get("meta_tags", {}),  # Keep for advanced rules
-
-        "social": page.get("social", {}),  # Keep for advanced rules
-
-        "doctype": page.get("doctype_present"),  # Map doctype_present boolean to doctype field for rules
-
         "html_lang": page.get("html_lang"),
+        "structured_data": page.get("structured_data", []),
+        "hreflangs": page.get("hreflangs", []),
+        "images": images_normalized,
+        "image_analysis": page.get("image_analysis", {}),
+        "tracking": tracking,
+        "doctype": page.get("doctype_present"),
+        "theme_color_present": page.get("theme_color_present", False),
+
+        # NESTED fields — these were all broken before
+        "headings": headings_list,  # Already properly converted from content.headings
+        "content_text": normalize_text(page.get("content", {}).get("text")),
+        "word_count": page.get("content", {}).get("word_count", 0),
+        "meta_description": normalize_text(page.get("meta_tags", {}).get("description", "")),
+        "viewport": normalize_text(page.get("meta_tags", {}).get("viewport", "")),
+
+        # OG tags — rebuild as flat dict from meta_tags (FIXED)
+        "og_tags": {
+            "title": normalize_text(page.get("meta_tags", {}).get("og:title", "")),
+            "description": normalize_text(page.get("meta_tags", {}).get("og:description", "")),
+            "image": normalize_text(page.get("meta_tags", {}).get("og:image", "")),
+            "url": normalize_text(page.get("meta_tags", {}).get("og:url", "")),
+            "type": normalize_text(page.get("meta_tags", {}).get("og:type", "")),
+        },
+
+        # Social — map from actual social structure
+        "social": page.get("social", {}),
+
+        # meta_tags — pass full dict for charset, robots, author, keywords rules
+        "meta_tags": page.get("meta_tags", {}),
+
+        # Scripts — synthetic list from tracking (keep existing logic)
+        "scripts": scripts_list,
 
         # Include new page signals for enhanced rule compatibility
         "review_schema_present": page.get("review_schema_present", False),
-
-        "theme_color_present": page.get("theme_color_present", False),
-
         "hreflang_present": page.get("hreflang_present", False)
-
     }
 
+
+
+def _is_document_complete(normalized):
+    """
+    Returns False if the document is missing critical content fields.
+    These indicate a failed or incomplete scrape — rules should not run.
+    """
+    required_fields = ["title", "content_text", "headings", "images"]
+    missing = [f for f in required_fields if not normalized.get(f)]
+    if len(missing) >= 3:  # if 3+ core fields missing, skip this page
+        return False
+    return True
 
 
 def analyze_page_seo(page, job_id, project_id,
@@ -795,10 +805,23 @@ def analyze_page_seo(page, job_id, project_id,
 
         print(f"[ERROR] Normalization failed for {page.get('url', 'unknown')}: {norm_error}")
 
-        return []
+        return {"issues": [], "summary": {"skipped": True, "reason": "normalization_failed"}}
+
+    # Check document completeness BEFORE running any rules
+    if not _is_document_complete(normalized):
+        print(f"[SKIP] Incomplete document for {url} — scrape may have failed")
+        return {"issues": [], "summary": {"skipped": True, "reason": "incomplete_document"}}
 
     # Build unified rule context (superset of normalized — backward compatible)
     lookup_url = _normalize_lookup_url(url)
+    
+    # DEBUG: Show URL matching
+    print(f"[DEBUG] lookup_url being used: {repr(lookup_url)}")
+    headless_match = (headless_lookup or {}).get(lookup_url, 'NOT FOUND')
+    print(f"[DEBUG] headless match: {headless_match}")
+    if headless_match != 'NOT FOUND':
+        print(f"[DEBUG] headless keys: {list(headless_match.keys())}")
+    
     rule_context = {
         **normalized,
         "performance": (performance_lookup or {}).get(lookup_url, (performance_lookup or {}).get(url, {})),
@@ -806,6 +829,13 @@ def analyze_page_seo(page, job_id, project_id,
         "crawl_graph": (crawl_graph_lookup or {}).get(lookup_url, {}),
         "technical_report": technical_report or {},
     }
+    
+    # Permanent headless data log
+    headless_data = rule_context.get("headless", {})
+    print(f"[HEADLESS] url={lookup_url} | "
+          f"axe_violations={len(headless_data.get('axeViolations', []))} | "
+          f"dom_elements={headless_data.get('domMetrics', {}).get('totalElements', 'N/A')} | "
+          f"keyboard_checked={headless_data.get('keyboard_analysis', {}).get('keyboard_navigation_checked', 'N/A')}")
 
     # Use the modular rule engine
     from scraper.workers.seo.page_analysis.rules.seo_rule_engine import get_seo_engine

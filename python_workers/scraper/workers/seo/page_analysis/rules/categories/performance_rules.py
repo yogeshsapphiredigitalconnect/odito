@@ -6,21 +6,10 @@ mobile-friendliness and performance optimization rules.
 """
 
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import _get_perf
 
 
-# ── Helpers ───────────────────────────────────────────────────
-
-def _get_perf(normalized, device="mobile"):
-    """Get performance data dict for a given device type."""
-    perf = normalized.get("performance", {})
-    if isinstance(perf, dict):
-        # Try device-nested first: {"mobile": {...}}
-        if device in perf:
-            return perf[device]
-        # Flat dict fallback (direct metrics)
-        if "performance_score" in perf:
-            return perf
-    return {}
+# _get_perf imported from seo_rule_utils
 
 
 def _get_best_performance_score(normalized):
@@ -59,6 +48,9 @@ class LcpGoodRule(BaseSEORuleV2):
     description = "LCP should be ≤2.5 seconds"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        perf_raw = normalized.get("performance")
+        if not perf_raw or not isinstance(perf_raw, dict):
+            return []
         perf = _get_perf(normalized)
         lcp = perf.get("largest_contentful_paint")
         if lcp is not None and lcp > 2.5:
@@ -79,6 +71,9 @@ class ClsGoodRule(BaseSEORuleV2):
     description = "CLS should be ≤0.1"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        perf_raw = normalized.get("performance")
+        if not perf_raw or not isinstance(perf_raw, dict):
+            return []
         perf = _get_perf(normalized)
         cls = perf.get("cumulative_layout_shift")
         if cls is not None and cls > 0.1:
@@ -99,6 +94,9 @@ class TbtGoodRule(BaseSEORuleV2):
     description = "TBT should be ≤200ms"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        perf_raw = normalized.get("performance")
+        if not perf_raw or not isinstance(perf_raw, dict):
+            return []
         perf = _get_perf(normalized)
         tbt = perf.get("total_blocking_time")
         if tbt is not None and tbt > 200:
@@ -119,6 +117,9 @@ class PageSpeedScoreRule(BaseSEORuleV2):
     description = "PageSpeed score should be ≥90"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        perf_raw = normalized.get("performance")
+        if not perf_raw or not isinstance(perf_raw, dict):
+            return []
         score, device = _get_best_performance_score(normalized)
         if score is None:
             return []  # No performance data available
@@ -141,6 +142,9 @@ class SpeedIndexRule(BaseSEORuleV2):
     description = "Speed Index should be ≤3.4s"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        perf_raw = normalized.get("performance")
+        if not perf_raw or not isinstance(perf_raw, dict):
+            return []
         perf = _get_perf(normalized)
         si = perf.get("speed_index")
         if si is not None and si > 3.4:
@@ -161,6 +165,9 @@ class RenderBlockingRule(BaseSEORuleV2):
     description = "Minimize render-blocking resources (≤3)"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        perf_raw = normalized.get("performance")
+        if not perf_raw or not isinstance(perf_raw, dict):
+            return []
         perf = _get_perf(normalized)
         rb = perf.get("render_blocking_analysis", {})
         if isinstance(rb, dict):

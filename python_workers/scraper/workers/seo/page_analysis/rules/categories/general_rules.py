@@ -7,6 +7,7 @@ AMP, E-E-A-T signals, SGE optimization.
 
 import re
 from ..base_seo_rule import BaseSEORuleV2
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -59,15 +60,9 @@ class ContentContainsKeywordRule(BaseSEORuleV2):
     description = "Content should contain primary keyword"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        meta_tags = normalized.get("meta_tags", {})
-        keywords_list = meta_tags.get("keywords", [])
-        keyword = ""
-        if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-            kw = keywords_list[0]
-            if isinstance(kw, str):
-                keyword = kw.split(",")[0].strip().lower()
+        keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         content = normalized.get("content_text", "").lower()
         if keyword not in content:
             return [self.create_issue(
@@ -87,15 +82,9 @@ class ContentKeywordDensityRule(BaseSEORuleV2):
     description = "Keyword density should be 1–3%"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        meta_tags = normalized.get("meta_tags", {})
-        keywords_list = meta_tags.get("keywords", [])
-        keyword = ""
-        if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-            kw = keywords_list[0]
-            if isinstance(kw, str):
-                keyword = kw.split(",")[0].strip().lower()
+        keyword = _keyword_from_context(normalized)
         if not keyword or len(keyword) < 3:
-            return []
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         content = normalized.get("content_text", "").lower()
         wc = normalized.get("word_count", 0)
         if wc < 100:

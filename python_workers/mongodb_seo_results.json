@@ -1,0 +1,1532 @@
+{
+  "url": "https://www.sapphiredigitalconnect.com/",
+  "page_data_keys": [
+    "page_url",
+    "device_type",
+    "analyzed_at",
+    "performance_score",
+    "first_contentful_paint",
+    "largest_contentful_paint",
+    "cumulative_layout_shift",
+    "total_blocking_time",
+    "speed_index",
+    "time_to_interactive",
+    "status",
+    "error",
+    "render_blocking_analysis",
+    "url"
+  ],
+  "results": {
+    "integrity": {
+      "total_rules": 188,
+      "passed": 2,
+      "failed": 34,
+      "skipped": 152,
+      "executed": 36
+    },
+    "failed_rules": [
+      {
+        "rule": "TITLE_EMPTY",
+        "reason": "Title tag is empty or missing",
+        "expected": "A descriptive page title",
+        "detected": null
+      },
+      {
+        "rule": "META_DESC_EMPTY",
+        "reason": "Meta description is empty or missing",
+        "expected": "A compelling meta description (50\u2013160 characters)",
+        "detected": null
+      },
+      {
+        "rule": "LANG_META_TAG_NAME",
+        "reason": "No language declaration found",
+        "expected": "Add html lang attribute or meta[name=language]",
+        "detected": "None"
+      },
+      {
+        "rule": "CHARSET_PRESENT",
+        "reason": "Charset meta tag is missing",
+        "expected": "<meta charset=\"UTF-8\">",
+        "detected": "None"
+      },
+      {
+        "rule": "ROBOTS_META_PRESENT",
+        "reason": "Robots meta tag is missing",
+        "expected": "<meta name=\"robots\" content=\"index, follow\">",
+        "detected": "None"
+      },
+      {
+        "rule": "AUTHOR_PRESENT",
+        "reason": "Author meta tag is missing",
+        "expected": "<meta name=\"author\" content=\"Author Name\">",
+        "detected": "None"
+      },
+      {
+        "rule": "H1_EXACTLY_ONE",
+        "reason": "Page has 0 H1 tags (expected exactly 1)",
+        "expected": "Exactly 1 H1 tag",
+        "detected": 0
+      },
+      {
+        "rule": "IMAGES_PRESENT",
+        "reason": "No images found on page",
+        "expected": "At least 1 image recommended",
+        "detected": 0
+      },
+      {
+        "rule": "OG_TITLE_EXISTS",
+        "reason": "og:title is missing",
+        "expected": "Add og:title meta property",
+        "detected": "None"
+      },
+      {
+        "rule": "OG_DESCRIPTION_EXISTS",
+        "reason": "og:description is missing",
+        "expected": "Add og:description meta property",
+        "detected": "None"
+      },
+      {
+        "rule": "OG_IMAGE_EXISTS",
+        "reason": "og:image is missing",
+        "expected": "Add og:image meta property",
+        "detected": "None"
+      },
+      {
+        "rule": "OG_URL_EXISTS",
+        "reason": "og:url is missing",
+        "expected": "Add og:url meta property",
+        "detected": "None"
+      },
+      {
+        "rule": "OG_TYPE_EXISTS",
+        "reason": "og:type is missing",
+        "expected": "Add og:type (e.g. website, article)",
+        "detected": "None"
+      },
+      {
+        "rule": "PINTEREST_MEDIA_PRESENT",
+        "reason": "pin:media tag is missing",
+        "expected": "Add pin:media for Pinterest sharing",
+        "detected": "None"
+      },
+      {
+        "rule": "PINTEREST_DESCRIPTION_PRESENT",
+        "reason": "pin:description tag is missing",
+        "expected": "Add pin:description for Pinterest sharing",
+        "detected": "None"
+      },
+      {
+        "rule": "SOCIAL_SHARING_OPTIMIZED",
+        "reason": "Social sharing not fully optimized \u2014 missing: og:title, og:description, og:image, twitter:card",
+        "expected": "Add OG + Twitter Card meta tags",
+        "detected": "og:title, og:description, og:image, twitter:card"
+      },
+      {
+        "rule": "SCHEMA_JSONLD_PRESENT",
+        "reason": "No JSON-LD structured data found",
+        "expected": "Add JSON-LD schema markup",
+        "detected": "None"
+      },
+      {
+        "rule": "CANONICAL_PRESENT",
+        "reason": "Canonical URL is missing",
+        "expected": "<link rel=\"canonical\" href=\"...\">",
+        "detected": "None"
+      },
+      {
+        "rule": "APPLE_TOUCH_ICON_PRESENT",
+        "reason": "Apple touch icon is missing",
+        "expected": "<link rel=\"apple-touch-icon\" href=\"...\">",
+        "detected": "None"
+      },
+      {
+        "rule": "VIEWPORT_PRESENT",
+        "reason": "Viewport meta tag is missing or incomplete",
+        "expected": "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+        "detected": null
+      },
+      {
+        "rule": "DOCTYPE_PRESENT",
+        "reason": "DOCTYPE declaration is missing",
+        "expected": "<!DOCTYPE html>",
+        "detected": "None"
+      },
+      {
+        "rule": "THEME_COLOR_PRESENT",
+        "reason": "Theme color meta tag is missing",
+        "expected": "<meta name=\"theme-color\" content=\"#...\">",
+        "detected": "None"
+      },
+      {
+        "rule": "HREFLANG_PRESENT",
+        "reason": "Hreflang tags are missing",
+        "expected": "Add hreflang for multilingual content",
+        "detected": "None"
+      },
+      {
+        "rule": "MULTILINGUAL_SUPPORT",
+        "reason": "Page has no language signals (no lang attribute, no hreflang)",
+        "expected": "Add html lang and/or hreflang tags",
+        "detected": "None"
+      },
+      {
+        "rule": "MOBILE_FRIENDLY",
+        "reason": "Page may not be mobile-friendly (no viewport)",
+        "expected": "width=device-width, initial-scale=1",
+        "detected": "None"
+      },
+      {
+        "rule": "ARIA_LANDMARKS",
+        "reason": "No ARIA landmarks found",
+        "expected": "Add role=navigation, main, banner, etc.",
+        "detected": 0
+      },
+      {
+        "rule": "HTML_LANG_A11Y",
+        "reason": "HTML lang attribute is missing",
+        "expected": "Add lang=\"en\" to <html>",
+        "detected": "None"
+      },
+      {
+        "rule": "WORD_COUNT_MIN",
+        "reason": "Page has only 0 words (min 300)",
+        "expected": "\u2265300 words for content pages",
+        "detected": 0
+      },
+      {
+        "rule": "SGE_OPTIMIZED",
+        "reason": "Not optimized for AI/SGE: missing structured data, sufficient content (\u2265300 words), H2 subheadings",
+        "expected": "Schema + H2s + quality content",
+        "detected": "structured data, sufficient content (\u2265300 words), H2 subheadings"
+      },
+      {
+        "rule": "SECURITY_HEADERS",
+        "reason": "Content-Security-Policy not found in meta tags",
+        "expected": "Add CSP header or meta tag",
+        "detected": "Missing"
+      },
+      {
+        "rule": "EEAT_AUTHOR_INFO",
+        "reason": "Author information not found (E-E-A-T signal)",
+        "expected": "Add author meta tag or schema author field",
+        "detected": "Missing"
+      },
+      {
+        "rule": "EEAT_CONTACT_INFO",
+        "reason": "Contact info not found in structured data (E-E-A-T)",
+        "expected": "Add telephone/email to Organization schema",
+        "detected": "Missing"
+      },
+      {
+        "rule": "ANALYTICS_PRESENT",
+        "reason": "Analytics tracking not detected",
+        "expected": "Add Google Analytics or GTM",
+        "detected": "None"
+      },
+      {
+        "rule": "FB_PIXEL_PRESENT",
+        "reason": "Facebook/Meta Pixel not detected",
+        "expected": "Add FB pixel for remarketing",
+        "detected": "None"
+      }
+    ],
+    "skipped_rules": [
+      {
+        "rule": "TITLE_MULTIPLE",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_LENGTH",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_SINGLE_WORD",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_ALL_CAPS",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_EXCESSIVE_PUNCTUATION",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_LEADING_TRAILING_SEPARATOR",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_GENERIC_PHRASE",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_UNNECESSARY_NUMBERS",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_MISSING_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_KEYWORD_POSITION",
+        "reason": "Data Missing - required: ['content_text', 'title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_KEYWORD_STUFFING",
+        "reason": "Data Missing - required: ['content_text', 'title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_VOICE_SEARCH",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_VAGUE",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_META_ALIGNMENT",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_READABILITY",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_CLICKBAIT",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_FILLER_WORDS",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_CONTAINS_HTML",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "TITLE_IS_LINK",
+        "reason": "Data Missing - required: ['title']",
+        "type": "Data Missing",
+        "missing_data": [
+          "title"
+        ]
+      },
+      {
+        "rule": "META_DESC_LENGTH",
+        "reason": "Data Missing - required: ['meta_description']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_description"
+        ]
+      },
+      {
+        "rule": "META_DESC_MISSING_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'meta_description']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "meta_description"
+        ]
+      },
+      {
+        "rule": "META_DESC_FILLER_WORDS",
+        "reason": "Data Missing - required: ['meta_description']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_description"
+        ]
+      },
+      {
+        "rule": "META_KEYWORDS_COUNT",
+        "reason": "Data Missing - required: ['content_text', 'word_count']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "word_count"
+        ]
+      },
+      {
+        "rule": "META_KEYWORDS_INCLUDES_PRIMARY",
+        "reason": "Data Missing - required: ['content_text']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text"
+        ]
+      },
+      {
+        "rule": "META_KEYWORDS_HTML_TAGS",
+        "reason": "Data Missing - required: ['content_text']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text"
+        ]
+      },
+      {
+        "rule": "CHARSET_VALID_ENCODING",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "CHARSET_TAG_NAME",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "ROBOTS_META_NOT_EMPTY",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "ROBOTS_META_VALID_DIRECTIVES",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "ROBOTS_META_CONFLICTING",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "AUTHOR_LENGTH",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "H1_LENGTH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H1_CONTAINS_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H1_KEYWORD_BEGINNING",
+        "reason": "Data Missing - required: ['content_text', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H1_READABILITY",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H2_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H2_CONTAINS_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H2_LENGTH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H2_EMPTY",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H2_DUPLICATE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H3_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H3_LENGTH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H3_DUPLICATE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H4_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H4_LENGTH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H5_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H5_LENGTH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H6_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "headings"
+        ]
+      },
+      {
+        "rule": "H6_LENGTH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_NO_EMPTY",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_NO_HTML",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_NOT_LINK",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_ALL_CAPS",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_EXCESSIVE_PUNCTUATION",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_GENERIC_PHRASE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_CONTAINS_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_KEYWORD_EARLY",
+        "reason": "Data Missing - required: ['content_text', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_KEYWORD_STUFFING",
+        "reason": "Data Missing - required: ['content_text', 'headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_VOICE_SEARCH",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_UNIQUE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_READABLE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_SENTENCE_CASE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_CLICKBAIT_FILLER",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "H1_DIFFERS_FROM_TITLE",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "HEADING_HIERARCHY_LOGICAL",
+        "reason": "Data Missing - required: ['headings']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headings"
+        ]
+      },
+      {
+        "rule": "IMAGES_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_MODERN_FORMAT",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_VALID_URL",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_HTTPS",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_ALT_MEANINGFUL",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_ALT_KEYWORD",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_DIMENSIONS",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_OPTIMIZED_SIZE",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_DUPLICATE_URL",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_LAZY_LOADING",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_ROLE_ATTRIBUTE",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "IMAGES_OTHER_CATEGORY",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "OG_TITLE_MATCHES_PAGE",
+        "reason": "Data Missing - required: ['social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "OG_CONTAINS_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "OG_VALID_URLS",
+        "reason": "Data Missing - required: ['social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "PINTEREST_URL_MATCH",
+        "reason": "Data Missing - required: ['social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "PINTEREST_MEDIA_VALID_URL",
+        "reason": "Data Missing - required: ['social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "PINTEREST_DESC_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "PINTEREST_TAGS_VALID",
+        "reason": "Data Missing - required: ['social', 'og_tags']",
+        "type": "Data Missing",
+        "missing_data": [
+          "social",
+          "og_tags"
+        ]
+      },
+      {
+        "rule": "SCHEMA_VALID_CONTEXT",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_VALID_TYPE",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_URL_MATCHES_PAGE",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_NAME_ALIGNS_TITLE",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_LOCALBIZ_PHONE",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_LOCALBIZ_ADDRESS",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_IMAGE_VALID",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_DESCRIPTION_KEYWORD",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_TYPE_NOT_DEPRECATED",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_NO_DUPLICATE_FORMATS",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_BREADCRUMBLIST",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_ARTICLE_DATE",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "SCHEMA_FAQPAGE",
+        "reason": "Data Missing - required: ['structured_data']",
+        "type": "Data Missing",
+        "missing_data": [
+          "structured_data"
+        ]
+      },
+      {
+        "rule": "CANONICAL_VALID_URL",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "CANONICAL_HTTPS",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "CANONICAL_NO_QUERY_PARAMS",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "CANONICAL_MATCHES_PAGE",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "CANONICAL_CONSISTENT_WWW",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "APPLE_TOUCH_ICON_VALID_URL",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "APPLE_TOUCH_ICON_SIZE",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "APPLE_TOUCH_ICON_MULTIPLE_SIZES",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "HTTPS_ENFORCED",
+        "reason": "Data Missing - required: ['canonical', 'viewport']",
+        "type": "Data Missing",
+        "missing_data": [
+          "canonical",
+          "viewport"
+        ]
+      },
+      {
+        "rule": "URL_MAX_LENGTH",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "URL_SEO_FRIENDLY",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "URL_NO_QUERY_PARAMS",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "URL_CONTAINS_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "URL_MAX_DEPTH",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "ROBOTS_TXT_EXISTS",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "ROBOTS_TXT_NOT_BLOCK_IMPORTANT",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "ROBOTS_TXT_SITEMAP_REF",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "SITEMAP_EXISTS",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "SITEMAP_VALID",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "SITEMAP_CONTAINS_PAGE",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "INTERNAL_LINKS_MIN",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "INTERNAL_LINKS_MAX",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "CLICK_DEPTH_MAX",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "ORPHAN_PAGE",
+        "reason": "Data Missing - required: ['meta_tags', 'robots']",
+        "type": "Data Missing",
+        "missing_data": [
+          "meta_tags",
+          "robots"
+        ]
+      },
+      {
+        "rule": "HREFLANG_SELF_REFERENCE",
+        "reason": "Data Missing - required: ['hreflangs']",
+        "type": "Data Missing",
+        "missing_data": [
+          "hreflangs"
+        ]
+      },
+      {
+        "rule": "HREFLANG_X_DEFAULT",
+        "reason": "Data Missing - required: ['hreflangs']",
+        "type": "Data Missing",
+        "missing_data": [
+          "hreflangs"
+        ]
+      },
+      {
+        "rule": "HREFLANG_VALID_LANG_CODE",
+        "reason": "Data Missing - required: ['hreflangs']",
+        "type": "Data Missing",
+        "missing_data": [
+          "hreflangs"
+        ]
+      },
+      {
+        "rule": "HREFLANG_VALID_URL",
+        "reason": "Data Missing - required: ['hreflangs']",
+        "type": "Data Missing",
+        "missing_data": [
+          "hreflangs"
+        ]
+      },
+      {
+        "rule": "HREFLANG_INCLUDES_TARGET_LANGS",
+        "reason": "Data Missing - required: ['hreflangs']",
+        "type": "Data Missing",
+        "missing_data": [
+          "hreflangs"
+        ]
+      },
+      {
+        "rule": "HREFLANG_ALL_VALID",
+        "reason": "Data Missing - required: ['hreflangs']",
+        "type": "Data Missing",
+        "missing_data": [
+          "hreflangs"
+        ]
+      },
+      {
+        "rule": "LCP_GOOD",
+        "reason": "Data Missing - required: ['performance']",
+        "type": "Data Missing",
+        "missing_data": [
+          "performance"
+        ]
+      },
+      {
+        "rule": "CLS_GOOD",
+        "reason": "Data Missing - required: ['performance']",
+        "type": "Data Missing",
+        "missing_data": [
+          "performance"
+        ]
+      },
+      {
+        "rule": "TBT_GOOD",
+        "reason": "Data Missing - required: ['performance']",
+        "type": "Data Missing",
+        "missing_data": [
+          "performance"
+        ]
+      },
+      {
+        "rule": "PAGESPEED_SCORE",
+        "reason": "Data Missing - required: ['performance']",
+        "type": "Data Missing",
+        "missing_data": [
+          "performance"
+        ]
+      },
+      {
+        "rule": "SPEED_INDEX",
+        "reason": "Data Missing - required: ['performance']",
+        "type": "Data Missing",
+        "missing_data": [
+          "performance"
+        ]
+      },
+      {
+        "rule": "RENDER_BLOCKING",
+        "reason": "Data Missing - required: ['performance']",
+        "type": "Data Missing",
+        "missing_data": [
+          "performance"
+        ]
+      },
+      {
+        "rule": "AXE_NO_VIOLATIONS",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "AXE_NO_CRITICAL",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "AXE_NO_SERIOUS",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "AXE_MAX_MODERATE",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "IMAGES_ALL_HAVE_ALT",
+        "reason": "Data Missing - required: ['images']",
+        "type": "Data Missing",
+        "missing_data": [
+          "images"
+        ]
+      },
+      {
+        "rule": "DOM_ELEMENT_COUNT",
+        "reason": "Data Missing - required: ['word_count', 'headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "word_count",
+          "headless"
+        ]
+      },
+      {
+        "rule": "FORM_LABELS",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "BUTTONS_HAVE_LABELS",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "HEADING_ORDER_LOGICAL_A11Y",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "KEYBOARD_NAV_CHECKED",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "NO_FOCUS_TRAP",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "SMALL_CLICK_TARGETS",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "FOCUS_INDICATOR",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "UNREACHABLE_ELEMENTS",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "SKIP_NAVIGATION",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "LINKS_DESCRIPTIVE_TEXT",
+        "reason": "Data Missing - required: ['headless']",
+        "type": "Data Missing",
+        "missing_data": [
+          "headless"
+        ]
+      },
+      {
+        "rule": "WORD_COUNT_MAX",
+        "reason": "Data Missing - required: ['content_text', 'word_count']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "word_count"
+        ]
+      },
+      {
+        "rule": "CONTENT_CONTAINS_KEYWORD",
+        "reason": "Data Missing - required: ['content_text', 'word_count']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "word_count"
+        ]
+      },
+      {
+        "rule": "CONTENT_KEYWORD_DENSITY",
+        "reason": "Data Missing - required: ['content_text', 'word_count']",
+        "type": "Data Missing",
+        "missing_data": [
+          "content_text",
+          "word_count"
+        ]
+      }
+    ],
+    "missing_data_keys": [
+      "word_count",
+      "headings",
+      "viewport",
+      "meta_tags",
+      "robots",
+      "images",
+      "structured_data",
+      "headless",
+      "canonical",
+      "social",
+      "performance",
+      "title",
+      "content_text",
+      "meta_description",
+      "og_tags",
+      "hreflangs"
+    ],
+    "logic_errors": []
+  }
+}

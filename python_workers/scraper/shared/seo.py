@@ -294,7 +294,7 @@ def extract_visual_branding_data(soup: BeautifulSoup, seo_data: dict):
     meta_tags = seo_data.get("meta_tags", {})
     
     # Theme color
-    theme_color = meta_tags.get("theme-color", [None])[0] if meta_tags.get("theme-color") else None
+    theme_color = meta_tags.get("theme-color", [None])[0] if meta_tags.get("theme-color") and meta_tags.get("theme-color") else None
     
     # Apple touch icons
     apple_icons = []
@@ -342,7 +342,7 @@ def extract_content_analysis(soup: BeautifulSoup, seo_data: dict):
     # H1 tags data extracted
     
     # Check H1 length
-    h1_text = headings.get("h1", [""])[0]
+    h1_text = headings.get("h1", [""])[0] if headings.get("h1") else ""
     # H1 length data extracted
     
     # Check for duplicate H2 tags

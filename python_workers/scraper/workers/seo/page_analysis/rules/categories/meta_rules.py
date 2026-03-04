@@ -8,6 +8,7 @@ charset, robots meta, and author validation.
 import re
 from ..base_seo_rule import BaseSEORuleV2
 from ..utils import safe_str
+from ..seo_rule_utils import _keyword_from_context
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -47,26 +48,7 @@ ISO_639_1_CODES = {
 }
 
 
-def _keyword_from_context(normalized):
-    """Extract primary keyword from meta keywords or first H1."""
-    meta_tags = normalized.get("meta_tags", {})
-    keywords_list = meta_tags.get("keywords", [])
-    if keywords_list and isinstance(keywords_list, list) and keywords_list[0]:
-        kw = keywords_list[0]
-        if isinstance(kw, str):
-            # take first keyword if comma-separated
-            keyword = kw.split(",")[0].strip().lower()
-            # Validate keyword quality
-            if keyword and len(keyword) >= 3:
-                return keyword
-    # fallback: use H1 text
-    headings = normalized.get("headings", [])
-    for h in headings:
-        if h.get("tag") == "h1" and h.get("text", "").strip():
-            keyword = h["text"].strip().lower()
-            if keyword and len(keyword) >= 3:
-                return keyword
-    return None
+# _keyword_from_context imported from seo_rule_utils
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -126,7 +108,7 @@ class MetaDescMissingKeywordRule(BaseSEORuleV2):
             return []
         keyword = _keyword_from_context(normalized)
         if not keyword:
-            return []  # Cannot check without a valid keyword
+            return []  # KEYWORD_UNAVAILABLE: issue skipped — no target keyword configured
         if keyword.lower() not in desc.lower():
             return [self.create_issue(
                 job_id, project_id, url,
