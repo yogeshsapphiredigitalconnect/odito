@@ -196,6 +196,15 @@ class LinkAnalyzer:
                     potentially_broken.append(link)
                     break
         
+        # Detect content citations - external links with reference keywords
+        citation_keywords = ['source', 'study', 'research', 'report']
+        reference_links = []
+
+        for link in external_links:
+            anchor_lower = link['anchor_text'].lower()
+            if any(keyword in anchor_lower for keyword in citation_keywords):
+                reference_links.append(link)
+
         return {
             'domain_distribution': {domain: data['count'] for domain, data in domain_analysis.items()},
             'unique_external_domains': len(domain_analysis),
@@ -205,7 +214,12 @@ class LinkAnalyzer:
             'potentially_broken_links': potentially_broken,
             'potentially_broken_count': len(potentially_broken),
             'secure_external_links': len([l for l in external_links if l['normalized_url'].startswith('https://')]),
-            'http_external_links': len([l for l in external_links if l['normalized_url'].startswith('http://')])
+            'http_external_links': len([l for l in external_links if l['normalized_url'].startswith('http://')]),
+            'content_citations': {
+                'content_cites_sources': len(reference_links) > 0,
+                'source_links_count': len(reference_links),
+                'reference_links': reference_links[:5]  # Limit storage
+            }
         }
     
     def _analyze_link_quality(self, links: List[Dict[str, Any]]) -> Dict[str, Any]:

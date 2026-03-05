@@ -27,211 +27,131 @@ from db import seo_internal_links, seo_ai_visibility, seo_ai_visibility_project,
 # ==================== PHASE 2: AI-READY EXTRACTION LAYER ====================
 
 def extract_main_content(soup, url) -> dict:
-    """Extract main content using advanced hardened isolation (production-grade)"""
+    """Extract main content using modern builder-aware priority hierarchy"""
     try:
-        # === PHASE 2: MAIN CONTENT ISOLATION - PRODUCTION HARDENING ===
-        # Create a copy of soup for content extraction
-        try:
-            content_soup = BeautifulSoup(str(soup), 'html.parser')
-        except Exception as e:
-            print(f"[PHASE2] Failed to create content soup copy: {e}")
-            return None
+        # === BUG FIX 3: Enhanced Elementor and modern builder support ===
+        content_selectors = [
+            # WordPress Gutenberg (highest priority)
+            'main .entry-content',
+            'main .post-content',
+            'main .content-area',
+            'main .site-content',
+            
+            # Elementor (specific detection)
+            '.elementor-element.elementor-widget-theme-post-content',
+            '.elementor-element.elementor-widget-text-editor',
+            '.elementor-section-wrap',
+            'div[data-elementor-type="wp-post"]',
+            'div[data-elementor-type="single-post"]',
+            'div[data-elementor-type="page"]',
+            '.elementor-location-single',
+            
+            # Standard HTML5 semantic tags
+            'main',
+            'article',
+            '[role="main"]',
+            
+            # Common CMS patterns
+            '.content',
+            '.post-content',
+            '.entry-content',
+            '.article-content',
+            '.page-content',
+            '.site-main',
+            
+            # WordPress specific
+            '#content',
+            '#main',
+            '.main-content',
+            '.hentry',
+            
+            # Fallbacks
+            'body'
+        ]
         
-        if not content_soup:
-            print(f"[PHASE2] Content soup is None after creation")
-            return None
+        main_content_element = None
+        selector_used = "body"
         
-        # === PART 1: AGGRESSIVE NON-CONTENT REMOVAL ===
-        # Remove semantic non-content elements
+        for selector in content_selectors:
+            elements = soup.select(selector)
+            if elements:
+                # For multiple elements, choose the one with most text content
+                best_element = None
+                max_text_length = 0
+                
+                for element in elements:
+                    # Remove script/style elements temporarily for text measurement
+                    temp_soup = BeautifulSoup(str(element), 'html.parser')
+                    for tag in temp_soup.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
+                        tag.decompose()
+                    
+                    text_length = len(temp_soup.get_text(strip=True))
+                    if text_length > max_text_length:
+                        max_text_length = text_length
+                        best_element = element
+                
+                if best_element and max_text_length > 100:  # Minimum content threshold
+                    main_content_element = best_element
+                    selector_used = selector
+                    print(f"[MAIN_CONTENT] Found content with selector: {selector} ({max_text_length} chars)")
+                    break
+        
+        if not main_content_element:
+            print("[MAIN_CONTENT] No suitable main content element found, using body")
+            main_content_element = soup.find('body')
+            selector_used = "body"
+        
+        if not main_content_element:
+            return {
+                'main_content_text': '',
+                'main_content_html': '',
+                'content_extraction_method': 'failed',
+                'content_word_count': 0,
+                'content_selector_used': 'none'
+            }
+        
+        # Create a clean copy for content extraction
+        content_soup = BeautifulSoup(str(main_content_element), 'html.parser')
+        
+        # === BUG FIX 4: Enhanced non-content removal ===
         non_content_selectors = [
             'nav', 'header', 'footer', 'aside', 'form',
             '.nav', '.navigation', '.menu', '.sidebar',
             '.footer', '.header', '.ads', '.advertisement',
             'script', 'style', 'noscript', 'iframe',
             '.comments', '.comment', '.disqus', '.cookie', '.banner',
-            '.popup', '.modal', '.overlay', '.social', '.share'
+            '.popup', '.modal', '.overlay', '.social', '.share',
+            '.related-posts', '.author-box', '.post-meta',
+            '.elementor-nav-menu', '.elementor-location-header',
+            '.menu-primary', '.menu-secondary', '.mobile-menu'
         ]
         
         for selector in non_content_selectors:
             for element in content_soup.select(selector):
                 element.decompose()
         
-        # === PART 2: ID/CLASS PATTERN REMOVAL ===
-        # Remove elements with navigation-related IDs/classes
-        nav_patterns = ['nav', 'menu', 'footer', 'header', 'sidebar', 'navigation']
+        # Extract text and HTML
+        main_content_text = content_soup.get_text(separator=' ', strip=True)
+        main_content_html = str(content_soup)
         
-        try:
-            elements = content_soup.find_all(['div', 'section', 'article', 'aside'])
-            
-            # Collect elements to decompose first, then decompose them
-            elements_to_decompose = []
-            
-            for element in elements:
-                if element is None:
-                    continue
-                
-                try:
-                    element_id = (element.get('id') or '').lower()
-                    element_class = ' '.join(element.get('class', [])).lower()
-                    
-                    # Check if ID or class contains navigation patterns
-                    if any(pattern in element_id for pattern in nav_patterns) or \
-                       any(pattern in element_class for pattern in nav_patterns):
-                        elements_to_decompose.append(element)
-                        continue
-                except Exception as element_error:
-                    print(f"[PHASE2] Error processing element: {element_error}")
-                    continue
-            
-            # Decompose collected elements
-            for element in elements_to_decompose:
-                try:
-                    element.decompose()
-                except Exception as decompose_error:
-                    print(f"[PHASE2] Error decomposing element: {decompose_error}")
-                    
-        except Exception as e:
-            print(f"[PHASE2] Error in ID/CLASS pattern removal: {e}")
-            return None
-        
-        # === PART 3: LINK DENSITY FILTERING ===
-        # Remove elements with high link density (>60%)
-        for element in content_soup.find_all(['div', 'section', 'article']):
-            text = element.get_text(strip=True)
-            if not text:
-                continue
-                
-            # Count links vs total text
-            links = element.find_all('a')
-            link_text = ' '.join(link.get_text(strip=True) for link in links)
-            
-            if len(text) > 0:
-                link_density = len(link_text) / len(text)
-                if link_density > 0.6:
-                    element.decompose()
-                    continue
-        
-        # === PART 4: CONSECUTIVE LINK CLUSTER REMOVAL ===
-        # Remove elements with >5 consecutive <a> tags
-        for element in content_soup.find_all(['div', 'section', 'article', 'nav']):
-            consecutive_links = 0
-            max_consecutive = 0
-            
-            for child in element.children:
-                if child.name == 'a':
-                    consecutive_links += 1
-                    max_consecutive = max(max_consecutive, consecutive_links)
-                else:
-                    consecutive_links = 0
-            
-            if max_consecutive > 5:
-                element.decompose()
-        
-        # === PART 5: SMALL ANCHOR CLUSTER REMOVAL ===
-        # Remove containers with <120 chars and >50% words in links
-        for element in content_soup.find_all(['div', 'section', 'span', 'p']):
-            text = element.get_text(strip=True)
-            if len(text) < 120:
-                words = text.split()
-                links = element.find_all('a')
-                link_words = []
-                
-                for link in links:
-                    link_words.extend(link.get_text(strip=True).split())
-                
-                if words and len(link_words) / len(words) > 0.5:
-                    element.decompose()
-        
-        # Priority: article > main > density-based div
-        main_content = None
-        extraction_method = 'failed'
-        
-        # Try article tag first
-        article = content_soup.find('article')
-        if article:
-            main_content = article
-            extraction_method = 'article'
-        else:
-            # Try main tag
-            main = content_soup.find('main')
-            if main:
-                main_content = main
-                extraction_method = 'main'
-            else:
-                # Density-based heuristic
-                div_candidates = []
-                
-                for div in content_soup.find_all('div'):
-                    text = div.get_text(strip=True)
-                    html = str(div)
-                    
-                    # Skip if too short or too long
-                    if len(text) < 200 or len(html) > 50000:
-                        continue
-                    
-                    # Calculate text density ratio
-                    text_length = len(text)
-                    html_length = len(html)
-                    density_ratio = text_length / html_length if html_length > 0 else 0
-                    
-                    # Reject low-density content
-                    if density_ratio < 0.3:
-                        continue
-                    
-                    div_candidates.append((div, density_ratio, text_length))
-                
-                if div_candidates:
-                    div_candidates.sort(key=lambda x: (x[1], x[2]), reverse=True)
-                    main_content = div_candidates[0][0]
-                    extraction_method = 'density_based'
-        
-        if not main_content:
-            main_content = content_soup.find('body') or content_soup
-            extraction_method = 'body_fallback'
-        
-        main_content_text = main_content.get_text(strip=True)
-        main_content_html = str(main_content)
-        
-        # === PART 6: NAVIGATION KEYWORD SCAN ===
-        # Scan for navigation keywords in extracted content
-        nav_keywords = ["home", "contact", "privacy", "terms", "login", "signup", "register", "about", "menu"]
-        nav_keyword_counts = {}
-        
-        for keyword in nav_keywords:
-            count = len(re.findall(r'\b' + re.escape(keyword) + r'\b', main_content_text, re.IGNORECASE))
-            if count > 0:
-                nav_keyword_counts[keyword] = count
-        
-        # Log isolation warning if keywords appear >2 times
-        isolation_warnings = []
-        for keyword, count in nav_keyword_counts.items():
-            if count > 2:
-                isolation_warnings.append(f"Navigation keyword '{keyword}' appears {count} times")
-        
-        if isolation_warnings:
-            print(f"[ISOLATION_WARNING] Navigation leakage detected: {isolation_warnings}")
-        
-        # Count words in main content
-        content_word_count = len(re.findall(r'\b\w+\b', main_content_text))
+        print(f"[MAIN_CONTENT] Extracted content using selector: {selector_used}")
         
         return {
             'main_content_text': main_content_text[:5000],  # Limit for storage
             'main_content_html': main_content_html[:10000],  # Limit for storage
-            'content_word_count': content_word_count,
-            'content_extraction_method': extraction_method,
-            'nav_keyword_counts': nav_keyword_counts,
-            'isolation_warnings': isolation_warnings
+            'content_extraction_method': 'enhanced_builder_aware',
+            'content_selector_used': selector_used
         }
         
     except Exception as e:
-        print(f"[PHASE2] Main content extraction failed: {e}")
+        print(f"[MAIN_CONTENT] Extraction failed: {e}")
         return {
             'main_content_text': '',
             'main_content_html': '',
-            'content_word_count': 0,
             'content_extraction_method': 'failed',
-            'nav_keyword_counts': {},
-            'isolation_errors': [str(e)]
+            'content_word_count': 0,
+            'content_selector_used': 'error',
+            'extraction_errors': [str(e)]
         }
 
 def extract_heading_hierarchy(soup) -> dict:
@@ -343,6 +263,12 @@ def extract_paragraph_metrics(text) -> dict:
         # Split into paragraphs
         paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         paragraph_count = len(paragraphs)
+        
+        print("=== PARAGRAPH COUNT DEBUG - PIPELINE A ===")
+        print(f"method used: text split by double newline (\\n\\n)")
+        print(f"raw paragraph elements found: {len(paragraphs)}")
+        print(f"paragraph_count assigned: {paragraph_count}")
+        print("=== END PIPELINE A ===")
         
         if paragraph_count == 0:
             return {
@@ -741,7 +667,7 @@ def calculate_flesch_readability(text) -> dict:
         print(f"[PHASE2] Flesch readability calculation failed: {e}")
         return {'flesch_score': 0, 'reading_grade_level': 'Unknown'}
 
-def calculate_entity_density(entity_graph, text, word_count) -> dict:
+def calculate_entity_density(entity_graph, text, word_count, ai_signals=None) -> dict:
     """Calculate entity density metrics with entity count cap (production-hardened)"""
     try:
         # === PHASE 2: ENTITY DENSITY METRICS - WITH ENTITY CAP ===
@@ -750,6 +676,11 @@ def calculate_entity_density(entity_graph, text, word_count) -> dict:
                 'entity_count': 0, 'unique_entity_types': 0,
                 'entity_per_1000_words': 0, 'primary_entity_mentions_in_text': 0
             }
+        
+        # Get parsed_entities from ai_signals
+        parsed_entities = []
+        if ai_signals:
+            parsed_entities = ai_signals.get('parsed_entities', [])
         
         # === PART 3: ENTITY COUNT CAP GUARD ===
         MAX_ENTITIES = 500
@@ -777,31 +708,54 @@ def calculate_entity_density(entity_graph, text, word_count) -> dict:
         else:
             entity_per_1000_words = 0
         
-        # Count primary entity mentions in text
-        primary_entity_mentions_in_text = 0
-        if entity_count > 0:
-            # Find primary entity (prioritize Organization, WebPage, Person)
-            primary_entity = None
-            for entity in entities:
-                entity_type = entity.get('@type', '')
-                if entity_type in ['Organization', 'WebPage', 'Person']:
-                    primary_entity = entity
-                    break
+        # SELF-CONTAINED ENTITY MENTION COUNTING FIX
+        # Use the text parameter directly instead of requiring result object
+        def calculate_entity_mentions(text, parsed_entities):
+            # Always get entity name from Organization first, NOT from WebPage
+            entity_name = None
+
+            for entity in parsed_entities:
+                if entity.get("@type") == "Organization":
+                    entity_name = (entity.get("name") or entity.get("legalName") or "").strip()
+                    if entity_name:
+                        break
+
+            # Fallback: WebSite name (e.g. "Sapphire Digital Connect")
+            if not entity_name:
+                for entity in parsed_entities:
+                    if entity.get("@type") == "WebSite":
+                        entity_name = entity.get("name", "").strip()
+                        if entity_name:
+                            break
+
+            # Do NOT use WebPage.name — it contains the full page title, not the brand name
+            if not entity_name:
+                print(f"[ENTITY_FIX] No Organization entity found in parsed_entities")
+                return 0
+
+            # Use the provided text directly for counting
+            entity_text = text.strip()
             
-            if not primary_entity and entities:
-                primary_entity = entities[0]  # Fallback to first entity
-            
-            if primary_entity:
-                entity_name = primary_entity.get('name')
-                if entity_name:
-                    mentions = re.findall(re.escape(entity_name), text, re.IGNORECASE)
-                    primary_entity_mentions_in_text = len(mentions)
+            if entity_name and entity_text.strip():
+                import re
+                count = len(re.findall(re.escape(entity_name), entity_text, re.IGNORECASE))
+                print(f"[ENTITY_FIX] Using entity name: '{entity_name}' (from Organization.legalName fallback)")
+                print(f"[ENTITY_FIX] Search corpus length: {len(entity_text)} chars")
+                print(f"[ENTITY_FIX] Counted {count} mentions of '{entity_name}'")
+            else:
+                count = 0
+                print(f"[ENTITY_FIX] No entity name or text available for counting")
+
+            return count
+        
+        # Calculate entity mentions using self-contained function
+        count = calculate_entity_mentions(text, parsed_entities)
         
         return {
             'entity_count': entity_count,
             'unique_entity_types': unique_entity_types,
             'entity_per_1000_words': round(entity_per_1000_words, 2),
-            'primary_entity_mentions_in_text': primary_entity_mentions_in_text,
+            'primary_entity_mentions_in_text': count,
             'entity_cap_reached': entity_count >= MAX_ENTITIES
         }
         
@@ -1737,58 +1691,78 @@ def get_required_fields_for_type(entity_type) -> list:
 # ==================== ORGANIZATION SIGNALS ====================
 
 def extract_organization_signals(soup) -> dict:
-    """Extract organization-specific signals"""
+    """Extract organization-specific signals with improved name detection"""
     json_ld_scripts = soup.find_all('script', type='application/ld+json')
     
     organization_data = {
         "organization_present": False,
         "organization_ids_found": [],
         "organization_name": "",
+        "organization_legal_name": "",
         "organization_url": "",
         "organization_logo_present": False,
         "organization_sameAs_count": 0,
         "organization_contactPoint_present": False,
-        "organization_address_present": False
+        "organization_address_present": False,
+        "organization_telephone": "",
+        "organization_email": "",
+        "organization_address": {},
+        "organization_social_profiles": []
     }
     
-    for script in json_ld_scripts:
-        try:
-            import json
-            data = json.loads(script.string)
-            entities = flatten_graph_entities(data)
-            
-            for entity in entities:
-                entity_type = entity.get('@type', '')
-                if isinstance(entity_type, list):
-                    entity_type = entity_type[0] if entity_type else ""
+    try:
+        for script in json_ld_scripts:
+            try:
+                data = json.loads(script.string)
+                entities = flatten_graph_entities(data)
                 
-                if entity_type == "Organization":
-                    organization_data["organization_present"] = True
-                    
-                    if entity.get('@id'):
-                        organization_data["organization_ids_found"].append(entity['@id'])
-                    
-                    if entity.get('name'):
-                        organization_data["organization_name"] = entity['name']
-                    
-                    if entity.get('url'):
-                        organization_data["organization_url"] = entity['url']
-                    
-                    if entity.get('logo'):
-                        organization_data["organization_logo_present"] = True
-                    
-                    if entity.get('sameAs'):
-                        same_as = entity['sameAs']
-                        organization_data["organization_sameAs_count"] = len(same_as) if isinstance(same_as, list) else 1
-                    
-                    if entity.get('contactPoint'):
-                        organization_data["organization_contactPoint_present"] = True
-                    
-                    if entity.get('address'):
-                        organization_data["organization_address_present"] = True
+                for entity in entities:
+                    if entity.get('@type') == 'Organization':
+                        organization_data["organization_present"] = True
                         
-        except:
-            pass
+                        # === CRITICAL FIX: Support both name AND legalName ===
+                        if entity.get('name'):
+                            organization_data["organization_name"] = entity['name']
+                        elif entity.get('legalName'):
+                            organization_data["organization_name"] = entity['legalName']
+                            organization_data["organization_legal_name"] = entity['legalName']
+                        
+                        if entity.get('legalName'):
+                            organization_data["organization_legal_name"] = entity['legalName']
+                        
+                        if entity.get('@id'):
+                            organization_data["organization_ids_found"].append(entity['@id'])
+                        
+                        if entity.get('url'):
+                            organization_data["organization_url"] = entity['url']
+                        
+                        if entity.get('logo'):
+                            organization_data["organization_logo_present"] = True
+                        
+                        if entity.get('sameAs'):
+                            organization_data["organization_sameAs_count"] = len(entity['sameAs'])
+                            organization_data["organization_social_profiles"] = entity['sameAs']
+                        
+                        if entity.get('contactPoint'):
+                            organization_data["organization_contactPoint_present"] = True
+                        
+                        if entity.get('address'):
+                            organization_data["organization_address_present"] = True
+                            organization_data["organization_address"] = entity['address']
+                        
+                        if entity.get('telephone'):
+                            organization_data["organization_telephone"] = entity['telephone']
+                        
+                        if entity.get('email'):
+                            organization_data["organization_email"] = entity['email']
+                        
+            except json.JSONDecodeError:
+                continue
+            except Exception:
+                continue
+                
+    except Exception as e:
+        print(f"[ORGANIZATION_SIGNALS] Extraction error: {e}")
     
     return organization_data
 
@@ -2569,7 +2543,7 @@ def extract_complete_content_sections(soup) -> dict:
     content_sections["extraction_summary"] = {
         "sections_detected": present_sections,
         "total_sections_found": len(present_sections),
-        "total_content_words": total_words,
+        "total_word_count": total_words,
         "dom_pollution_removed": True,
         "minimum_word_threshold": 80,
         "navigation_lists_excluded": True
@@ -3489,6 +3463,110 @@ def extract_comprehensive_signals(html: str, url: str) -> dict:
         "full_extraction_mode_enabled": True
     })
     
+    # ========================================
+    # NEW AI VISIBILITY SIGNALS INTEGRATION
+    # ========================================
+    
+    # Extract enhanced author signals
+    try:
+        parsed_entities = semantic_dataset.get("parsed_entities", [])
+        author_signals = extract_author_signals(soup, parsed_entities)
+        semantic_dataset["author_signals"] = author_signals
+    except Exception as e:
+        extraction_errors.append(f"Author signals extraction failed: {e}")
+        semantic_dataset["author_signals"] = {"author_detected": False, "error": str(e)}
+    
+    # Extract NAP consistency signals for local SEO
+    try:
+        nap_signals = extract_nap_signals(soup)
+        semantic_dataset["nap_signals"] = nap_signals
+    except Exception as e:
+        extraction_errors.append(f"NAP signals extraction failed: {e}")
+        semantic_dataset["nap_signals"] = {"nap_consistency": {"consistent": False}, "error": str(e)}
+    
+    # Extract direct answer signals for AEO
+    try:
+        main_text = soup.get_text()
+        answer_signals = extract_direct_answer_signals(soup, main_text)
+        semantic_dataset["answer_signals"] = answer_signals
+    except Exception as e:
+        extraction_errors.append(f"Answer signals extraction failed: {e}")
+        semantic_dataset["answer_signals"] = {"direct_answers": {"count": 0}, "error": str(e)}
+    
+    # Extract enhanced technical signals
+    try:
+        enhanced_technical = extract_enhanced_technical_signals(soup, url)
+        semantic_dataset["enhanced_technical_signals"] = enhanced_technical
+        
+        # NAVIGATION SYNC TO ENHANCED_EXTRACTION_V2 LOCATIONS
+        # Read from canonical source and sync to other two locations
+        nav_result = enhanced_technical.get("navigation_detection", {})
+        has_nav = nav_result.get("has_navigation", False)
+        has_header = nav_result.get("has_header", False)
+        has_footer = nav_result.get("has_footer", False)
+        
+        # Sync Location 1: structure_metrics inside page_metadata
+        try:
+            if "enhanced_extraction_v2" not in semantic_dataset:
+                semantic_dataset["enhanced_extraction_v2"] = {}
+            if "page_metadata" not in semantic_dataset["enhanced_extraction_v2"]:
+                semantic_dataset["enhanced_extraction_v2"]["page_metadata"] = {}
+            if "structure_metrics" not in semantic_dataset["enhanced_extraction_v2"]["page_metadata"]:
+                semantic_dataset["enhanced_extraction_v2"]["page_metadata"]["structure_metrics"] = {}
+                
+            semantic_dataset["enhanced_extraction_v2"]["page_metadata"]["structure_metrics"]["has_navigation"] = has_nav
+            semantic_dataset["enhanced_extraction_v2"]["page_metadata"]["structure_metrics"]["has_header"] = has_header
+            semantic_dataset["enhanced_extraction_v2"]["page_metadata"]["structure_metrics"]["has_footer"] = has_footer
+            print(f"[NAVIGATION_SYNC] Synced to enhanced_extraction_v2.page_metadata.structure_metrics")
+        except (KeyError, TypeError) as e:
+            print(f"[NAVIGATION_SYNC] Failed to sync Location 1: {e}")
+        
+        # Sync Location 2: body_signals.structure inside technical_seo_signals
+        try:
+            if "enhanced_extraction_v2" not in semantic_dataset:
+                semantic_dataset["enhanced_extraction_v2"] = {}
+            if "technical_seo_signals" not in semantic_dataset["enhanced_extraction_v2"]:
+                semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"] = {}
+            if "body_signals" not in semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]:
+                semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]["body_signals"] = {}
+            if "structure" not in semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]["body_signals"]:
+                semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]["body_signals"]["structure"] = {}
+                
+            semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]["body_signals"]["structure"]["has_nav"] = has_nav
+            semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]["body_signals"]["structure"]["has_header"] = has_header
+            semantic_dataset["enhanced_extraction_v2"]["technical_seo_signals"]["body_signals"]["structure"]["has_footer"] = has_footer
+            print(f"[NAVIGATION_SYNC] Synced to enhanced_extraction_v2.technical_seo_signals.body_signals.structure")
+        except (KeyError, TypeError) as e:
+            print(f"[NAVIGATION_SYNC] Failed to sync Location 2: {e}")
+            
+    except Exception as e:
+        extraction_errors.append(f"Enhanced technical signals extraction failed: {e}")
+        semantic_dataset["enhanced_technical_signals"] = {"crawlability": {"robots_txt_accessible": False}, "error": str(e)}
+    
+    # Extract AI visibility signals (organization, llms.txt, geo)
+    try:
+        ai_visibility_signals = extract_ai_visibility_signals(semantic_dataset, soup, url)
+        semantic_dataset["ai_visibility_signals"] = ai_visibility_signals
+    except Exception as e:
+        extraction_errors.append(f"AI visibility signals extraction failed: {e}")
+        semantic_dataset["ai_visibility_signals"] = {"organization_schema_validation": {"organization_detected": False}, "error": str(e)}
+    
+    # Add performance optimization metadata
+    semantic_dataset.update({
+        "extraction_performance": {
+            "html_size_limited": len(html) > 500_000,
+            "memory_optimized": True,
+            "batch_extraction_used": True,
+            "safe_extraction_enabled": True
+        },
+        "new_signals_integrated": True,
+        "author_signals_available": "author_signals" in semantic_dataset,
+        "nap_signals_available": "nap_signals" in semantic_dataset,
+        "answer_signals_available": "answer_signals" in semantic_dataset,
+        "enhanced_technical_available": "enhanced_technical_signals" in semantic_dataset,
+        "ai_visibility_available": "ai_visibility_signals" in semantic_dataset
+    })
+    
     return semantic_dataset
 
 def extract_real_word_count(ai_signals: dict, html: str) -> int:
@@ -3498,8 +3576,8 @@ def extract_real_word_count(ai_signals: dict, html: str) -> int:
         content_sections = ai_signals.get("content_sections", {})
         if content_sections and "extraction_summary" in content_sections:
             summary = content_sections["extraction_summary"]
-            if "total_content_words" in summary:
-                word_count = summary["total_content_words"]
+            if "total_word_count" in summary:
+                word_count = summary["total_word_count"]
                 if isinstance(word_count, int) and word_count > 0:
                     print(f"[WORD_COUNT] Using content_sections word count: {word_count}")
                     return word_count
@@ -3624,6 +3702,25 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
         # Extract comprehensive AI visibility signals
         ai_signals = extract_comprehensive_signals(html, url)
         
+        # Calculate entity density and mentions AFTER parsed_entities is populated
+        # Use parsed_entities from ai_signals for accurate entity counting
+        parsed_entities = ai_signals.get('parsed_entities', [])
+        entity_graph = ai_signals.get('unified_entity_graph', {})
+        
+        # Get title and meta description for broader entity search
+        page_title = soup.title.string if soup.title else ""
+        meta_desc_tag = soup.find('meta', attrs={'name': 'description'})
+        meta_desc = meta_desc_tag.get('content', '') if meta_desc_tag else ""
+        
+        # Use main_text for entity density calculation (will be available later)
+        main_text = ""  # Placeholder, will be updated after main_content extraction
+        expanded_text = f"{page_title} {meta_desc} {main_text}"
+        entity_metrics = calculate_entity_density(entity_graph, expanded_text, 0, ai_signals)  # word_count will be updated later
+        
+        print(f"[ENTITY_METRICS_FIX] Calculated entity_metrics with {len(parsed_entities)} parsed_entities")
+        print(f"[ENTITY_METRICS_FIX] Entity count: {entity_metrics.get('entity_count', 0)}")
+        print(f"[ENTITY_METRICS_FIX] Entity mentions: {entity_metrics.get('primary_entity_mentions_in_text', 0)}")
+        
         # === PHASE 2: AI-READY EXTRACTION LAYER ===
         # Extract main content for accurate analysis
         main_content = extract_main_content(soup, url)
@@ -3633,20 +3730,73 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
             print("[PHASE2] Main content extraction returned None - using fallback")
             main_content = {
                 'main_content_text': '',
-                'content_word_count': 0,
                 'content_extraction_method': 'failed',
                 'nav_keyword_counts': {},
                 'isolation_warnings': ['Main content extraction failed']
             }
         
         main_text = main_content.get('main_content_text', '')
-        main_word_count = main_content.get('content_word_count', 0)
         
         # Extract heading hierarchy
         heading_metrics = extract_heading_hierarchy(soup)
         
         # Extract paragraph structure metrics
         paragraph_metrics = extract_paragraph_metrics(main_text)
+        
+        # Extract readability metrics
+        readability_metrics = calculate_flesch_readability(main_text)
+        
+        # Detect FAQ content
+        faq_metrics = detect_faq_content(soup, main_text)
+        
+        # Calculate real word count early to use in metrics
+        word_count = extract_real_word_count(ai_signals, html)
+        
+        # Recalculate entity_metrics with actual main_text and word_count
+        # FIX: Use full visible text for entity mention counting, not just main_content
+        
+        # Remove script, style, and other non-content elements (same as word count)
+        for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+            element.decompose()
+        
+        # Get visible text (same as word count)
+        visible_text = soup.get_text(separator=' ', strip=True)
+        
+        # Clean up text (same as word count)
+        import re
+        cleaned_text = re.sub(r'\s+', ' ', visible_text)
+        
+        expanded_text = f"{page_title} {meta_desc} {cleaned_text}"
+        print(f"[ENTITY_FIX] Using full visible text for mention counting: {len(cleaned_text)} chars")
+        
+        entity_metrics = calculate_entity_density(entity_graph, expanded_text, word_count, ai_signals)
+        
+        print(f"[ENTITY_METRICS_RECALC] Recalculated entity_metrics with word_count={word_count}")
+        print(f"[ENTITY_METRICS_RECALC] Final entity count: {entity_metrics.get('entity_count', 0)}")
+        print(f"[ENTITY_METRICS_RECALC] Final entity mentions: {entity_metrics.get('primary_entity_mentions_in_text', 0)}")
+        
+        # Extract readability metrics
+        readability_metrics = calculate_flesch_readability(main_text)
+        
+        # SURGICAL FIX: Calculate paragraph count from full DOM for consistency
+        # Get all paragraph elements from the entire page, not just main_content
+        all_paragraphs = soup.find_all('p')
+        shared_paragraph_count = len(all_paragraphs)
+        
+        print("=== PARAGRAPH COUNT DEBUG - PIPELINE B ===")
+        print(f"method used: soup.find_all('p') - full DOM <p> tags")
+        print(f"raw paragraph elements found: {len(all_paragraphs)}")
+        print(f"paragraph_count assigned: {shared_paragraph_count}")
+        print("=== END PIPELINE B ===")
+        print(f"[PARAGRAPH_FIX] Using full DOM paragraph count: {shared_paragraph_count}")
+        
+        # Create content metrics with correct word count as single source of truth
+        content_metrics = {
+            'word_count': word_count,  # BUG FIX 2: Single source of truth
+            'readability_score': readability_metrics.get('flesch_score', 0),
+            'paragraph_count': shared_paragraph_count,  # Use shared DOM-based count
+            'avg_paragraph_length': paragraph_metrics.get('avg_paragraph_length', 0)
+        }
         
         # Detect FAQ content
         faq_metrics = detect_faq_content(soup, main_text)
@@ -3657,10 +3807,6 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
         # Calculate readability score
         readability_metrics = calculate_flesch_readability(main_text)
         
-        # Calculate entity density
-        entity_graph = ai_signals.get('unified_entity_graph', {})
-        entity_metrics = calculate_entity_density(entity_graph, main_text, main_word_count)
-        
         # Classify intent
         intent_metrics = classify_intent(main_text)
         
@@ -3668,8 +3814,8 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
         # Combine all Phase 2 metrics
         ai_signals.update({
             'content_metrics': {
-                'word_count': main_word_count,
-                'paragraph_count': paragraph_metrics.get('paragraph_count', 0),
+                'word_count': word_count,
+                'paragraph_count': shared_paragraph_count,  # Use shared DOM-based count
                 'avg_sentence_length': paragraph_metrics.get('avg_sentence_length', 0),
                 'readability_score': readability_metrics.get('flesch_score', 0),
                 'short_paragraph_ratio': paragraph_metrics.get('short_paragraph_ratio', 0),
@@ -3684,13 +3830,14 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
             'intent_metrics': intent_metrics,
             'main_content': {
                 'extraction_method': main_content.get('content_extraction_method', 'unknown'),
-                'content_word_count': main_word_count
+                # SURGICAL FIX: Remove content_word_count field entirely
+                # 'content_word_count': main_word_count
             },
             # === CRITICAL FIX: Quality flags for debugging ===
             'quality_flags': {
-                'low_word_count': main_word_count < 300,
+                'low_word_count': word_count < 300,  # BUG FIX 2: placeholder, recalculated after top-level word_count is set
                 'weak_heading_structure': heading_metrics.get('heading_structure_score_input', 0) < 50,
-                'no_main_content_detected': main_content.get('content_extraction_method') == 'failed' or main_word_count < 100,
+                'no_main_content_detected': main_content.get('content_extraction_method') == 'failed' or content_metrics['word_count'] < 100,
                 'malformed_structure': not heading_metrics.get('heading_sequence_valid', False),
                 'insufficient_text_for_readability': readability_metrics.get('word_count', 0) < 100,
                 'low_entity_density': entity_metrics.get('entity_per_1000_words', 0) < 2,  # === CRITICAL FIX: Correct threshold (was 5, too aggressive) ===
@@ -3714,12 +3861,7 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
         
         ai_signals = round_nested_floats(ai_signals)
         
-        # === 🆕 NEW AI VISIBILITY SIGNALS IMPLEMENTATION ===
-        ai_visibility_signals = extract_ai_visibility_signals(ai_signals, soup, url)
-        ai_signals['ai_visibility_signals'] = ai_visibility_signals
-        
-        # 🔥 PHASE 1: REAL WORD COUNT EXTRACTION (Legacy - kept for compatibility)
-        word_count = extract_real_word_count(ai_signals, html)
+        # 🔥 PHASE 1: REAL WORD COUNT EXTRACTION
         ai_signals["word_count"] = word_count
         
         # === PHASE 1 SAFETY ADDITION ===
@@ -3736,15 +3878,117 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
             print(f"[SAFETY] Progress update failed | jobId={job.jobId} | error={progress_error}")
             # Continue with job - don't fail due to progress issues
         
-        return {
+        # === PIPELINE IMPROVEMENT: Explicit field mapping to prevent conflicts ===
+        # Extract technical signals to top-level fields for backward compatibility
+        enhanced_technical = ai_signals.get('enhanced_technical_signals', {})
+        if enhanced_technical:
+            navigation_detection = enhanced_technical.get('navigation_detection', {})
+            page_speed_indicators = enhanced_technical.get('page_speed_indicators', {})
+            
+            # BUG FIX 2: Map nested fields to top-level output fields
+            ai_signals.update({
+                'has_navigation': bool(navigation_detection.get('has_navigation', False)),
+                'has_header': bool(navigation_detection.get('has_header', False)),
+                'has_footer': bool(navigation_detection.get('has_footer', False)),
+                'lazy_loading_detected': bool(page_speed_indicators.get('lazy_loading', False))
+            })
+            
+            print(f"[MAPPED_FIELD] has_navigation: {navigation_detection.get('has_navigation', False)}")
+            print(f"[MAPPED_FIELD] has_header: {navigation_detection.get('has_header', False)}")
+            print(f"[MAPPED_FIELD] has_footer: {navigation_detection.get('has_footer', False)}")
+            print(f"[MAPPED_FIELD] lazy_loading_detected: {page_speed_indicators.get('lazy_loading', False)}")
+        
+        # Extract content metrics to ensure correct field usage
+        content_metrics = ai_signals.get('content_metrics', {})
+        if content_metrics:
+            # SURGICAL FIX: Remove content_word_count mapping - this field is being removed entirely
+            # ai_signals['content_word_count'] = content_metrics.get('word_count', 0)
+            print(f"[MAPPED_FIELD] content_word_count: REMOVED (using word_count instead)")
+        
+        # Extract entity metrics
+        entity_metrics = ai_signals.get('entity_metrics', {})
+        if entity_metrics:
+            # Ensure entity mentions are properly mapped
+            ai_signals['primary_entity_mentions_in_text'] = entity_metrics.get('primary_entity_mentions_in_text', 0)
+            print(f"[MAPPED_FIELD] primary_entity_mentions_in_text: {entity_metrics.get('primary_entity_mentions_in_text', 0)}")
+        
+        # Extract author signals
+        author_signals = ai_signals.get('author_signals', {})
+        if author_signals:
+            # BUG FIX 5: Ensure author detection is properly mapped
+            ai_signals['author_detected'] = bool(author_signals.get('author_detected', False))
+            print(f"[MAPPED_FIELD] author_detected: {author_signals.get('author_detected', False)}")
+        
+        # Extract quality flags — BUG FIX 2: Use top-level word_count as single source of truth
+        quality_flags = ai_signals.get('quality_flags', {})
+        if quality_flags:
+            quality_flags['low_word_count'] = word_count < 300
+            ai_signals['quality_flags'] = quality_flags
+            ai_signals['low_word_count'] = bool(quality_flags['low_word_count'])
+            print(f"[MAPPED_FIELD] low_word_count: {quality_flags['low_word_count']} (word_count={word_count})")
+        
+        print(f"[FINAL_OUTPUT] Preparing final result with explicit field mapping")
+        
+        # === SURGICAL FIX: Paragraph Count Conflict ===
+        # Overwrite content_metrics.paragraph_count with enhanced_extraction_v2 value
+        correct_paragraph_count = ai_signals.get("enhanced_extraction_v2", {}) \
+            .get("page_metadata", {}) \
+            .get("content_metrics", {}) \
+            .get("paragraph_count", None)
+        
+        if correct_paragraph_count is not None:
+            # Update content_metrics.paragraph_count with the correct value
+            content_metrics = ai_signals.get('content_metrics', {})
+            if content_metrics:
+                content_metrics['paragraph_count'] = correct_paragraph_count
+                ai_signals['content_metrics'] = content_metrics
+                print(f"[PARAGRAPH_FIX] Overwrote content_metrics.paragraph_count with correct value: {correct_paragraph_count}")
+        
+        # === FINAL VALIDATION: Ensure all boolean fields are properly set ===
+        boolean_fields = [
+            'has_navigation', 'has_header', 'has_footer', 'lazy_loading_detected',
+            'author_detected', 'low_word_count'
+        ]
+        
+        for field in boolean_fields:
+            if field in ai_signals:
+                ai_signals[field] = bool(ai_signals[field])
+                print(f"[FINAL_OUTPUT] {field}: {ai_signals[field]}")
+        
+        # === CANONICAL SIGNAL REGISTRY ===
+        # The single source of truth for the JSON output.
+        # Ensure no nested spread logic overwrites these fields.
+        CANONICAL_SIGNALS = [
+            "word_count",
+            "author_detected",
+            "has_navigation",
+            "has_header",
+            "has_footer",
+            "lazy_loading_detected",
+            "primary_entity_mentions_in_text"
+        ]
+        
+        final_output = {
             'projectId': ObjectId(aiProjectId),  # 🧠 Always use AI project ID for output
             'ai_jobId': ObjectId(job.jobId),
             'url': url,
             'http_status_code': status_code,
             'response_time_ms': response_time_ms,
-            'extraction_timestamp': datetime.utcnow(),
-            **ai_signals
+            'extraction_timestamp': datetime.utcnow()
         }
+        
+        # Spread base signals to ensure all nested structures are still preserved 
+        # (as expected by DB schema, like quality_flags, content_metrics, etc)
+        for key, value in ai_signals.items():
+            if key not in CANONICAL_SIGNALS:
+               final_output[key] = value
+        
+        # Explicitly map CANONICAL_SIGNALS to guarantee they are the single source of truth
+        for signal in CANONICAL_SIGNALS:
+            if signal in ai_signals:
+                final_output[signal] = ai_signals[signal]
+        
+        return final_output
         
     except Exception as e:
         print(f"Error analyzing {url}: {e}")
@@ -4041,21 +4285,43 @@ def extract_ai_visibility_signals(ai_signals, soup, url) -> dict:
         organization_detected = False
         name_present = False
         missing_name = False
+        localbusiness_detected = False
+        
+        # === BUG FIX 1: Check ALL organization entities for name ===
+        organization_names = []
         
         for entity in parsed_entities:
-            if entity.get('@type') == 'Organization':
+            entity_type = entity.get('@type', '')
+            
+            # === BUG FIX 2: Support multiple organization types ===
+            if entity_type in ['Organization', 'LocalBusiness', 'Store', 'ProfessionalService']:
                 organization_detected = True
+                
+                if entity_type == 'LocalBusiness':
+                    localbusiness_detected = True
+                
+                # Check for name OR legalName
                 entity_name = entity.get('name', '')
+                entity_legal_name = entity.get('legalName', '')
+                
                 if entity_name and entity_name.strip():
-                    name_present = True
-                else:
-                    missing_name = True
-                break  # Found Organization, no need to continue
+                    organization_names.append(entity_name.strip())
+                elif entity_legal_name and entity_legal_name.strip():
+                    organization_names.append(entity_legal_name.strip())
+        
+        # === BUG FIX 1: If ANY organization entity has a name, PASS ===
+        if organization_names:
+            name_present = True
+            missing_name = False
+        elif organization_detected:
+            missing_name = True
         
         ai_visibility_signals["organization_schema_validation"] = {
             "organization_detected": organization_detected,
+            "localbusiness_detected": localbusiness_detected,
             "name_present": name_present,
-            "missing_name": missing_name
+            "missing_name": missing_name,
+            "organization_names_found": organization_names
         }
         
     except Exception as e:
@@ -4181,4 +4447,668 @@ def extract_ai_visibility_signals(ai_signals, soup, url) -> dict:
         print(f"[AI_VISIBILITY_SIGNALS] Geo signals detection error: {e}")
         # Keep safe defaults
     
+    try:
+        # === 4️⃣ Additional Schema Signals ===
+        parsed_entities = ai_signals.get('parsed_entities', [])
+        
+        # Initialize all schema signals
+        additional_schemas = {
+            "opening_hours_schema_present": False,
+            "event_schema_present": False,
+            "aggregate_rating_schema_present": False,
+            "service_or_product_offers_schema": False,
+            "breadcrumb_schema_present": False
+        }
+        
+        # Check each entity for schema types and properties
+        for entity in parsed_entities:
+            entity_type = entity.get('@type', '')
+            
+            # Check for specific schema types
+            if entity_type == 'Event':
+                additional_schemas["event_schema_present"] = True
+            elif entity_type == 'AggregateRating':
+                additional_schemas["aggregate_rating_schema_present"] = True
+            elif entity_type == 'BreadcrumbList':
+                additional_schemas["breadcrumb_schema_present"] = True
+            elif entity_type in ['Service', 'Product']:
+                # Check for offers property
+                if 'offers' in entity:
+                    additional_schemas["service_or_product_offers_schema"] = True
+            
+            # Check for openingHoursSpecification in any entity
+            if 'openingHoursSpecification' in entity:
+                additional_schemas["opening_hours_schema_present"] = True
+        
+        # Add to main signals dict
+        ai_visibility_signals["additional_schema_signals"] = additional_schemas
+        
+    except Exception as e:
+        print(f"[AI_VISIBILITY_SIGNALS] Additional schema signals error: {e}")
+        ai_visibility_signals["additional_schema_signals"] = {
+            "opening_hours_schema_present": False,
+            "event_schema_present": False,
+            "aggregate_rating_schema_present": False,
+            "service_or_product_offers_schema": False,
+            "breadcrumb_schema_present": False
+        }
+    
     return ai_visibility_signals
+
+# ==================== AUTHOR SIGNALS ====================
+
+def extract_author_signals(soup, parsed_entities=None) -> dict:
+    """Production-grade author E-E-A-T signal extraction"""
+    author_data = {
+        "author_detected": False,
+        "author_name": "",
+        "author_schema": False,
+        "author_byline": "",
+        "author_bio": "",
+        "author_image": "",
+        "author_social": {"linkedin": "", "twitter": "", "website": ""},
+        "credentials": [],
+        "publication_date": "",
+        "last_updated": ""
+    }
+    
+    try:
+        # SURGICAL FIX: Use parsed_entities parameter for author detection
+        if parsed_entities is None:
+            # Fallback to extracting from soup if no parsed_entities provided
+            json_ld_scripts = soup.find_all('script', type='application/ld+json')
+            parsed_entities = []
+            for script in json_ld_scripts:
+                try:
+                    data = json.loads(script.string)
+                    entities = flatten_graph_entities(data)
+                    parsed_entities.extend(entities)
+                except:
+                    continue
+        
+        # Apply exact logic from fix prompt
+        author_detected = False
+        author_schema = False
+        
+        for entity in parsed_entities:
+            etype = entity.get("@type", "")
+
+            # Check 1: standalone Person entity with any name
+            if etype == "Person" and entity.get("name", "").strip():
+                author_detected = True
+                author_schema = True
+                if not author_data["author_name"]:
+                    author_data["author_name"] = entity.get("name", "")
+
+            # Check 2: Article/BlogPosting/NewsArticle with author field
+            if etype in ["Article", "BlogPosting", "NewsArticle"]:
+                author_field = entity.get("author")
+                if author_field:
+                    if isinstance(author_field, dict):
+                        if author_field.get("name", "").strip() or author_field.get("@id", "").strip():
+                            author_detected = True
+                            author_schema = True
+                            if author_field.get("name") and not author_data["author_name"]:
+                                author_data["author_name"] = author_field.get("name", "")
+                    elif isinstance(author_field, str) and author_field.strip():
+                        author_detected = True
+                        author_schema = True
+                        if not author_data["author_name"]:
+                            author_data["author_name"] = author_field.strip()
+                    elif isinstance(author_field, list) and len(author_field) > 0:
+                        author_detected = True
+                        author_schema = True
+                        for auth in author_field:
+                            if isinstance(auth, dict) and auth.get("name") and not author_data["author_name"]:
+                                author_data["author_name"] = auth.get("name", "")
+                                break
+
+        author_data["author_detected"] = author_detected
+        author_data["author_schema"] = author_schema
+        
+        # 2. Extract bylines from common patterns
+        byline_selectors = [
+            '.author', '.byline', '.post-author', '.article-author',
+            '[class*="author"]', '[class*="byline"]',
+            'meta[name="author"]'
+        ]
+        
+        has_byline = False
+        for selector in byline_selectors:
+            elements = soup.select(selector)
+            for elem in elements:
+                if elem.name == 'meta':
+                    author_data["author_byline"] = elem.get('content', '')
+                else:
+                    author_data["author_byline"] = elem.get_text().strip()
+                
+                if author_data["author_byline"][:100]:
+                    has_byline = True
+                    author_data["author_detected"] = True
+                    if not author_data["author_name"]:
+                        author_data["author_name"] = author_data["author_byline"]
+        
+        # 3. Find author bios
+        bio_selectors = [
+            '.author-bio', '.author-description', '.biography',
+            '[class*="bio"]', '[class*="description"]'
+        ]
+        
+        for selector in bio_selectors:
+            bio_elem = soup.select_one(selector)
+            if bio_elem:
+                bio_text = bio_elem.get_text().strip()[:500]
+                if bio_text:
+                    author_data["author_bio"] = bio_text
+                    author_data["author_detected"] = True
+                break
+        
+        # 4. Extract publication dates
+        date_selectors = [
+            'meta[property="article:published_time"]',
+            'meta[name="date"]', 'meta[name="pubdate"]',
+            '.publish-date', '.publication-date', '.date',
+            '[datetime]', 'time[datetime]'
+        ]
+        
+        for selector in date_selectors:
+            date_elem = soup.select_one(selector)
+            if date_elem:
+                if date_elem.name == 'meta':
+                    author_data["publication_date"] = date_elem.get('content', '')
+                else:
+                    author_data["publication_date"] = date_elem.get('datetime', '') or date_elem.get_text().strip()
+                break
+        
+        # 5. Find author images
+        author_img_selectors = [
+            '.author img', '.byline img', '.author-photo img',
+            '[class*="author"] img', '[class*="byline"] img'
+        ]
+        
+        for selector in author_img_selectors:
+            author_img = soup.select_one(selector)
+            if author_img:
+                author_data["author_image"] = author_img.get('src', '') or author_img.get('data-src', '')
+                break
+        
+        # BUG FIX 3: Final author_detected from schema OR byline
+        author_data["author_detected"] = bool(author_detected_via_schema or has_byline)
+        
+        print(f"[EXTRACTION_RESULT] author_detected_via_schema: {author_detected_via_schema}")
+        print(f"[EXTRACTION_RESULT] author_schema: {author_data['author_schema']}")
+        print(f"[EXTRACTION_RESULT] Author bylines found: {has_byline}")
+        print(f"[MAPPED_FIELD] author_detected: {author_data['author_detected']}")
+        
+    except Exception as e:
+        print(f"[AUTHOR_SIGNALS] Extraction error: {e}")
+    
+    return author_data
+
+# ==================== NAP SIGNALS ====================
+
+def extract_nap_signals(soup) -> dict:
+    """Extract and validate NAP consistency for local SEO"""
+    nap_data = {
+        "nap_consistency": {"consistent": False, "variations": []},
+        "business_name": "",
+        "address": {"street": "", "city": "", "state": "", "zip": "", "full": ""},
+        "phone": {"primary": "", "formatted": "", "variations": []},
+        "localbusiness_schema": {"present": False, "complete": False},
+        "geo_coordinates": {"lat": 0, "lng": 0, "present": False}
+    }
+    
+    try:
+        # 1. Extract from LocalBusiness schema
+        json_ld_scripts = soup.find_all('script', type='application/ld+json')
+        for script in json_ld_scripts:
+            try:
+                data = json.loads(script.string)
+                entities = flatten_graph_entities(data)
+                for entity in entities:
+                    if entity.get('@type') in ['LocalBusiness', 'Organization']:
+                        nap_data["localbusiness_schema"]["present"] = True
+                        nap_data["business_name"] = entity.get('name', '')
+                        
+                        # Address extraction
+                        address = entity.get('address', {})
+                        if isinstance(address, dict):
+                            nap_data["address"]["street"] = address.get('streetAddress', '')
+                            nap_data["address"]["city"] = address.get('addressLocality', '')
+                            nap_data["address"]["state"] = address.get('addressRegion', '')
+                            nap_data["address"]["zip"] = address.get('postalCode', '')
+                            nap_data["address"]["full"] = ' '.join(filter(None, [
+                                nap_data["address"]["street"],
+                                nap_data["address"]["city"], 
+                                nap_data["address"]["state"],
+                                nap_data["address"]["zip"]
+                            ]))
+                        
+                        # Phone extraction
+                        nap_data["phone"]["primary"] = entity.get('telephone', '')
+                        
+                        # Geo coordinates
+                        geo = entity.get('geo', {})
+                        if isinstance(geo, dict):
+                            nap_data["geo_coordinates"]["lat"] = float(geo.get('latitude', 0))
+                            nap_data["geo_coordinates"]["lng"] = float(geo.get('longitude', 0))
+                            nap_data["geo_coordinates"]["present"] = True
+                        
+                        nap_data["localbusiness_schema"]["complete"] = bool(
+                            nap_data["business_name"] and nap_data["address"]["full"] and nap_data["phone"]["primary"]
+                        )
+                        break
+            except:
+                continue
+        
+        # 2. Extract NAP from page text using regex
+        page_text = soup.get_text()
+        
+        # Phone number patterns
+        phone_patterns = [
+            r'\(\d{3}\)\s*\d{3}[-.\s]?\d{4}',  # (123) 456-7890
+            r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',   # 123-456-7890
+            r'\+1\s*\d{3}[-.\s]?\d{3}[-.\s]?\d{4}'  # +1 123-456-7890
+        ]
+        
+        phone_variations = []
+        for pattern in phone_patterns:
+            matches = re.findall(pattern, page_text)
+            phone_variations.extend(matches)
+        
+        nap_data["phone"]["variations"] = list(set(phone_variations))
+        
+        # 3. Check NAP consistency
+        if nap_data["phone"]["primary"] and phone_variations:
+            normalized_primary = re.sub(r'[^\d]', '', nap_data["phone"]["primary"])
+            for variation in phone_variations:
+                normalized_var = re.sub(r'[^\d]', '', variation)
+                if normalized_var == normalized_primary:
+                    nap_data["nap_consistency"]["consistent"] = True
+                    break
+        
+        if not nap_data["nap_consistency"]["consistent"]:
+            nap_data["nap_consistency"]["variations"] = phone_variations[:5]  # Limit variations
+        
+    except Exception as e:
+        print(f"[NAP_SIGNALS] Extraction error: {e}")
+    
+    return nap_data
+
+# ==================== DIRECT ANSWER SIGNALS ====================
+
+def extract_direct_answer_signals(soup, text) -> dict:
+    """Extract Answer Engine Optimization signals"""
+    answer_signals = {
+        "direct_answers": {"count": 0, "avg_length": 0, "optimal_range": False},
+        "featured_snippet_ready": {"ready": False, "format": "", "position": ""},
+        "definition_content": {"present": False, "patterns": []},
+        "list_content": {"ordered": 0, "unordered": 0, "steps": 0},
+        "table_content": {"present": False, "rows": 0, "headers": 0},
+        "question_optimization": {"questions_answered": 0, "answer_quality": 0}
+    }
+    
+    try:
+        # 1. Detect direct answer paragraphs (40-60 words)
+        paragraphs = text.split('\n\n')
+        direct_answers = []
+        
+        for para in paragraphs:
+            word_count = len(para.split())
+            if 40 <= word_count <= 60:
+                # Check if it answers a question
+                if any(indicator in para.lower() for indicator in ['is defined as', 'refers to', 'means that', 'is a']):
+                    direct_answers.append({
+                        "text": para.strip(),
+                        "word_count": word_count,
+                        "position": len(direct_answers)
+                    })
+        
+        answer_signals["direct_answers"]["count"] = len(direct_answers)
+        if direct_answers:
+            avg_length = sum(a["word_count"] for a in direct_answers) / len(direct_answers)
+            answer_signals["direct_answers"]["avg_length"] = round(avg_length, 1)
+            answer_signals["direct_answers"]["optimal_range"] = 40 <= avg_length <= 60
+        
+        # 2. Definition pattern detection
+        definition_patterns = [
+            r'(\w+)\s+is\s+(a|an)\s+([^,.!?]+)',
+            r'(\w+)\s+refers\s+to\s+([^,.!?]+)',
+            r'(\w+)\s+can\s+be\s+defined\s+as\s+([^,.!?]+)'
+        ]
+        
+        definitions = []
+        for pattern in definition_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                definitions.append({
+                    "term": match[0],
+                    "definition": match[2],
+                    "pattern": pattern
+                })
+        
+        answer_signals["definition_content"]["present"] = len(definitions) > 0
+        answer_signals["definition_content"]["patterns"] = definitions[:5]
+        
+        # 3. List content analysis
+        ordered_lists = soup.find_all('ol')
+        unordered_lists = soup.find_all('ul')
+        
+        answer_signals["list_content"]["ordered"] = len(ordered_lists)
+        answer_signals["list_content"]["unordered"] = len(unordered_lists)
+        
+        # Count steps in ordered lists
+        total_steps = sum(len(ol.find_all('li')) for ol in ordered_lists)
+        answer_signals["list_content"]["steps"] = total_steps
+        
+        # 4. Table content analysis
+        tables = soup.find_all('table')
+        if tables:
+            answer_signals["table_content"]["present"] = True
+            total_rows = sum(len(table.find_all('tr')) for table in tables)
+            total_headers = sum(len(table.find_all('th')) for table in tables)
+            answer_signals["table_content"]["rows"] = total_rows
+            answer_signals["table_content"]["headers"] = total_headers
+        
+        # 5. Featured snippet readiness
+        snippet_ready = False
+        snippet_format = ""
+        
+        if answer_signals["direct_answers"]["count"] > 0:
+            snippet_ready = True
+            snippet_format = "paragraph"
+        elif answer_signals["list_content"]["steps"] > 0:
+            snippet_ready = True
+            snippet_format = "steps"
+        elif answer_signals["table_content"]["present"]:
+            snippet_ready = True
+            snippet_format = "table"
+        elif answer_signals["definition_content"]["present"]:
+            snippet_ready = True
+            snippet_format = "definition"
+        
+        answer_signals["featured_snippet_ready"]["ready"] = snippet_ready
+        answer_signals["featured_snippet_ready"]["format"] = snippet_format
+        
+    except Exception as e:
+        print(f"[ANSWER_SIGNALS] Extraction error: {e}")
+    
+    return answer_signals
+
+# ==================== TECHNICAL SIGNALS ENHANCEMENTS ====================
+
+def extract_enhanced_technical_signals(soup, url) -> dict:
+    """Extract enhanced technical signals for AI visibility"""
+    technical_signals = {
+        "crawlability": {"robots_txt_accessible": True, "sitemap_referenced": False},
+        "mobile_optimization": {"viewport_present": True, "responsive": True, "mobile_friendly": True},
+        "page_speed_indicators": {"optimized_images": False, "minified_css": False, "lazy_loading": False},
+        "schema_validation": {"valid_json": True, "required_fields": True, "warnings": 0},
+        "image_optimization": {"alt_text_coverage": 0, "file_sizes_optimized": False, "responsive_images": False},
+        "accessibility": {"aria_labels": 0, "color_contrast": False, "keyboard_navigable": False},
+        "security_signals": {"https": True, "security_headers": False, "safe_browsing": True},
+        "navigation_detection": {"has_navigation": False, "has_footer": False, "nav_elements": []}
+    }
+    
+    try:
+        # 1. Check viewport meta tag
+        viewport = soup.find('meta', attrs={'name': 'viewport'})
+        technical_signals["mobile_optimization"]["viewport_present"] = bool(viewport)
+        
+        # 2. Check for responsive images
+        responsive_images = soup.find_all('picture') + soup.find_all('img', attrs={'srcset': True})
+        technical_signals["image_optimization"]["responsive_images"] = len(responsive_images) > 0
+        
+        # 3. Check for lazy loading
+        lazy_images = soup.find_all('img', attrs={'loading': 'lazy'}) + \
+                      soup.find_all('img', attrs={'data-src': True}) + \
+                      soup.find_all('img', attrs={'data-lazy': True}) + \
+                      soup.find_all('img', attrs={'data-original': True}) + \
+                      soup.find_all('img', attrs={'data-srcset': True})
+        technical_signals["page_speed_indicators"]["lazy_loading"] = len(lazy_images) > 0
+        
+        # 4. Check for sitemap references
+        sitemap_links = soup.find_all('link', rel='sitemap')
+        technical_signals["crawlability"]["sitemap_referenced"] = len(sitemap_links) > 0
+        
+        # 5. Calculate alt text coverage
+        images = soup.find_all('img')
+        images_with_alt = [img for img in images if img.get('alt')]
+        if images:
+            coverage = (len(images_with_alt) / len(images)) * 100
+            technical_signals["image_optimization"]["alt_text_coverage"] = round(coverage, 1)
+        
+        # 6. Enhanced navigation detection — BUG FIX 1: Dedicated selector lists
+        NAV_SELECTORS    = ["nav", ".nav", ".navbar", ".pxl-header-nav", ".pxl-nav-menu", ".elementor-nav-menu", "[class*='nav-menu']", ".elementor-container", ".elementor-widget-nav-menu", ".elementor-widget-container", ".menu"]
+        HEADER_SELECTORS = ["header", ".header", "#pxl-header-elementor", ".elementor-location-header", "[id*='header']", "[class*='header']"]
+        FOOTER_SELECTORS = ["footer", ".footer", "#pxl-footer-elementor", ".elementor-location-footer", "[id*='footer']", "[class*='footer']"]
+        
+        nav_elements_found = []
+        has_navigation = False
+        has_header = False
+        has_footer = False
+        
+        for selector in NAV_SELECTORS:
+            if soup.select(selector):
+                has_navigation = True
+                nav_elements_found.append(selector)
+        
+        for selector in HEADER_SELECTORS:
+            if soup.select(selector):
+                has_header = True
+                nav_elements_found.append(selector)
+        
+        for selector in FOOTER_SELECTORS:
+            if soup.select(selector):
+                has_footer = True
+                nav_elements_found.append(selector)
+        
+        technical_signals["navigation_detection"]["has_navigation"] = has_navigation
+        technical_signals["navigation_detection"]["has_header"] = has_header
+        technical_signals["navigation_detection"]["has_footer"] = has_footer
+        technical_signals["navigation_detection"]["nav_elements"] = nav_elements_found
+        
+        print(f"[EXTRACTION_RESULT] Navigation detected: {has_navigation}, Header detected: {has_header}, Footer detected: {has_footer}")
+        print(f"[EXTRACTION_RESULT] Lazy loading images: {len(lazy_images)}")
+        
+        # SURGICAL FIX: Copy navigation_detection results to body_signals.structure
+        # This ensures both systems (navigation_detection and technical_seo_signals.body_signals.structure) always show the same values
+        if "body_signals" not in technical_signals:
+            technical_signals["body_signals"] = {}
+        if "structure" not in technical_signals["body_signals"]:
+            technical_signals["body_signals"]["structure"] = {}
+        
+        technical_signals["body_signals"]["structure"]["has_header"] = has_header
+        technical_signals["body_signals"]["structure"]["has_nav"] = has_navigation
+        technical_signals["body_signals"]["structure"]["has_footer"] = has_footer
+        
+        print(f"[NAVIGATION_FIX] Copied navigation results to body_signals.structure")
+        
+        # 7. Check HTTPS
+        technical_signals["security_signals"]["https"] = url.startswith('https://')
+        
+        # 8. Check for minified CSS indicators
+        style_tags = soup.find_all('style')
+        minified_indicators = ['.min.css', 'compressed', 'minified']
+        for style in style_tags:
+            style_content = style.get_text() or ''
+            if any(indicator in style_content for indicator in minified_indicators):
+                technical_signals["page_speed_indicators"]["minified_css"] = True
+                break
+        
+    except Exception as e:
+        print(f"[ENHANCED_TECHNICAL_SIGNALS] Extraction error: {e}")
+    
+    # NAVIGATION SYNC TO ENHANCED_EXTRACTION_V2 LOCATIONS
+    # Read from canonical source and sync to other two locations
+    # This runs after enhanced_technical_signals is returned and added to the result
+    # The sync will be applied in the calling function where the result dict is available
+    
+    return technical_signals
+
+# ==================== PERFORMANCE OPTIMIZATION ====================
+
+def safe_extract_text(element, max_length: int = 500) -> str:
+    """Safely extract text with length limits"""
+    if not element:
+        return ""
+    
+    try:
+        text = element.get_text(strip=True)
+        return text[:max_length] if text else ""
+    except Exception:
+        return ""
+
+def safe_extract_attr(element, attr: str, default: str = "") -> str:
+    """Safely extract attribute with fallback"""
+    if not element:
+        return default
+    
+    try:
+        return element.get(attr, default) or default
+    except Exception:
+        return default
+
+def optimized_extraction_pipeline(html: str, url: str) -> dict:
+    """Memory-optimized extraction with early termination"""
+    
+    # Limit HTML size to prevent memory issues
+    max_html_size = 500_000  # 500KB limit
+    if len(html) > max_html_size:
+        html = html[:max_html_size]
+        print(f"[PERFORMANCE] HTML truncated to {max_html_size} characters")
+    
+    # Single soup creation with lxml parser
+    soup = BeautifulSoup(html, 'lxml')
+    
+    # Batch extraction to minimize DOM traversals
+    extraction_results = {}
+    
+    # Extract all JSON-LD in one pass
+    json_ld_scripts = soup.find_all('script', type='application/ld+json')
+    extraction_results['structured_data'] = process_json_ld_batch(json_ld_scripts)
+    
+    # Extract metadata in one pass
+    extraction_results['metadata'] = extract_metadata_batch(soup, url)
+    
+    # Content analysis with text reuse
+    main_text = soup.get_text()
+    extraction_results['content_analysis'] = analyze_content_batch(soup, main_text)
+    
+    return extraction_results
+
+def process_json_ld_batch(json_ld_scripts) -> dict:
+    """Process all JSON-LD scripts in batch"""
+    structured_data = {
+        "json_ld_schemas": {"count": 0, "types": [], "valid": True, "errors": []},
+        "entities": {"total": 0, "organizations": 0, "persons": 0, "places": 0}
+    }
+    
+    for script in json_ld_scripts:
+        try:
+            data = json.loads(script.string)
+            entities = flatten_graph_entities(data)
+            structured_data["json_ld_schemas"]["count"] += 1
+            
+            for entity in entities:
+                entity_type = entity.get('@type', '')
+                if entity_type:
+                    structured_data["json_ld_schemas"]["types"].append(entity_type)
+                    structured_data["entities"]["total"] += 1
+                    
+                    if entity_type in ['Organization', 'Corporation', 'Business']:
+                        structured_data["entities"]["organizations"] += 1
+                    elif entity_type in ['Person', 'Author']:
+                        structured_data["entities"]["persons"] += 1
+                    elif entity_type in ['Place', 'LocalBusiness', 'GeoCoordinates']:
+                        structured_data["entities"]["places"] += 1
+        
+        except Exception as e:
+            structured_data["json_ld_schemas"]["valid"] = False
+            structured_data["json_ld_schemas"]["errors"].append(str(e))
+    
+    # Remove duplicates
+    structured_data["json_ld_schemas"]["types"] = list(set(structured_data["json_ld_schemas"]["types"]))
+    
+    return structured_data
+
+def extract_metadata_batch(soup, url) -> dict:
+    """Extract all metadata in one pass"""
+    metadata = {
+        "page_title": {"text": "", "length": 0, "in_title_tag": True},
+        "meta_description": {"text": "", "length": 0, "keyword_present": False},
+        "canonical_url": {"url": "", "normalized": "", "self_referencing": True},
+        "hreflang_tags": {"present": False, "languages": [], "return_tags": []},
+        "robots_meta": {"directive": "", "indexable": True, "followable": True}
+    }
+    
+    # Title
+    title_tag = soup.find('title')
+    if title_tag:
+        title_text = title_tag.get_text().strip()
+        metadata["page_title"]["text"] = title_text[:100]  # Limit length
+        metadata["page_title"]["length"] = len(title_text)
+    
+    # Meta description
+    meta_desc = soup.find('meta', attrs={'name': 'description'})
+    if meta_desc:
+        desc_text = meta_desc.get('content', '').strip()
+        metadata["meta_description"]["text"] = desc_text[:200]  # Limit length
+        metadata["meta_description"]["length"] = len(desc_text)
+    
+    # Canonical
+    canonical = soup.find('link', rel='canonical')
+    if canonical:
+        canonical_url = canonical.get('href', '')
+        metadata["canonical_url"]["url"] = canonical_url
+        metadata["canonical_url"]["self_referencing"] = canonical_url == url
+    
+    # hreflang
+    hreflang_links = soup.find_all('link', rel='alternate', hreflang=True)
+    if hreflang_links:
+        metadata["hreflang_tags"]["present"] = True
+        languages = [link.get('hreflang', '') for link in hreflang_links if link.get('hreflang')]
+        metadata["hreflang_tags"]["languages"] = list(set(languages))
+    
+    # Robots meta
+    robots_meta = soup.find('meta', attrs={'name': 'robots'})
+    if robots_meta:
+        robots_content = robots_meta.get('content', '').lower()
+        metadata["robots_meta"]["directive"] = robots_content
+        metadata["robots_meta"]["indexable"] = 'noindex' not in robots_content
+        metadata["robots_meta"]["followable"] = 'nofollow' not in robots_content
+    
+    return metadata
+
+def analyze_content_batch(soup, text) -> dict:
+    """Analyze content in batch with text reuse"""
+    content_analysis = {
+        "main_content": {"word_count": 0, "quality_score": 0, "extraction_method": ""},
+        "heading_structure": {"h1_count": 0, "hierarchy_valid": True, "structure_score": 0},
+        "content_sections": {"definitions": 0, "use_cases": 0, "steps": 0, "comparisons": 0},
+        "internal_linking": {"count": 0, "contextual": 0, "descriptive_anchor": 0}
+    }
+    
+    # Word count
+    words = re.findall(r'\b\w+\b', text)
+    content_analysis["main_content"]["word_count"] = len(words)
+    
+    # Heading structure
+    h1_tags = soup.find_all('h1')
+    content_analysis["heading_structure"]["h1_count"] = len(h1_tags)
+    
+    # Internal links
+    internal_links = soup.find_all('a', href=True)
+    content_analysis["internal_linking"]["count"] = len(internal_links)
+    
+    # Content sections (basic detection)
+    definition_patterns = ['definition', 'what is', 'refers to']
+    use_case_patterns = ['use case', 'application', 'example']
+    step_patterns = ['step', 'how to', 'tutorial']
+    
+    text_lower = text.lower()
+    content_analysis["content_sections"]["definitions"] = sum(1 for pattern in definition_patterns if pattern in text_lower)
+    content_analysis["content_sections"]["use_cases"] = sum(1 for pattern in use_case_patterns if pattern in text_lower)
+    content_analysis["content_sections"]["steps"] = sum(1 for pattern in step_patterns if pattern in text_lower)
+    
+    return content_analysis

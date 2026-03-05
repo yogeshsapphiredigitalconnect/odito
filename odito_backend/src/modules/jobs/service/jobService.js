@@ -651,6 +651,29 @@ export class JobService {
     }
   }
 
+  /**
+   * Atomically create and dispatch AI_VISIBILITY job
+   * CRITICAL: This operation must be atomic to prevent duplicates
+   */
+  async createAndDispatchAiVisibilityJob(aiLinkDiscoveryJob) {
+    const aiVisibilityJob = await this.createJob({
+      user_id: aiLinkDiscoveryJob.user_id,
+      seo_project_id: aiLinkDiscoveryJob.project_id,
+      jobType: JOB_TYPES.AI_VISIBILITY,
+      input_data: {
+        source_job_id: aiLinkDiscoveryJob._id.toString(),
+        aiProjectId: aiLinkDiscoveryJob.input_data?.aiProjectId
+      },
+      priority: JOB_TYPE_CONFIG[JOB_TYPES.AI_VISIBILITY].priority
+    });
+
+    console.log(
+      `[QUEUE] AI_VISIBILITY job queued | jobId=${aiVisibilityJob._id}` 
+    );
+
+    return aiVisibilityJob;
+  }
+
   async createAndDispatchPageScrapingJob(linkDiscoveryJob) {
     try {
       // Get MongoDB connection to access discovered URLs

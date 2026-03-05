@@ -123,12 +123,17 @@ class MultimediaExtractor:
         # Cross-reference HTML and schema videos
         video_cross_reference = self._cross_reference_videos(enhanced_videos, iframe_videos, schema_videos)
         
+        # Extract Google Maps embeds
+        google_maps_embeds = self._extract_google_maps_embeds()
+        
         return {
             'html_videos': enhanced_videos,
             'iframe_videos': iframe_videos,
             'schema_videos': schema_videos,
             'video_cross_reference': video_cross_reference,
-            'video_summary': self._calculate_video_summary(enhanced_videos, iframe_videos, schema_videos)
+            'video_summary': self._calculate_video_summary(enhanced_videos, iframe_videos, schema_videos),
+            'google_maps_embeds': google_maps_embeds,
+            'google_maps_embed_present': len(google_maps_embeds) > 0
         }
     
     def _extract_audio_content(self) -> Dict[str, Any]:
@@ -490,6 +495,24 @@ class MultimediaExtractor:
             enhanced_iframes.append(iframe_data)
         
         return enhanced_iframes
+    
+    def _extract_google_maps_embeds(self) -> List[Dict[str, Any]]:
+        """Extract Google Maps embeds from iframes."""
+        iframes = self.soup.find_all('iframe')
+        google_maps_embeds = []
+        
+        for i, iframe in enumerate(iframes):
+            src = iframe.get('src', '')
+            if 'google.com/maps/embed' in src:
+                google_maps_embeds.append({
+                    'index': i,
+                    'src': src,
+                    'title': iframe.get('title', ''),
+                    'width': iframe.get('width'),
+                    'height': iframe.get('height')
+                })
+        
+        return google_maps_embeds
     
     def _extract_schema_video_objects(self, video_objects: List[Dict]) -> List[Dict[str, Any]]:
         """Extract enhanced data from VideoObject schema."""

@@ -220,6 +220,19 @@ class MetadataEnhancer:
     
     def _extract_content_metrics(self) -> Dict[str, Any]:
         """Extract content structure metrics."""
+        # BUG FIX 1: Detect navigation/header/footer BEFORE decomposing elements
+        NAV_SELECTORS    = ["nav", ".nav", ".navbar", ".pxl-header-nav", ".pxl-nav-menu", ".elementor-nav-menu", "[class*='nav-menu']"]
+        HEADER_SELECTORS = ["header", ".header", "#pxl-header-elementor", ".elementor-location-header", "[id*='header']", "[class*='header']"]
+        FOOTER_SELECTORS = ["footer", ".footer", "#pxl-footer-elementor", ".elementor-location-footer", "[id*='footer']", "[class*='footer']"]
+        
+        has_navigation = any(self.soup.select(s) for s in NAV_SELECTORS)
+        has_header = any(self.soup.select(s) for s in HEADER_SELECTORS)
+        has_footer = any(self.soup.select(s) for s in FOOTER_SELECTORS)
+        has_main = bool(self.soup.find('main'))
+        has_article = bool(self.soup.find('article'))
+        has_section = bool(self.soup.find('section'))
+        has_aside = bool(self.soup.find('aside'))
+        
         # Remove script and style elements
         for element in self.soup(['script', 'style', 'nav', 'footer', 'header']):
             element.decompose()
@@ -265,13 +278,13 @@ class MetadataEnhancer:
                 'list_count': len(lists),
                 'table_count': len(tables),
                 'form_count': len(forms),
-                'has_navigation': bool(self.soup.find('nav')),
-                'has_header': bool(self.soup.find('header')),
-                'has_footer': bool(self.soup.find('footer')),
-                'has_main': bool(self.soup.find('main')),
-                'has_article': bool(self.soup.find('article')),
-                'has_section': bool(self.soup.find('section')),
-                'has_aside': bool(self.soup.find('aside'))
+                'has_navigation': has_navigation,
+                'has_header': has_header,
+                'has_footer': has_footer,
+                'has_main': has_main,
+                'has_article': has_article,
+                'has_section': has_section,
+                'has_aside': has_aside
             }
         }
     

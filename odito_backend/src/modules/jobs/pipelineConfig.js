@@ -101,5 +101,30 @@ export const PIPELINE_CONFIG = {
     hooks: {
       beforeChain: 'emitCompleted'
     }
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // AI_LINK_DISCOVERY → AI_VISIBILITY  (AI pipeline start)
+  // ──────────────────────────────────────────────────────────────────────────
+  [JOB_TYPES.AI_LINK_DISCOVERY]: {
+    next: [JOB_TYPES.AI_VISIBILITY],
+    parallel: false,
+    atomicGuard: true
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // AI_VISIBILITY → AI_VISIBILITY_SCORING
+  // ──────────────────────────────────────────────────────────────────────────
+  [JOB_TYPES.AI_VISIBILITY]: {
+    next: [JOB_TYPES.AI_VISIBILITY_SCORING],
+    parallel: false,
+    atomicGuard: true
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // AI_VISIBILITY_SCORING → (terminal)
+  // ──────────────────────────────────────────────────────────────────────────
+  [JOB_TYPES.AI_VISIBILITY_SCORING]: {
+    next: []
   }
 };

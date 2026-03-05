@@ -31,6 +31,8 @@ const JOB_CREATION_MAP = {
   [JOB_TYPES.HEADLESS_ACCESSIBILITY]: (src) => jobService.createAndDispatchHeadlessAccessibilityJob(src),
   [JOB_TYPES.SEO_SCORING]: (src) => jobService.createAndDispatchSeoScoringJob(src),
   [JOB_TYPES.CRAWL_GRAPH]: (src) => jobService.createAndDispatchCrawlGraphJob(src),
+  [JOB_TYPES.AI_VISIBILITY]: (src) => jobService.createAndDispatchAiVisibilityJob(src),
+  [JOB_TYPES.AI_VISIBILITY_SCORING]: (src) => jobService.createAndDispatchAiVisibilityScoringJob(src),
 };
 
 const JOB_DISPATCH_MAP = {
@@ -42,6 +44,8 @@ const JOB_DISPATCH_MAP = {
   [JOB_TYPES.PAGE_ANALYSIS]: (job) => jobDispatcher.dispatchPageAnalysisJob(job),
   [JOB_TYPES.SEO_SCORING]: (job) => jobDispatcher.dispatchSeoScoringJob(job),
   [JOB_TYPES.CRAWL_GRAPH]: (job) => jobDispatcher.dispatchCrawlGraphJob(job),
+  [JOB_TYPES.AI_VISIBILITY]: (job) => jobDispatcher.dispatchAiVisibilityJob(job),
+  [JOB_TYPES.AI_VISIBILITY_SCORING]: (job) => jobDispatcher.dispatchAiVisibilityScoringJob(job),
 };
 
 // ---------------------------------------------------------------------------
