@@ -73,7 +73,23 @@ class SchemaArchitectureFixer:
         
         # Merge data from LocalBusiness entities (only on homepage)
         for localbiz in localbusiness_entities:
-            self._merge_entity_data(consolidated_org, localbiz)
+            localbiz_name = localbiz.get('name', '').strip()
+            # Skip LocalBusiness with empty names
+            if not localbiz_name:
+                continue
+            
+            # Check for name conflict with existing Organization
+            org_name = consolidated_org.get('name')
+            if org_name is not None:
+                org_name = org_name.strip()
+            if org_name and localbiz_name and localbiz_name != org_name:
+                print(f"[WARNING] LocalBusiness name '{localbiz_name}' conflicts with Organization name '{org_name}' - keeping Organization name")
+                # Still merge non-name properties but don't override Organization name
+                self._merge_entity_data(consolidated_org, localbiz, exclude_keys=['name'])
+            else:
+                # No conflict or no org name, safe to merge
+                self._merge_entity_data(consolidated_org, localbiz)
+            
             # Convert LocalBusiness-specific properties
             if localbiz.get('telephone'):
                 consolidated_org['telephone'] = localbiz['telephone']
@@ -266,13 +282,16 @@ class SchemaArchitectureFixer:
         
         return unique_entities
     
-    def _merge_entity_data(self, target: Dict, source: Dict):
+    def _merge_entity_data(self, target: Dict, source: Dict, exclude_keys=None):
         """Merge data from source entity into target entity."""
+        if exclude_keys is None:
+            exclude_keys = []
+        
         for key, value in source.items():
-            if key in ['@type', '@id']:
+            if key in ['@type', '@id'] or key in exclude_keys:
                 continue
             
-            if key not in target:
+            if key not in target or target[key] is None:
                 target[key] = value
             elif isinstance(target[key], list) and isinstance(value, list):
                 target[key].extend(value)
@@ -299,7 +318,24 @@ class SchemaArchitectureFixer:
         
         # Count Organization entities
         org_count = sum(1 for e in entities if e.get('@type') == 'Organization')
-        localbiz_count = sum(1 for e in entities if e.get('@type') == 'LocalBusiness')
+        
+        # Count LocalBusiness entities only if they have non-empty names different from Organization
+        org_name = None
+        for e in entities:
+            if e.get('@type') == 'Organization' and e.get('name'):
+                org_name = e.get('name', '').strip()
+                break
+        
+        localbiz_count = 0
+        for e in entities:
+            if e.get('@type') == 'LocalBusiness':
+                localbiz_name = e.get('name')
+                if localbiz_name is not None:
+                    localbiz_name = localbiz_name.strip()
+                # Only count as separate entity if name is non-empty and different from Organization name
+                if localbiz_name and (not org_name or localbiz_name != org_name):
+                    localbiz_count += 1
+        
         violations["multiple_organization_entities"] = org_count + localbiz_count
         
         # Check LocalBusiness on subpage

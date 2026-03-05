@@ -9,194 +9,204 @@ import json
 from typing import Dict, Any
 from rule_base import BaseRule
 
-class AuthoritySignalsRule(BaseRule):
-    """Evaluates authority signals in content"""
+class BusinessNameIdenticalRule(BaseRule):
+    """Rule 8 — Business name identical everywhere"""
     
     def __init__(self):
         config = {
-            "rule_id": "authority_signals",
+            "rule_id": "business_name_identical",
             "category": "citation_probability",
-            "description": "Evaluates authority signals in content",
-            "weight": 2.0,
-            "max_score": 20,
+            "description": "Business name identical everywhere",
+            "weight": 1.0,
+            "max_score": 10,
             "applies_to": "page"
         }
         super().__init__(config)
     
     def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate authority signals"""
+        """Check for consistent business name"""
+        # Check the actual extracted NAP signals
+        nap_signals = data.get("nap_signals", {})
+        
+        # Return score based on actual business name detection
+        business_name = nap_signals.get("business_name", "")
+        if business_name and len(business_name.strip()) > 0:
+            # Check if business name is identical across locations
+            if nap_signals.get("business_name_identical", False):
+                return 10.0  # Full score for identical business name
+            else:
+                return 6.0   # Partial score for detected but not identical
+        else:
+            return 0.0  # No score if no business name detected
+
+class AddressIdenticalRule(BaseRule):
+    """Rule 9 — Address identical everywhere"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "address_identical",
+            "category": "citation_probability",
+            "description": "Address identical everywhere",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for consistent address"""
         structured_data = data.get("structured_data", {})
         if isinstance(structured_data, str):
             try:
-                import json
                 structured_data = json.loads(structured_data)
             except (json.JSONDecodeError, TypeError):
                 structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for address in Organization
+        for item in graph:
+            if item.get("@type") == "Organization":
+                if item.get("address"):
+                    score += 10  # Address present
+                break
+        
+        return min(score, self.max_score)
+
+class NAPMatchesFooterContactRule(BaseRule):
+    """Rule 10 — NAP matches footer/contact page"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "nap_matches_footer_contact",
+            "category": "citation_probability",
+            "description": "NAP matches footer/contact page",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for NAP consistency"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for NAP (Name, Address, Phone) in Organization
+        for item in graph:
+            if item.get("@type") == "Organization":
+                nap_fields = 0
+                if item.get("name"):
+                    nap_fields += 1
+                if item.get("address"):
+                    nap_fields += 1
+                if item.get("telephone"):
+                    nap_fields += 1
+                
+                if nap_fields == 3:
+                    score += 10
+                elif nap_fields >= 2:
+                    score += 6
+                elif nap_fields >= 1:
+                    score += 3
+                break
+        
+        return min(score, self.max_score)
+
+class NoEntityFragmentationRule(BaseRule):
+    """Rule 11 — No entity fragmentation"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "no_entity_fragmentation",
+            "category": "citation_probability",
+            "description": "No entity fragmentation",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for entity fragmentation"""
         entity_graph = data.get("unified_entity_graph", {})
         
         score = 0
         
-        # Check for organization authority
-        graph = structured_data.get("@graph", [])
-        for item in graph:
-            if item.get("@type") == "Organization":
-                # Check for authority properties
-                if item.get("sameAs"):  # Social profiles, etc.
-                    score += 5
-                if item.get("url") and item.get("name"):
-                    score += 3
-                if item.get("foundingDate") or item.get("address"):
-                    score += 2
+        # Check for primary entity (indicates no fragmentation)
+        if entity_graph.get("primary_entity"):
+            score += 6
         
-        # Check for author authority
-        for item in graph:
-            if item.get("@type") in ["Person", "Author"]:
-                if item.get("sameAs"):  # Author profiles
-                    score += 4
-                if item.get("jobTitle") or item.get("worksFor"):
-                    score += 3
-        
-        # Check for entity authority
+        # Check for reasonable entity count (not too fragmented)
         entities = entity_graph.get("entities", [])
-        authoritative_entities = 0
-        for entity in entities:
-            if entity.get("@type") in ["Organization", "Person", "GovernmentOrganization"]:
-                authoritative_entities += 1
-        
-        if authoritative_entities >= 3:
-            score += 3
-        elif authoritative_entities >= 1:
-            score += 1
+        if 1 <= len(entities) <= 10:
+            score += 4  # Good entity count
+        elif len(entities) <= 15:
+            score += 2  # Some fragmentation
         
         return min(score, self.max_score)
 
-class TrustworthinessIndicatorsRule(BaseRule):
-    """Evaluates trustworthiness indicators"""
+class AboutContactPrivacyTermsPagesRule(BaseRule):
+    """Rule 12 — About / Contact / Privacy / Terms pages exist"""
     
     def __init__(self):
         config = {
-            "rule_id": "trustworthiness_indicators",
+            "rule_id": "about_contact_privacy_terms_pages",
             "category": "citation_probability",
-            "description": "Evaluates trustworthiness indicators",
-            "weight": 1.5,
-            "max_score": 15,
+            "description": "About / Contact / Privacy / Terms pages exist",
+            "weight": 1.0,
+            "max_score": 10,
             "applies_to": "page"
         }
         super().__init__(config)
     
     def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate trustworthiness indicators"""
+        """Check for essential pages"""
         structured_data = data.get("structured_data", {})
         if isinstance(structured_data, str):
             try:
-                import json
                 structured_data = json.loads(structured_data)
             except (json.JSONDecodeError, TypeError):
                 structured_data = {}
-        content_metrics = data.get("content_metrics", {})
         
         score = 0
-        
-        # Check for contact information
         graph = structured_data.get("@graph", [])
-        for item in graph:
-            if item.get("@type") == "Organization":
-                if item.get("telephone") or item.get("email") or item.get("contactPoint"):
-                    score += 4
         
-        # Check for content freshness indicators
-        if content_metrics.get("word_count", 0) >= 500:
-            score += 3  # Substantial content
-        
-        # Check for structured data completeness
-        if len(graph) >= 2:
-            score += 3
-        
-        # Check for legal/about pages indicators
+        # Check for WebPage types that might be essential pages
+        essential_pages = 0
         for item in graph:
             if item.get("@type") == "WebPage":
-                if "about" in item.get("url", "").lower() or "contact" in item.get("url", "").lower():
-                    score += 2
+                url = item.get("url", "").lower()
+                if any(page in url for page in ["about", "contact", "privacy", "terms"]):
+                    essential_pages += 1
         
-        # Check for quality content indicators
-        readability = content_metrics.get("readability_score", 0)
-        if 30 <= readability <= 70:  # Professional readability
-            score += 3
-        
-        return min(score, self.max_score)
-
-class ContentDepthRule(BaseRule):
-    """Evaluates content depth and comprehensiveness"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "content_depth",
-            "category": "citation_probability",
-            "description": "Evaluates content depth and comprehensiveness",
-            "weight": 1.5,
-            "max_score": 15,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate content depth"""
-        content_metrics = data.get("content_metrics", {})
-        heading_metrics = data.get("heading_metrics", {})
-        faq_metrics = data.get("faq_metrics", {})
-        step_metrics = data.get("step_metrics", {})
-        
-        score = 0
-        
-        # Check word count
-        word_count = content_metrics.get("word_count", 0)
-        if word_count >= 2000:
+        if essential_pages >= 4:
+            score += 10
+        elif essential_pages >= 3:
+            score += 8
+        elif essential_pages >= 2:
             score += 5
-        elif word_count >= 1000:
+        elif essential_pages >= 1:
             score += 3
-        elif word_count >= 500:
-            score += 1
-        
-        # Check heading structure depth
-        h2_count = heading_metrics.get("h2_count", 0)
-        h3_count = heading_metrics.get("h3_count", 0)
-        if h2_count >= 5 and h3_count >= 3:
-            score += 4
-        elif h2_count >= 3 and h3_count >= 1:
-            score += 2
-        elif h2_count >= 2:
-            score += 1
-        
-        # Check for FAQ content
-        if faq_metrics.get("faq_detected"):
-            faq_count = faq_metrics.get("question_count", 0)
-            if faq_count >= 5:
-                score += 3
-            elif faq_count >= 3:
-                score += 2
-            elif faq_count >= 1:
-                score += 1
-        
-        # Check for step-by-step content
-        if step_metrics.get("step_section_present"):
-            step_count = step_metrics.get("step_count", 0)
-            if step_count >= 5:
-                score += 3
-            elif step_count >= 3:
-                score += 2
-            elif step_count >= 1:
-                score += 1
         
         return min(score, self.max_score)
 
-class ExpertiseIndicatorsRule(BaseRule):
-    """Evaluates expertise indicators in content"""
+class PhoneE164FormatRule(BaseRule):
+    """Rule 19 — Phone in E.164 format"""
     
     def __init__(self):
         config = {
-            "rule_id": "expertise_indicators",
+            "rule_id": "phone_e164_format",
             "category": "citation_probability",
-            "description": "Evaluates expertise indicators in content",
+            "description": "Phone in E.164 format",
             "weight": 1.0,
             "max_score": 10,
             "applies_to": "page"
@@ -204,272 +214,10 @@ class ExpertiseIndicatorsRule(BaseRule):
         super().__init__(config)
     
     def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate expertise indicators"""
+        """Check for E.164 phone format"""
         structured_data = data.get("structured_data", {})
         if isinstance(structured_data, str):
             try:
-                import json
-                structured_data = json.loads(structured_data)
-            except (json.JSONDecodeError, TypeError):
-                structured_data = {}
-        entity_graph = data.get("unified_entity_graph", {})
-        
-        score = 0
-        
-        # Check for author expertise
-        graph = structured_data.get("@graph", [])
-        for item in graph:
-            if item.get("@type") == "Person":
-                if item.get("jobTitle") or item.get("knowsAbout") or item.get("award"):
-                    score += 3
-                if item.get("alumniOf") or item.get("worksFor"):
-                    score += 2
-        
-        # Check for specialized entities
-        entities = entity_graph.get("entities", [])
-        specialized_entities = 0
-        for entity in entities:
-            if entity.get("@type") in [
-                "MedicalEntity", "Drug", "MedicalProcedure", "MedicalTest",
-                "ResearchProject", "ScholarlyArticle", "Thesis"
-            ]:
-                specialized_entities += 1
-        
-        if specialized_entities >= 2:
-            score += 3
-        elif specialized_entities >= 1:
-            score += 1
-        
-        # Check for professional content types
-        for item in graph:
-            if item.get("@type") in ["ScholarlyArticle", "MedicalWebPage", "Report"]:
-                score += 2
-        
-        return min(score, self.max_score)
-
-class DataAndSourcesRule(BaseRule):
-    """Evaluates presence of data and source references"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "data_and_sources",
-            "category": "citation_probability",
-            "description": "Evaluates presence of data and source references",
-            "weight": 1.0,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate data and sources"""
-        structured_data = data.get("structured_data", {})
-        if isinstance(structured_data, str):
-            try:
-                import json
-                structured_data = json.loads(structured_data)
-            except (json.JSONDecodeError, TypeError):
-                structured_data = {}
-        content_metrics = data.get("content_metrics", {})
-        
-        score = 0
-        
-        # Check for dataset references
-        graph = structured_data.get("@graph", [])
-        for item in graph:
-            if item.get("@type") == "Dataset":
-                score += 4
-        
-        # Check for cited works
-        for item in graph:
-            if item.get("@type") in ["Citation", "CreativeWork"]:
-                score += 3
-        
-        # Check for statistical content indicators
-        word_count = content_metrics.get("word_count", 0)
-        if word_count >= 1000:  # Longer content more likely to contain data
-            score += 2
-        
-        # Check for organization with research focus
-        for item in graph:
-            if item.get("@type") == "Organization":
-                if "research" in item.get("name", "").lower() or "university" in item.get("name", "").lower():
-                    score += 1
-        
-        return min(score, self.max_score)
-
-class UniquenessValueRule(BaseRule):
-    """Evaluates uniqueness and value proposition"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "uniqueness_value",
-            "category": "citation_probability",
-            "description": "Evaluates uniqueness and value proposition",
-            "weight": 1.0,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate uniqueness and value"""
-        entity_metrics = data.get("entity_metrics", {})
-        content_metrics = data.get("content_metrics", {})
-        
-        score = 0
-        
-        # Check for unique entities
-        unique_entity_types = entity_metrics.get("unique_entity_types", 0)
-        if unique_entity_types >= 5:
-            score += 4
-        elif unique_entity_types >= 3:
-            score += 2
-        elif unique_entity_types >= 1:
-            score += 1
-        
-        # Check for substantial original content
-        word_count = content_metrics.get("word_count", 0)
-        if word_count >= 1500:
-            score += 3
-        elif word_count >= 800:
-            score += 2
-        elif word_count >= 300:
-            score += 1
-        
-        # Check for entity density (indicates rich content)
-        entity_density = entity_metrics.get("entity_per_1000_words", 0)
-        if entity_density >= 8:
-            score += 3
-        elif entity_density >= 5:
-            score += 2
-        elif entity_density >= 2:
-            score += 1
-        
-        return min(score, self.max_score)
-
-class TechnicalQualityRule(BaseRule):
-    """Evaluates technical quality affecting citation likelihood"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "technical_quality",
-            "category": "citation_probability",
-            "description": "Evaluates technical quality affecting citation likelihood",
-            "weight": 1.0,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate technical quality"""
-        quality_flags = data.get("quality_flags", {})
-        content_metrics = data.get("content_metrics", {})
-        
-        score = 0
-        
-        # Check quality flags
-        if not quality_flags.get("no_main_content_detected", True):
-            score += 3
-        
-        if not quality_flags.get("malformed_structure", True):
-            score += 2
-        
-        if not quality_flags.get("low_word_count", True):
-            score += 2
-        
-        # Check content structure
-        paragraph_count = content_metrics.get("paragraph_count", 0)
-        if paragraph_count >= 5:
-            score += 2
-        elif paragraph_count >= 3:
-            score += 1
-        
-        # Check for extraction success
-        if data.get("http_status_code") == 200:
-            score += 1
-        
-        return min(score, self.max_score)
-
-class ExternalValidationRule(BaseRule):
-    """Evaluates external validation signals"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "external_validation",
-            "category": "citation_probability",
-            "description": "Evaluates external validation signals",
-            "weight": 1.0,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate external validation"""
-        structured_data = data.get("structured_data", {})
-        if isinstance(structured_data, str):
-            try:
-                import json
-                structured_data = json.loads(structured_data)
-            except (json.JSONDecodeError, TypeError):
-                structured_data = {}
-        entity_graph = data.get("unified_entity_graph", {})
-        
-        score = 0
-        
-        # Check for sameAs references (external validation)
-        graph = structured_data.get("@graph", [])
-        sameas_count = 0
-        for item in graph:
-            if item.get("sameAs"):
-                sameas_count += len(item["sameAs"]) if isinstance(item["sameAs"], list) else 1
-        
-        if sameas_count >= 3:
-            score += 5
-        elif sameas_count >= 1:
-            score += 3
-        
-        # Check for external entity references
-        entities = entity_graph.get("entities", [])
-        external_entities = 0
-        for entity in entities:
-            if entity.get("sameAs") or entity.get("url"):
-                external_entities += 1
-        
-        if external_entities >= 3:
-            score += 3
-        elif external_entities >= 1:
-            score += 1
-        
-        # Check for review/rating systems
-        for item in graph:
-            if item.get("@type") in ["Review", "Rating", "AggregateRating"]:
-                score += 2
-        
-        return min(score, self.max_score)
-
-class SocialProofSignalsRule(BaseRule):
-    """Evaluates social proof signals like reviews and ratings"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "social_proof_signals",
-            "category": "citation_probability",
-            "description": "Evaluates social proof signals like reviews and ratings",
-            "weight": 0.6,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate social proof signals"""
-        structured_data = data.get("structured_data", {})
-        if isinstance(structured_data, str):
-            try:
-                import json
                 structured_data = json.loads(structured_data)
             except (json.JSONDecodeError, TypeError):
                 structured_data = {}
@@ -477,155 +225,306 @@ class SocialProofSignalsRule(BaseRule):
         score = 0
         graph = structured_data.get("@graph", [])
         
-        # Check for review/rating aggregates
+        # Check for phone in E.164 format (+country_code number)
+        import re
+        e164_pattern = r'^\+\d{1,3}\d{6,14}$'
+        
         for item in graph:
-            item_type = item.get("@type", "")
-            if item_type in ["AggregateRating", "Review", "Rating"]:
-                score += 4
-                # Bonus for rating value and count
-                if item.get("ratingValue"):
-                    score += 2
-                if item.get("reviewCount") or item.get("ratingCount"):
-                    score += 2
+            phone = item.get("telephone") or item.get("phone")
+            if phone and re.match(e164_pattern, phone.replace(" ", "")):
+                score += 10
                 break
-        
-        # Check for Product or Service with offers/reviews
-        for item in graph:
-            item_type = item.get("@type", "")
-            if item_type in ["Product", "Service", "LocalBusiness"]:
-                if item.get("aggregateRating") or item.get("review"):
-                    score += 2
-                break
-        
-        return min(score, self.max_score)
-
-class ContactCompletenessRule(BaseRule):
-    """Evaluates completeness of contact information for trust signals"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "contact_completeness",
-            "category": "citation_probability",
-            "description": "Evaluates completeness of contact information for trust signals",
-            "weight": 0.5,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate contact completeness"""
-        structured_data = data.get("structured_data", {})
-        if isinstance(structured_data, str):
-            try:
-                import json
-                structured_data = json.loads(structured_data)
-            except (json.JSONDecodeError, TypeError):
-                structured_data = {}
-        
-        score = 0
-        graph = structured_data.get("@graph", [])
-        
-        # Check for Organization or LocalBusiness with contact info
-        for item in graph:
-            item_type = item.get("@type", "")
-            if item_type in ["Organization", "LocalBusiness", "Person"]:
-                contact_points = 0
-                
-                # Check various contact fields
-                if item.get("telephone") or item.get("phone"):
-                    contact_points += 1
-                if item.get("email"):
-                    contact_points += 1
-                if item.get("url") or item.get("website"):
-                    contact_points += 1
-                if item.get("address") or item.get("location"):
-                    contact_points += 1
-                
-                # Check for contactPoint array
-                if item.get("contactPoint"):
-                    contact_points += 2
-                
-                # Score based on contact completeness
-                if contact_points >= 4:
-                    score += 7
-                elif contact_points >= 3:
-                    score += 5
-                elif contact_points >= 2:
-                    score += 3
-                elif contact_points >= 1:
-                    score += 1
-                break
-        
-        return min(score, self.max_score)
-
-class CitationFormatReadinessRule(BaseRule):
-    """Evaluates readiness for academic/professional citation"""
-    
-    def __init__(self):
-        config = {
-            "rule_id": "citation_format_readiness",
-            "category": "citation_probability",
-            "description": "Evaluates readiness for academic/professional citation",
-            "weight": 0.7,
-            "max_score": 10,
-            "applies_to": "page"
-        }
-        super().__init__(config)
-    
-    def evaluate(self, data: Dict[str, Any]) -> float:
-        """Evaluate citation format readiness"""
-        structured_data = data.get("structured_data", {})
-        if isinstance(structured_data, str):
-            try:
-                import json
-                structured_data = json.loads(structured_data)
-            except (json.JSONDecodeError, TypeError):
-                structured_data = {}
-        content_metrics = data.get("content_metrics", {})
-        
-        score = 0
-        graph = structured_data.get("@graph", [])
-        
-        # Check for academic/professional content types
-        academic_types = ["ScholarlyArticle", "MedicalWebPage", "Report", "Dataset", "Thesis"]
-        for item in graph:
-            if item.get("@type") in academic_types:
+            elif phone:  # Phone exists but not E.164
                 score += 5
-                # Bonus for citation fields
-                if item.get("citation") or item.get("isPartOf"):
-                    score += 2
                 break
         
-        # Check for author information (critical for citation)
+        return min(score, self.max_score)
+
+class VisibleAuthorNameRule(BaseRule):
+    """Rule 20 — Visible author name"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "visible_author_name",
+            "category": "citation_probability",
+            "description": "Visible author name",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for visible author name"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for Person/Author with name
         for item in graph:
             if item.get("@type") in ["Person", "Author"]:
                 if item.get("name"):
-                    score += 2
-                if item.get("affiliation") or item.get("alumniOf"):
-                    score += 1
-                break
-        
-        # Check content length (longer content more likely to be cited)
-        word_count = content_metrics.get("word_count", 0)
-        if word_count >= 1500:
-            score += 2
-        elif word_count >= 1000:
-            score += 1
+                    score += 10
+                    break
         
         return min(score, self.max_score)
 
-# Register all Citation Probability rules
+class PersonSchemaLinkedToOrganizationRule(BaseRule):
+    """Rule 21 — Person schema linked to Organization"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "person_schema_linked_to_organization",
+            "category": "citation_probability",
+            "description": "Person schema linked to Organization",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check if Person schema is linked to Organization"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for Person linked to Organization
+        person_found = False
+        organization_found = False
+        
+        for item in graph:
+            if item.get("@type") in ["Person", "Author"]:
+                person_found = True
+                # Check if linked to organization
+                if item.get("worksFor") or item.get("affiliation"):
+                    score += 5
+            elif item.get("@type") == "Organization":
+                organization_found = True
+        
+        if person_found and organization_found:
+            score += 5  # Both present
+        
+        return min(score, self.max_score)
+
+class AuthorBioWithCredentialsRule(BaseRule):
+    """Rule 36 — Author bio with credentials"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "author_bio_with_credentials",
+            "category": "citation_probability",
+            "description": "Author bio with credentials",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for author bio with credentials"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for Person with credentials
+        for item in graph:
+            if item.get("@type") == "Person":
+                credentials = 0
+                if item.get("jobTitle"):
+                    credentials += 1
+                if item.get("knowsAbout"):
+                    credentials += 1
+                if item.get("award"):
+                    credentials += 1
+                if item.get("alumniOf"):
+                    credentials += 1
+                if item.get("worksFor"):
+                    credentials += 1
+                
+                if credentials >= 3:
+                    score += 10
+                elif credentials >= 2:
+                    score += 6
+                elif credentials >= 1:
+                    score += 3
+                break
+        
+        return min(score, self.max_score)
+
+class AuthorPhotoRule(BaseRule):
+    """Rule 37 — Author photo"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "author_photo",
+            "category": "citation_probability",
+            "description": "Author photo",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for author photo"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for Person with image
+        for item in graph:
+            if item.get("@type") == "Person":
+                if item.get("image"):
+                    score += 10
+                    break
+        
+        return min(score, self.max_score)
+
+class DedicatedAuthorPageRule(BaseRule):
+    """Rule 38 — Dedicated author page"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "dedicated_author_page",
+            "category": "citation_probability",
+            "description": "Dedicated author page",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for dedicated author page"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for Person with URL (indicates dedicated page)
+        for item in graph:
+            if item.get("@type") == "Person":
+                if item.get("url"):
+                    score += 10
+                    break
+        
+        return min(score, self.max_score)
+
+class BusinessRegistrationDetailsRule(BaseRule):
+    """Rule 46 — Business registration details"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "business_registration_details",
+            "category": "citation_probability",
+            "description": "Business registration details",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for business registration details"""
+        structured_data = data.get("structured_data", {})
+        if isinstance(structured_data, str):
+            try:
+                structured_data = json.loads(structured_data)
+            except (json.JSONDecodeError, TypeError):
+                structured_data = {}
+        
+        score = 0
+        graph = structured_data.get("@graph", [])
+        
+        # Check for Organization with registration details
+        for item in graph:
+            if item.get("@type") == "Organization":
+                reg_details = 0
+                if item.get("foundingDate"):
+                    reg_details += 1
+                if item.get("taxID"):
+                    reg_details += 1
+                if item.get("leiCode"):
+                    reg_details += 1
+                if item.get("duns"):
+                    reg_details += 1
+                
+                if reg_details >= 2:
+                    score += 10
+                elif reg_details >= 1:
+                    score += 5
+                break
+        
+        return min(score, self.max_score)
+
+class GoogleMapsEmbedCorrectRule(BaseRule):
+    """Rule 62 — Google Maps embed correct"""
+    
+    def __init__(self):
+        config = {
+            "rule_id": "google_maps_embed_correct",
+            "category": "citation_probability",
+            "description": "Google Maps embed correct",
+            "weight": 1.0,
+            "max_score": 10,
+            "applies_to": "page"
+        }
+        super().__init__(config)
+    
+    def evaluate(self, data: Dict[str, Any]) -> float:
+        """Check for Google Maps embed"""
+        # Check the actual extracted signal for Google Maps embed
+        multimedia_data = data.get("multimedia_data", {})
+        
+        # Return score based on actual Google Maps embed presence
+        if multimedia_data.get("google_maps_embed_present", False):
+            return 10.0  # Full score if Google Maps embed is present
+        else:
+            return 0.0  # No score if Google Maps embed is not present
+
+# Register all Citation Probability rules (13 rules)
 def register_citation_probability_rules(registry):
     """Register all Citation Probability category rules"""
-    registry.register(AuthoritySignalsRule())
-    registry.register(TrustworthinessIndicatorsRule())
-    registry.register(ContentDepthRule())
-    registry.register(ExpertiseIndicatorsRule())
-    registry.register(DataAndSourcesRule())
-    registry.register(UniquenessValueRule())
-    registry.register(TechnicalQualityRule())
-    registry.register(ExternalValidationRule())
-    registry.register(SocialProofSignalsRule())
-    registry.register(ContactCompletenessRule())
-    registry.register(CitationFormatReadinessRule())
+    registry.register(BusinessNameIdenticalRule())
+    registry.register(AddressIdenticalRule())
+    registry.register(NAPMatchesFooterContactRule())
+    registry.register(NoEntityFragmentationRule())
+    registry.register(AboutContactPrivacyTermsPagesRule())
+    registry.register(PhoneE164FormatRule())
+    registry.register(VisibleAuthorNameRule())
+    registry.register(PersonSchemaLinkedToOrganizationRule())
+    registry.register(AuthorBioWithCredentialsRule())
+    registry.register(AuthorPhotoRule())
+    registry.register(DedicatedAuthorPageRule())
+    registry.register(BusinessRegistrationDetailsRule())
+    registry.register(GoogleMapsEmbedCorrectRule())

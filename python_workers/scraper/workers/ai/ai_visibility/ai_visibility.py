@@ -967,7 +967,8 @@ def normalize_entity_id(original_id, canonical_root) -> str:
     
     if original_id.startswith('#'):
         # Hash-only ID - normalize to canonical root
-        return canonical_root.rstrip('/') + original_id
+        canonical_root_with_slash = canonical_root if canonical_root.endswith('/') else canonical_root + '/'
+        return canonical_root_with_slash + original_id
     elif original_id.startswith(('http://', 'https://')):
         # Absolute URL - enforce canonical protocol and domain
         parsed = urlparse(original_id)
@@ -1213,7 +1214,7 @@ def extract_full_json_ld_data(soup, url) -> dict:
                 "architecture_violations_count": sum(1 for v in violations.values() if v if isinstance(v, bool)) + len([v for v in violations.values() if isinstance(v, list) and v]),
                 "single_json_ld_enforced": True,
                 "graph_cleanup_applied": True,
-                "json_ld_health_score": len([b for b in raw_blocks if b.get('is_valid_json', False)]) / len(raw_blocks) if raw_blocks else 1.0
+                "json_ld_health_score": len([b for b in raw_blocks if b.get('is_valid_json', False)]) / len(raw_blocks) if raw_blocks else 0
             }
         }
     
@@ -3478,7 +3479,7 @@ def extract_comprehensive_signals(html: str, url: str) -> dict:
     
     # Extract NAP consistency signals for local SEO
     try:
-        nap_signals = extract_nap_signals(soup)
+        nap_signals = extract_nap_signals(soup, parsed_entities)
         semantic_dataset["nap_signals"] = nap_signals
     except Exception as e:
         extraction_errors.append(f"NAP signals extraction failed: {e}")
@@ -4647,11 +4648,12 @@ def extract_author_signals(soup, parsed_entities=None) -> dict:
 
 # ==================== NAP SIGNALS ====================
 
-def extract_nap_signals(soup) -> dict:
+def extract_nap_signals(soup, parsed_entities=None) -> dict:
     """Extract and validate NAP consistency for local SEO"""
     nap_data = {
         "nap_consistency": {"consistent": False, "variations": []},
         "business_name": "",
+        "business_name_identical": False,  # Track if business name is consistent
         "address": {"street": "", "city": "", "state": "", "zip": "", "full": ""},
         "phone": {"primary": "", "formatted": "", "variations": []},
         "localbusiness_schema": {"present": False, "complete": False},
@@ -4659,7 +4661,57 @@ def extract_nap_signals(soup) -> dict:
     }
     
     try:
-        # 1. Extract from LocalBusiness schema
+        business_names = []  # Collect all potential business names
+        
+        # HELPER: Check if name is valid (not a marketing headline)
+        def is_valid_business_name(name):
+            if not name or len(name.strip()) <= 2 or len(name.strip()) >= 100:
+                return False
+            name = name.strip().lower()
+            # Filter out marketing headline words
+            headline_words = ['agency', 'services', 'solutions', 'results', 'globe', 'worldwide', 'digital marketing agency that delivers real results across the globe']
+            return not any(word in name for word in headline_words)
+        
+        # PRIORITY 1: Organization.name from parsed @graph entities
+        if parsed_entities:
+            for entity in parsed_entities:
+                if entity.get('@type') == 'Organization':
+                    org_name = entity.get('name', '').strip()
+                    if is_valid_business_name(org_name):
+                        nap_data["business_name"] = org_name
+                        business_names.append(org_name)
+                        break  # Early exit - found priority 1
+        
+        # PRIORITY 2: Organization.legalName from parsed @graph entities (only if still empty)
+        if not nap_data["business_name"] and parsed_entities:
+            for entity in parsed_entities:
+                if entity.get('@type') == 'Organization':
+                    legal_name = entity.get('legalName', '').strip()
+                    if is_valid_business_name(legal_name):
+                        nap_data["business_name"] = legal_name
+                        business_names.append(legal_name)
+                        break  # Early exit - found priority 2
+        
+        # PRIORITY 3: WebSite.name from parsed @graph entities (only if still empty)
+        if not nap_data["business_name"] and parsed_entities:
+            for entity in parsed_entities:
+                if entity.get('@type') == 'WebSite':
+                    website_name = entity.get('name', '').strip()
+                    if is_valid_business_name(website_name):
+                        nap_data["business_name"] = website_name
+                        business_names.append(website_name)
+                        break  # Early exit - found priority 3
+        
+        # PRIORITY 4: og:site_name from meta tags (only if still empty)
+        if not nap_data["business_name"]:
+            site_name_meta = soup.find('meta', property='og:site_name')
+            if site_name_meta and site_name_meta.get('content'):
+                site_name = site_name_meta.get('content').strip()
+                if is_valid_business_name(site_name):
+                    nap_data["business_name"] = site_name
+                    business_names.append(site_name)
+        
+        # Extract NAP details from schema (continue regardless of business name priority)
         json_ld_scripts = soup.find_all('script', type='application/ld+json')
         for script in json_ld_scripts:
             try:
@@ -4668,7 +4720,6 @@ def extract_nap_signals(soup) -> dict:
                 for entity in entities:
                     if entity.get('@type') in ['LocalBusiness', 'Organization']:
                         nap_data["localbusiness_schema"]["present"] = True
-                        nap_data["business_name"] = entity.get('name', '')
                         
                         # Address extraction
                         address = entity.get('address', {})
@@ -4694,14 +4745,137 @@ def extract_nap_signals(soup) -> dict:
                             nap_data["geo_coordinates"]["lng"] = float(geo.get('longitude', 0))
                             nap_data["geo_coordinates"]["present"] = True
                         
-                        nap_data["localbusiness_schema"]["complete"] = bool(
-                            nap_data["business_name"] and nap_data["address"]["full"] and nap_data["phone"]["primary"]
-                        )
                         break
             except:
                 continue
         
-        # 2. Extract NAP from page text using regex
+        # PRIORITY 5: LocalBusiness.name from schema (only if still empty)
+        if not nap_data["business_name"]:
+            for script in json_ld_scripts:
+                try:
+                    data = json.loads(script.string)
+                    entities = flatten_graph_entities(data)
+                    for entity in entities:
+                        if entity.get('@type') == 'LocalBusiness':
+                            localbiz_name = entity.get('name', '').strip()
+                            if is_valid_business_name(localbiz_name):
+                                nap_data["business_name"] = localbiz_name
+                                business_names.append(localbiz_name)
+                                break
+                except:
+                    continue
+                if nap_data["business_name"]:
+                    break
+        
+        # PRIORITY 6: Footer business name text (only if still empty)
+        if not nap_data["business_name"]:
+            footer_selectors = [
+                'footer .business-name', 'footer .company-name', 'footer .brand',
+                'footer h1', 'footer h2', 'footer h3', 'footer h4',
+                '.footer .copyright', '.site-footer .title', '.footer-info',
+                'footer', '.footer'
+            ]
+            
+            for selector in footer_selectors:
+                elements = soup.select(selector)
+                for elem in elements[:2]:
+                    text = elem.get_text().strip()
+                    # Remove copyright symbols and years
+                    clean_text = re.sub(r'[℗℠®]\s*\d{4}|\d{4}[\s-]*[℗℠®]', '', text).strip()
+                    clean_text = re.sub(r'©\s*\d{4}|\d{4}[\s-]*©', '', clean_text).strip()
+                    clean_text = re.sub(r'\.?\s*All rights reserved.*$', '', clean_text).strip()
+                    if is_valid_business_name(clean_text):
+                        nap_data["business_name"] = clean_text
+                        business_names.append(clean_text)
+                        break
+                if nap_data["business_name"]:
+                    break
+        
+        # PRIORITY 7: Contact section text (only if still empty)
+        if not nap_data["business_name"]:
+            contact_selectors = [
+                '.contact .business-name', '.contact .company-name',
+                '.contact-info h1', '.contact-info h2', '.contact h1', '.contact h2'
+            ]
+            
+            for selector in contact_selectors:
+                elements = soup.select(selector)
+                for elem in elements[:2]:
+                    text = elem.get_text().strip()
+                    if is_valid_business_name(text):
+                        nap_data["business_name"] = text
+                        business_names.append(text)
+                        break
+                if nap_data["business_name"]:
+                    break
+        
+        # PRIORITY 8: H1 heading (LAST FALLBACK ONLY - only if still empty)
+        if not nap_data["business_name"]:
+            h1_elements = soup.find_all('h1')
+            for elem in h1_elements[:2]:  # Check first 2 H1 elements
+                text = elem.get_text().strip()
+                if text and len(text) > 2 and len(text) < 100:
+                    # Filter out common non-business text
+                    if not any(skip in text.lower() for skip in ['home', 'menu', 'navigation', 'search', 'cart', 'login']):
+                        if is_valid_business_name(text):
+                            nap_data["business_name"] = text
+                            business_names.append(text)
+                            break
+        
+        # Meta tags for completeness (lower priority - don't override existing)
+        # Meta title
+        title_tag = soup.find('title')
+        if title_tag:
+            title_text = title_tag.get_text().strip()
+            if len(title_text) < 100:
+                business_names.append(title_text)
+        
+        # Meta application-name
+        app_name_meta = soup.find('meta', attrs={'name': 'application-name'})
+        if app_name_meta and app_name_meta.get('content'):
+            app_name = app_name_meta.get('content').strip()
+            if len(app_name) < 100:
+                business_names.append(app_name)
+        
+        # Update localbusiness_schema completeness
+        nap_data["localbusiness_schema"]["complete"] = bool(
+            nap_data["business_name"] and nap_data["address"]["full"] and nap_data["phone"]["primary"]
+        )
+        
+        # 6. Check business name consistency
+        if business_names:
+            # Remove duplicates and empty strings
+            unique_names = list(set(filter(None, business_names)))
+            
+            if len(unique_names) == 1:
+                # All names are identical
+                nap_data["business_name_identical"] = True
+                nap_data["business_name"] = unique_names[0]
+            elif len(unique_names) > 1:
+                # Check if most names are similar (allowing for minor variations)
+                primary_name = unique_names[0]
+                similar_count = sum(1 for name in unique_names 
+                                  if name.lower().replace(' ', '').replace('-', '') == 
+                                     primary_name.lower().replace(' ', '').replace('-', ''))
+                
+                if similar_count >= len(unique_names) * 0.7:  # 70% similarity
+                    nap_data["business_name_identical"] = True
+                    nap_data["business_name"] = primary_name
+                else:
+                    # Use the most frequently occurring name
+                    name_counts = {}
+                    for name in unique_names:
+                        normalized = name.lower().replace(' ', '').replace('-', '')
+                        name_counts[normalized] = name_counts.get(normalized, 0) + business_names.count(name)
+                    
+                    most_common = max(name_counts, key=name_counts.get)
+                    # Find original name with this normalized form
+                    for name in unique_names:
+                        if name.lower().replace(' ', '').replace('-', '') == most_common:
+                            nap_data["business_name"] = name
+                            break
+        
+        # 7. Extract NAP from page text using regex
         page_text = soup.get_text()
         
         # Phone number patterns
@@ -4718,7 +4892,7 @@ def extract_nap_signals(soup) -> dict:
         
         nap_data["phone"]["variations"] = list(set(phone_variations))
         
-        # 3. Check NAP consistency
+        # 8. Check NAP consistency
         if nap_data["phone"]["primary"] and phone_variations:
             normalized_primary = re.sub(r'[^\d]', '', nap_data["phone"]["primary"])
             for variation in phone_variations:
