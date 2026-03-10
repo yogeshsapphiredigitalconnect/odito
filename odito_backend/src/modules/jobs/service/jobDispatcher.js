@@ -428,47 +428,6 @@ class JobDispatcher {
   }
 
   /**
-   * Dispatch AI_LINK_DISCOVERY job directly to Python worker via HTTP
-   */
-  async dispatchAiLinkDiscoveryJob(job) {
-    try {
-      // Job should already be marked as dispatched atomically
-      // Just send the HTTP request to Python
-      const response = await axios.post(`${this.pythonBaseURL}/api/jobs/ai-link-discovery`, {
-        jobId: job._id.toString(),
-        projectId: job.project_id ? job.project_id.toString() : null,
-        userId: job.user_id.toString(),
-        aiProjectId: job.input_data?.aiProjectId || null,
-        url: job.input_data?.url || null
-      }, {
-        timeout: 600000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      return {
-        success: true,
-        jobId: job._id
-      };
-    } catch (error) {
-      console.error(`[ERROR] AI_LINK_DISCOVERY dispatch failed | jobId=${job._id} | reason="${error.message}"`);
-
-      // Mark job as failed if dispatch fails
-      await jobService.updateJobStatus(job._id, 'FAILED', {
-        completed_at: new Date(),
-        error_message: `Dispatch failed: ${error.message}`
-      });
-
-      return {
-        success: false,
-        message: 'Failed to dispatch AI_LINK_DISCOVERY job to Python worker',
-        error: error.message
-      };
-    }
-  }
-
-  /**
    * Dispatch AI_VISIBILITY job directly to Python worker via HTTP
    * This is PUSH model - Node actively calls Python
    * CRITICAL: Job must already be atomically marked as dispatched

@@ -391,11 +391,14 @@ def execute_headless_accessibility(job):
 
     print(f"[HEADLESS_A11Y] Starting | jobId={job_id} | projectId={project_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
 
-    # STEP 2: Fetch URLs directly from database (like PERFORMANCE workers)
+    # STEP 2: Fetch URLs directly from database with fallback logic
+    urls = []
+    
+    # First try: Get URLs from seo_page_data (scraped pages)
     try:
         # Convert projectId to ObjectId for MongoDB query
         project_id_obj = ObjectId(project_id)
-        print(f"[HEADLESS_A11Y] Fetching URLs from database | projectId={project_id} | jobId={job_id}")
+        print(f"[HEADLESS_A11Y] Fetching URLs from seo_page_data | projectId={project_id} | jobId={job_id}")
         
         # Query seo_page_data collection for successfully scraped pages
         pages = list(seo_page_data.find({
@@ -406,11 +409,32 @@ def execute_headless_accessibility(job):
         # Extract URLs from page data
         urls = [page["url"] for page in pages if page.get("url")]
         
-        print(f"[HEADLESS_A11Y] DB fetch complete | totalUrls={len(urls)} | jobId={job_id} | pagesFound={len(pages)}")
+        print(f"[HEADLESS_A11Y] seo_page_data fetch complete | totalUrls={len(urls)} | jobId={job_id} | pagesFound={len(pages)}")
         
     except Exception as db_error:
-        print(f"[HEADLESS_A11Y] Database fetch failed | jobId={job_id} | error={str(db_error)}")
-        urls = []
+        print(f"[HEADLESS_A11Y] seo_page_data fetch failed | jobId={job_id} | error={str(db_error)}")
+
+    # Second try: If no scraped pages found, fetch from seo_internal_links (discovered URLs)
+    if not urls:
+        try:
+            print(f"[HEADLESS_A11Y] No scraped pages found, trying seo_internal_links | projectId={project_id} | jobId={job_id}")
+            
+            # Import internal links collection
+            from db import seo_internal_links
+            
+            # Query by projectId to get all discovered internal links for this project
+            internal_links = list(seo_internal_links.find({"projectId": project_id_obj}))
+            urls = [link["url"] for link in internal_links if link.get("url")]
+            
+            print(f"[HEADLESS_A11Y] seo_internal_links fetch complete | totalUrls={len(urls)} | jobId={job_id} | linksFound={len(internal_links)}")
+            
+        except Exception as fallback_error:
+            print(f"[HEADLESS_A11Y] seo_internal_links fallback failed | jobId={job_id} | error={str(fallback_error)}")
+
+    # Third try: Use URLs from job input if provided (legacy support)
+    if not urls and hasattr(job, 'urls') and job.urls:
+        urls = job.urls
+        print(f"[HEADLESS_A11Y] Using URLs from job input | totalUrls={len(urls)} | jobId={job_id}")
 
     # STEP 3: Safety guard - graceful handling if no URLs found
     if not urls:

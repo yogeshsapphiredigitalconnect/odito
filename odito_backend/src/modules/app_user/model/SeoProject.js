@@ -184,6 +184,31 @@ const seoProjectSchema = new mongoose.Schema({
     default: null
   },
 
+  // 🤖 AI Visibility Data (Updated by AI visibility scoring worker)
+  ai_visibility: {
+    score: {
+      type: Number
+    },
+    pages_scored: {
+      type: Number
+    },
+    categories: {
+      type: Object,
+      default: {}
+    },
+    scoring_version: {
+      type: String
+    },
+    summary: {
+      type: String
+    }
+  },
+
+  last_ai_analysis_at: {
+    type: Date,
+    default: null
+  },
+
   // 🕒 System Timestamps (auto-managed by Mongoose)
   // created_at: Date (implicit)
   // updated_at: Date (implicit)
@@ -212,6 +237,9 @@ seoProjectSchema.index({ audit_started_at: -1 });
 seoProjectSchema.index({ last_analysis_at: -1 });
 seoProjectSchema.index({ crawl_duration: -1 });
 seoProjectSchema.index({ audit_duration_ms: -1 }); // 🎯 SINGLE SOURCE OF TRUTH INDEX
+
+// Index for AI visibility analysis timing
+seoProjectSchema.index({ last_ai_analysis_at: -1 });
 
 // Index for business/industry filtering
 seoProjectSchema.index({ industry: 1 });

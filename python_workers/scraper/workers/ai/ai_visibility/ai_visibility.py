@@ -7,7 +7,8 @@ import hashlib
 import json
 import re
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 from bson.objectid import ObjectId
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -940,7 +941,8 @@ class AIVisibilityJob(BaseModel):
     jobId: str
     projectId: str
     userId: str
-    aiProjectId: str = None  # For standalone projects
+    aiProjectId: Optional[str] = None  # For standalone projects
+    input_data: Optional[dict] = None  # For source_job_id and other metadata
 
 # ==================== ENTITY GRAPH EXTRACTION ====================
 
@@ -3610,7 +3612,7 @@ def extract_real_word_count(ai_signals: dict, html: str) -> int:
         return 1  # Safe fallback
 
 def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) -> dict:
-    """Analyze a single URL for AI visibility with performance guards (production-hardened)"""
+    """Analyze a single URL for AI visibility using HTML from database (no HTTP requests)"""
     try:
         # Check cancellation before processing each URL
         if is_job_cancelled(job.jobId):
@@ -3620,46 +3622,66 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
         if not aiProjectId:
             aiProjectId = job.aiProjectId or job.projectId
         
-        # Skip sitemap and XML files
-        url_lower = url.lower()
-        if (url_lower.endswith('.xml') or 
-            'sitemap' in url_lower or 
-            url_lower.endswith('.xml.gz')):
+        print(f"[AI_VISIBILITY] Analyzing URL from database: {url}")
+        
+        # === ARCHITECTURE FIX: Read HTML from database instead of HTTP requests ===
+        # Import seo_page_data collection
+        from db import seo_page_data
+        
+        # Find the page in seo_page_data collection using projectId
+        page_data = None
+        if job.projectId and job.projectId != 'null':
+            try:
+                page_data = seo_page_data.find_one({
+                    "projectId": ObjectId(job.projectId),
+                    "url": url,
+                    "extraction_status": "SUCCESS"
+                })
+                print(f"[AI_VISIBILITY] Found page data for {url}: {page_data is not None}")
+            except Exception as db_error:
+                print(f"[AI_VISIBILITY] Database query failed for {url}: {db_error}")
+        
+        if not page_data:
             return {
-                'projectId': ObjectId(aiProjectId),  # 🧠 Always use AI project ID for output
+                'projectId': ObjectId(aiProjectId),
                 'ai_jobId': ObjectId(job.jobId),
                 'url': url,
                 'http_status_code': 0,
                 'response_time_ms': 0,
-                'error': 'Skipped XML/sitemap file',
+                'error': 'Page not found in seo_page_data collection',
                 'skipped': True
             }
         
-        # Fetch HTML (HTTP-only mode)
-        html, status_code, response_time_ms, _ = fetch_html(url, timeout=10)
-        
-        # Skip non-HTML content
-        if status_code != 200:
+        # Get HTML from database instead of HTTP request
+        html = page_data.get('raw_html', '')
+        if not html:
             return {
-                'projectId': ObjectId(aiProjectId),  # 🧠 Always use AI project ID for output
+                'projectId': ObjectId(aiProjectId),
                 'ai_jobId': ObjectId(job.jobId),
                 'url': url,
-                'http_status_code': status_code,
-                'response_time_ms': response_time_ms,
-                'error': f'HTTP {status_code}'
+                'http_status_code': 0,
+                'response_time_ms': 0,
+                'error': 'No HTML found in database for this URL',
+                'skipped': True
             }
         
         # Check if content is actually HTML (basic check)
         if not html or ('<!DOCTYPE' not in html and '<html' not in html.lower()):
             return {
-                'projectId': ObjectId(aiProjectId),  # Always use AI project ID for output
+                'projectId': ObjectId(aiProjectId),
                 'ai_jobId': ObjectId(job.jobId),
                 'url': url,
-                'http_status_code': status_code,
-                'response_time_ms': response_time_ms,
-                'error': 'Non-HTML content',
+                'http_status_code': 200,  # Page exists but content is not HTML
+                'response_time_ms': 0,
+                'error': 'Content is not HTML',
                 'skipped': True
             }
+        
+        print(f"[AI_VISIBILITY] Using database HTML for {url} ({len(html)} chars)")
+        
+        # Set status_code and response_time based on database data
+        status_code = page_data.get('status_code', 200)
+        response_time_ms = page_data.get('response_time_ms', 0)
         
         # === PART 3: PERFORMANCE GUARDS ===
         # Check HTML size (already exists in fetcher, but double-check)
@@ -4015,10 +4037,15 @@ def check_job_timeout(start_time: datetime, job_id: str) -> bool:
         return True
     return False
 
-def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
+def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = None):
     """Execute AI visibility analysis - SAFE VERSION"""
     start_time = datetime.utcnow()
     duration_ms = 0
+    
+    # Defensive logging
+    print(f"[AI_VISIBILITY] Starting | jobId={job.jobId}")
+    print(f"[AI_VISIBILITY] aiProjectId={aiProjectId}")
+    print(f"[AI_VISIBILITY] projectId={job.projectId}")
     
     # === PHASE 1 SAFETY ADDITION ===
     # ENGINEER-LEVEL FIX: Use time-based timeout check instead of signals
@@ -4076,11 +4103,21 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
                         }
                     
                     collection_used = "seo_internal_links"
-                    print(f"[WORKER] Using non-standalone AI project data | aiProjectId={aiProjectId} | seoProjectId={seo_project_id}")
-                    print(f"[WORKER] Querying seo_internal_links collection")
-                    internal_links_cursor = seo_internal_links.find({
-                        "projectId": ObjectId(seo_project_id)  # 🧠 Use SEO project ID, not AI project ID
-                    }).limit(50)
+                    print(f"[WORKER] Using non-standalone AI project data | aiProjectId={aiProjectId} | seo_project_id={seo_project_id}")
+                    print(f"[WORKER] Querying seo_internal_links collection with seo_jobId from TECHNICAL_DOMAIN")
+                    # Get source_job_id from TECHNICAL_DOMAIN job input_data
+                    input_data = getattr(job, 'input_data', {}) or {}
+                    source_job_id = input_data.get('source_job_id')
+                    if source_job_id:
+                        internal_links_cursor = seo_internal_links.find({
+                            "seo_jobId": ObjectId(source_job_id)  # Use source_job_id from TECHNICAL_DOMAIN job
+                        }).limit(50)
+                    else:
+                        # Fallback if no source_job_id found
+                        print(f"[WORKER] WARNING: No source_job_id found, using seo_project_id fallback")
+                        internal_links_cursor = seo_internal_links.find({
+                            "projectId": ObjectId(seo_project_id)
+                        }).limit(50)
                 
                 internal_links = list(internal_links_cursor)
                 print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links")
@@ -4089,10 +4126,18 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
                 # No aiProjectId but has projectId - use seo_internal_links
                 collection_used = "seo_internal_links"
                 print(f"[WORKER] Using existing SEO project data | projectId={job.projectId}")
-                print(f"[WORKER] Querying seo_internal_links collection")
-                internal_links_cursor = seo_internal_links.find({
-                    "projectId": ObjectId(job.projectId)
-                }).limit(50)
+                print(f"[WORKER] Querying seo_internal_links collection with seo_jobId")
+                input_data = getattr(job, 'input_data', {}) or {}
+                source_job_id = input_data.get('source_job_id')
+                if source_job_id:
+                    internal_links_cursor = seo_internal_links.find({
+                        "seo_jobId": ObjectId(source_job_id)
+                    }).limit(50)
+                else:
+                    # Fallback to old query method if no source_job_id
+                    internal_links_cursor = seo_internal_links.find({
+                        "projectId": ObjectId(job.projectId)
+                    }).limit(50)
                 
                 internal_links = list(internal_links_cursor)
                 print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links")
@@ -4103,21 +4148,28 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
                 collection_used = "none"
             
             if not internal_links:
-                print(f"[WORKER] No internal links found for projectId={job.projectId}")
+                print(f"[AI_VISIBILITY] No URLs found for job | jobId={job.jobId}")
                 return {
-                    "status": "success",
+                    "status": "no_urls",
                     "jobId": job.jobId,
-                    "message": "No internal links found to analyze",
+                    "message": "No URLs found to analyze",
                     "stats": {"pages_processed": 0}
                 }
             
             # === ENGINEER-LEVEL FIX ===
             # Add timeout checks in main processing loop
             print(f"[WORKER] Starting analysis of {len(internal_links)} URLs")
+            print(f"[AI_VISIBILITY] Analyzing pages: {len(internal_links)}")
+            print(f"[AI_VISIBILITY] Using HTML from database - NO HTTP REQUESTS")
+            print(f"[AI_VISIBILITY] Pages loaded from database: {len(internal_links)}")
             
             all_results = []
             successful_pages = 0
             failed_pages = 0
+            
+            # === FIX: Use deterministic progress calculation ===
+            total_pages = len(internal_links)
+            print(f"[AI_VISIBILITY] Total pages to analyze: {total_pages}")
             
             with ThreadPoolExecutor(max_workers=4) as executor:
                 # Submit all analysis tasks
@@ -4128,13 +4180,13 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
                     if url:
                         futures.append(executor.submit(analyze_single_url, url, job, aiProjectId))
                 
-                # Collect results as they complete
-                for i, future in enumerate(as_completed(futures)):
-                    # Check cancellation during result collection
+                # Collect results in submission order for deterministic progress
+                for i, future in enumerate(futures):
+                    # Check cancellation before processing each result
                     if is_job_cancelled(job.jobId):
                         print(f"🛑 Job {job.jobId} cancelled during analysis")
                         # Cancel remaining futures
-                        for f in futures:
+                        for f in futures[i+1:]:
                             f.cancel()
                         return {"status": "cancelled", "jobId": job.jobId, "message": "Job cancelled by user"}
                     
@@ -4149,14 +4201,14 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
                         else:
                             successful_pages += 1
                     
-                    # Send progress update
-                    percentage = int(((i + 1) / len(futures)) * 100)
+                    # === DETERMINISTIC PROGRESS: Always increases ===
+                    progress = int((i + 1) / total_pages * 100)
                     send_progress_update(
                         job.jobId,
-                        percentage,
+                        progress,
                         "AI Analysis",
-                        f"Analyzing pages for AI visibility",
-                        f"{i + 1} of {len(futures)} pages processed"
+                        f"Analyzed {i+1}/{total_pages} pages",
+                        f"Success: {successful_pages}, Failed: {failed_pages}"
                     )
             
             # Final cancellation check before storing results
@@ -4255,7 +4307,13 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: str = None):
         except:
             pass
         
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return error result instead of raising exception
+        return {
+            "status": "error",
+            "jobId": job.jobId,
+            "message": f"Job failed: {str(e)}",
+            "stats": {"pages_processed": 0, "duration_ms": duration_ms}
+        }
 
 def extract_ai_visibility_signals(ai_signals, soup, url) -> dict:
     """Extract 3 new AI visibility signals: Organization validation, llms.txt, and Geo signals"""

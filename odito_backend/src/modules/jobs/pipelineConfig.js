@@ -33,36 +33,31 @@ export const PIPELINE_CONFIG = {
   },
 
   // ──────────────────────────────────────────────────────────────────────────
-  // TECHNICAL_DOMAIN → PAGE_SCRAPING  (uses source LINK_DISCOVERY job)
+  // TECHNICAL_DOMAIN → PARALLEL(PAGE_SCRAPING, HEADLESS_ACCESSIBILITY)  (uses source LINK_DISCOVERY job)
   // ──────────────────────────────────────────────────────────────────────────
   [JOB_TYPES.TECHNICAL_DOMAIN]: {
-    next: [JOB_TYPES.PAGE_SCRAPING],
-    parallel: false,
+    next: [JOB_TYPES.PAGE_SCRAPING, JOB_TYPES.HEADLESS_ACCESSIBILITY],
+    parallel: true,
     atomicGuard: true,
     resolveSource: true
   },
 
   // ──────────────────────────────────────────────────────────────────────────
-  // PAGE_SCRAPING → CRAWL_GRAPH  (sequential, with fallback to parallel workers)
-  //   If CRAWL_GRAPH creation fails → fallback to direct parallel dispatch
+  // PAGE_SCRAPING → PARALLEL(CRAWL_GRAPH, AI_VISIBILITY)  (parallel execution)
   // ──────────────────────────────────────────────────────────────────────────
   [JOB_TYPES.PAGE_SCRAPING]: {
-    next: [JOB_TYPES.CRAWL_GRAPH],
-    parallel: false,
-    atomicGuard: true,
-    creationFallback: {
-      [JOB_TYPES.CRAWL_GRAPH]: [JOB_TYPES.PERFORMANCE_MOBILE, JOB_TYPES.PERFORMANCE_DESKTOP, JOB_TYPES.HEADLESS_ACCESSIBILITY]
-    }
+    next: [JOB_TYPES.CRAWL_GRAPH, JOB_TYPES.AI_VISIBILITY],
+    parallel: true,
+    atomicGuard: true
   },
 
   // ──────────────────────────────────────────────────────────────────────────
-  // CRAWL_GRAPH → [PERFORMANCE_MOBILE, PERFORMANCE_DESKTOP, HEADLESS_ACCESSIBILITY]  (parallel)
-  //   PAGE_ANALYSIS is NOT triggered here.
-  //   It is gated behind PERFORMANCE_DESKTOP + HEADLESS_ACCESSIBILITY completion.
+  // CRAWL_GRAPH → [PERFORMANCE_MOBILE, PERFORMANCE_DESKTOP]  (sequential)
+  //   PAGE_ANALYSIS is gated behind PERFORMANCE_DESKTOP + HEADLESS_ACCESSIBILITY completion.
   // ──────────────────────────────────────────────────────────────────────────
   [JOB_TYPES.CRAWL_GRAPH]: {
-    next: [JOB_TYPES.PERFORMANCE_MOBILE, JOB_TYPES.PERFORMANCE_DESKTOP, JOB_TYPES.HEADLESS_ACCESSIBILITY],
-    parallel: true,
+    next: [JOB_TYPES.PERFORMANCE_MOBILE, JOB_TYPES.PERFORMANCE_DESKTOP],
+    parallel: false,
     atomicGuard: false
   },
 
@@ -103,15 +98,7 @@ export const PIPELINE_CONFIG = {
     }
   },
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // AI_LINK_DISCOVERY → AI_VISIBILITY  (AI pipeline start)
-  // ──────────────────────────────────────────────────────────────────────────
-  [JOB_TYPES.AI_LINK_DISCOVERY]: {
-    next: [JOB_TYPES.AI_VISIBILITY],
-    parallel: false,
-    atomicGuard: true
-  },
-
+  
   // ──────────────────────────────────────────────────────────────────────────
   // AI_VISIBILITY → AI_VISIBILITY_SCORING
   // ──────────────────────────────────────────────────────────────────────────
@@ -122,7 +109,7 @@ export const PIPELINE_CONFIG = {
   },
 
   // ──────────────────────────────────────────────────────────────────────────
-  // AI_VISIBILITY_SCORING → (terminal)
+  // AI_VISIBILITY_SCORING → (terminal, but triggers project update)
   // ──────────────────────────────────────────────────────────────────────────
   [JOB_TYPES.AI_VISIBILITY_SCORING]: {
     next: []

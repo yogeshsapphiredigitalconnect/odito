@@ -142,7 +142,82 @@
   --sidebar-accent-foreground: #9ba3bf;
   --sidebar-border: #1c2138;
   --sidebar-ring: #06b6d4;
+  
+  /* Landing page specific variables */
+  --bg: #04070f;
+  --bg2: #07101e;
+  --surface: rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --text: #f0f4ff;
+  --text2: #8896b0;
+  --text3: #5a6a82;
+  --cyan: #00e5ff;
+  --violet: #7c3aed;
+  --purple: #a855f7;
+  --green: #10ffa0;
+  --grad1: linear-gradient(135deg, #7c3aed, #00e5ff);
+  --font-display: var(--font-syne);
+  --font-body: var(--font-dm-sans);
+  --radius: 16px;
+  --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  --bg3: #0c1a2e;
+  --border2: rgba(255,255,255,0.14);
+  --amber: #ffbb33;
+  --red: #ff4560;
+  --pink: #ff2d9b;
+  --grad2: linear-gradient(135deg, #a855f7, #ec4899);
+  --grad3: linear-gradient(135deg, #10ffa0, #00e5ff);
+  --grad4: linear-gradient(135deg, #ff4560, #ffbb33);
+  --radius-lg: 24px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 40px rgba(0,229,255,0.12);
 }
+
+/* ── Landing hero ── */
+.hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; position: relative; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.18), transparent), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,229,255,0.1), transparent); pointer-events: none; }
+.hero-particles { position: absolute; inset: 0; pointer-events: none; }
+.particle { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: var(--cyan); animation: float 6s infinite; opacity: 0.4; }
+@keyframes float { 0%,100% { transform: translateY(0) scale(1); opacity: 0.4; } 50% { transform: translateY(-40px) scale(1.5); opacity: 0.8; } }
+.hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--purple); margin-bottom: 28px; }
+.hero-h1 { font-family: var(--font-display); font-size: clamp(36px,5vw,64px); font-weight: 800; text-align: center; line-height: 1.1; margin-bottom: 20px; }
+.hero-h1 span { background: var(--grad1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero-sub { font-size: 17px; color: var(--text2); text-align: center; max-width: 540px; line-height: 1.6; margin-bottom: 40px; }
+.trust-row { display: flex; gap: 24px; align-items: center; margin-top: 32px; }
+.trust-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); }
+
+/* ── Chat input ── */
+.chat-input-row { display: flex; gap: 8px; margin-top: 12px; }
+.chat-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; color: var(--text); font-family: var(--font-body); outline: none; transition: var(--transition); }
+.chat-input:focus { border-color: var(--violet); }
+.chat-send { padding: 10px 18px; background: var(--grad1); border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition); font-family: var(--font-body); }
+.chat-send:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,229,255,0.3); }
+
+/* ── Chat bubbles ── */
+.chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 14px; font-size: 13.5px; line-height: 1.55; margin-bottom: 10px; }
+.chat-bubble.ai { background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-bubble.user { background: var(--grad1); color: #fff; border-bottom-right-radius: 4px; margin-left: auto; }
+
+/* ── Processing screen ── */
+.process-step { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.process-step:last-child { border-bottom: none; }
+.process-icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-size: 15px; flex-shrink: 0; }
+.process-icon.done { background: rgba(16,255,160,0.15); }
+.process-icon.active { background: rgba(0,229,255,0.15); animation: pulse 1.5s infinite; }
+.process-icon.pending { background: var(--surface); opacity: 0.4; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,229,255,0.3); } 50% { box-shadow: 0 0 0 6px rgba(0,229,255,0); } }
+
+/* ── Glass card ── */
+.glass-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  backdrop-filter: blur(20px); transition: var(--transition);
+}
+.glass-card:hover { border-color: var(--border2); box-shadow: var(--shadow-glow); }
+
+/* ── Progress bar ── */
+.prog-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
 
 .dark-intelligence {
   --background: oklch(0.09 0.01 240);

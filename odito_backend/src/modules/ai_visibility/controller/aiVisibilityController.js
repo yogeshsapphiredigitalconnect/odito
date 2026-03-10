@@ -64,82 +64,39 @@ export const startAudit = async (req, res) => {
 
     let job;
 
-    if (aiProject.isStandalone) {
-      // NEW project → trigger AI_LINK_DISCOVERY
+    // ALL projects → trigger AI_VISIBILITY directly (no more AI_LINK_DISCOVERY)
+    job = await jobService.createJob({
+      user_id: req.user._id,
 
-      job = await jobService.createJob({
-        user_id: req.user._id,
+      seo_project_id: aiProject.projectId || aiProject._id, // Use SEO project ID or AI project ID for standalone
 
-        seo_project_id: aiProject._id, // Use AI project ID as seo_project_id
+      jobType: JOB_TYPES.AI_VISIBILITY,
 
-        jobType: JOB_TYPES.AI_LINK_DISCOVERY,
+      input_data: {
+        aiProjectId: aiProject._id,
 
-        input_data: {
-          aiProjectId: aiProject._id,
+        isStandalone: aiProject.isStandalone,
+      },
+    });
 
-          isStandalone: aiProject.isStandalone,
+    // Link job to AI project
+    await AIVisibilityProjectService.linkJob(aiProject._id, job._id);
 
-          url: aiProject.config.url,
-        },
-      });
+    console.log(
+      `[AI_VISIBILITY] Job dispatched | jobId=${job._id} | aiProjectId=${aiProject._id}`,
+    );
 
-      // Link discovery job to AI project
+    // Dispatch AI visibility job
+    await jobService.atomicallyDispatchJob(job._id);
 
-      await AIVisibilityProjectService.linkJob(aiProject._id, job._id);
-
-      console.log(
-        `[AI_LINK_DISCOVERY] Job dispatched | jobId=${job._id} | aiProjectId=${aiProject._id}`,
+    jobDispatcher.dispatchAiVisibilityJob(job).catch((error) => {
+      console.error(
+        `[ERROR] AI_VISIBILITY dispatch failed | jobId=${job._id}:`,
+        error,
       );
-
-      // Dispatch discovery job
-
-      await jobService.atomicallyDispatchJob(job._id);
-
-      jobDispatcher.dispatchAiLinkDiscoveryJob(job).catch((error) => {
-        console.error(
-          `[ERROR] AI_LINK_DISCOVERY dispatch failed | jobId=${job._id}:`,
-          error,
-        );
-      });
-    } else {
-      // EXISTING project → trigger AI_VISIBILITY directly
-
-      job = await jobService.createJob({
-        user_id: req.user._id,
-
-        seo_project_id: aiProject.projectId, // Use SEO project ID
-
-        jobType: JOB_TYPES.AI_VISIBILITY,
-
-        input_data: {
-          aiProjectId: aiProject._id,
-
-          isStandalone: aiProject.isStandalone,
-        },
-      });
-
-      // Link job to AI project
-
-      await AIVisibilityProjectService.linkJob(aiProject._id, job._id);
-
-      console.log(
-        `[AI_VISIBILITY] Job dispatched | jobId=${job._id} | aiProjectId=${aiProject._id}`,
-      );
-
-      // Dispatch AI visibility job
-
-      await jobService.atomicallyDispatchJob(job._id);
-
-      jobDispatcher.dispatchAiVisibilityJob(job).catch((error) => {
-        console.error(
-          `[ERROR] AI_VISIBILITY dispatch failed | jobId=${job._id}:`,
-          error,
-        );
-      });
-    }
+    });
 
     // ✅ CORRECT: Update AI project status to running ONLY when audit is explicitly started
-
     await AIVisibilityProjectService.updateStatus(aiProject._id, "running", {
       skipTimestamp: false,
     });
@@ -150,12 +107,9 @@ export const startAudit = async (req, res) => {
 
     res.json({
       success: true,
-
       message: "AI audit started successfully",
-
       data: {
         jobId: job._id,
-
         jobType: job.jobType,
       },
     });

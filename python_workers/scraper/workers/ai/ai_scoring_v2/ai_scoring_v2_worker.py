@@ -306,6 +306,14 @@ def execute_ai_visibility_scoring_v2(job_data: Dict[str, Any]) -> Dict[str, Any]
         
         logger.info(f"[WORKER] AI_VISIBILITY_SCORING_V2 completed | jobId={job.jobId} | pages_scored={processed_count} | website_score={website_result['website_ai_score']}")
         
+        # Send completion callback to Node.js
+        try:
+            send_completion_callback(job.jobId, completion_stats)
+            logger.info(f"[WORKER] Completion callback sent | jobId={job.jobId}")
+        except Exception as callback_error:
+            logger.error(f"[WORKER] Failed to send completion callback | jobId={job.jobId} | error={callback_error}")
+            # Don't fail the job - callback is non-critical
+        
         return {
             "status": "completed",
             "jobId": job.jobId,

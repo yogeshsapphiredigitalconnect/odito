@@ -90,8 +90,14 @@ export const completeJobSafely = async (req, res) => {
  * This is the clean entry point that delegates to services.
  */
 async function handleJobCompletion(updatedJob, stats, requestId) {
+  console.log(`[COMPLETION_HANDLER:${requestId}] handleJobCompletion called | jobType=${updatedJob.jobType} | jobId=${updatedJob._id}`);
+  console.log(`[COMPLETION_HANDLER:${requestId}] Stats payload:`, JSON.stringify(stats, null, 2));
+  
   await projectStatusService.updateForJobType(updatedJob, stats, requestId);
+  console.log(`[COMPLETION_HANDLER:${requestId}] projectStatusService.updateForJobType completed`);
+  
   await chainingEngine.process(updatedJob, stats, requestId);
+  console.log(`[COMPLETION_HANDLER:${requestId}] chainingEngine.process completed`);
 }
 
 export default completeJobSafely;

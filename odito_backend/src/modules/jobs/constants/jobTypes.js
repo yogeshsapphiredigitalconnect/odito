@@ -37,9 +37,6 @@ export const JOB_TYPES = {
 
   // AI Visibility Scoring (final stage)
   AI_VISIBILITY_SCORING: 'AI_VISIBILITY_SCORING',
-
-  // AI Link Discovery for new standalone projects
-  AI_LINK_DISCOVERY: 'AI_LINK_DISCOVERY',
 };
 
 export const JOB_STATUS = {
@@ -159,13 +156,6 @@ export const JOB_TYPE_CONFIG = {
     timeout: 300000,       // 5 minutes
     priority: 8,
     workerType: 'ai_visibility_scorer'
-  },
-
-  // AI Link Discovery Configuration
-  [JOB_TYPES.AI_LINK_DISCOVERY]: {
-    maxAttempts: 2,
-    timeout: 300000,       // 5 minutes
-    priority: 5
   }
 };
 

@@ -418,12 +418,11 @@ def execute_seo_scoring_logic(job):
                     for p in sample_projects:
                         print(f"   - _id: {p['_id']} | project_name: {p.get('project_name', 'N/A')}")
                 
-                # Update project with website-level metrics
-                dollar = '$'  # Use variable to avoid character encoding issues
+                # Update project with website-level metrics using safe partial update
                 update_result = db.seoprojects.update_one(
                     {"_id": project_object_id},
                     {
-                        dollar + "set": {
+                        "$set": {
                             "website_score": round(website_score, 2),
                             "website_grade": website_grade_letter,
                             "pages_scored": len(page_scores),
@@ -434,6 +433,19 @@ def execute_seo_scoring_logic(job):
                 )
                 
                 print(f"[PROJECT] Website metrics write result | matched={update_result.matched_count} | modified={update_result.modified_count} | projectId={job.projectId} | jobId={job.jobId}")
+                
+                # Verify existing fields are preserved after update
+                if update_result.modified_count > 0:
+                    project_after = db.seoprojects.find_one({"_id": project_object_id})
+                    if project_after:
+                        existing_fields = list(project_after.keys())
+                        print(f"[VERIFY] Project fields after SEO update: {existing_fields}")
+                        
+                        # Check for ai_visibility field specifically
+                        if "ai_visibility" in project_after:
+                            print(f"[VERIFY] ai_visibility field preserved: {project_after['ai_visibility']}")
+                        else:
+                            print(f"[WARN] ai_visibility field NOT found after SEO update")
                 
                 if update_result.matched_count == 0:
                     print(f"[ERROR] No project document found for update | projectId={job.projectId} | project_object_id={project_object_id}")

@@ -12,7 +12,7 @@ class HeadlessAccessibilityJob(BaseModel):
     jobId: str
     projectId: str
     userId: str
-    sourceJobId: str  # Reference to PAGE_SCRAPING job
+    sourceJobId: str  # Reference to TECHNICAL_DOMAIN job
     urls: Optional[List[str]] = []
 
 

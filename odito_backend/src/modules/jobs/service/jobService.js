@@ -474,29 +474,31 @@ export class JobService {
   /**
    * Atomically create and dispatch HEADLESS_ACCESSIBILITY job
    * CRITICAL: This operation must be atomic to prevent duplicates
+   * Simplified to use projectId for URL retrieval instead of source_job_id dependency
    */
-  async createAndDispatchHeadlessAccessibilityJob(pageScrapingJob) {
+  async createAndDispatchHeadlessAccessibilityJob(technicalDomainJob) {
     try {
-      console.log(`[DEBUG] createAndDispatchHeadlessAccessibilityJob called with pageScrapingJob._id=${pageScrapingJob._id}`);
+      console.log(`[DEBUG] createAndDispatchHeadlessAccessibilityJob called with technicalDomainJob._id=${technicalDomainJob._id}`);
 
-      // Create HEADLESS_ACCESSIBILITY job with source job reference
+      // Create HEADLESS_ACCESSIBILITY job with minimal input data
+      // The worker will fetch URLs from database using projectId
       const headlessA11yJob = await this.createJob({
-        user_id: pageScrapingJob.user_id,
-        seo_project_id: pageScrapingJob.project_id,
+        user_id: technicalDomainJob.user_id,
+        seo_project_id: technicalDomainJob.project_id,
         jobType: JOB_TYPES.HEADLESS_ACCESSIBILITY,
         input_data: {
-          source_job_id: pageScrapingJob._id.toString(),
-          urls: pageScrapingJob.input_data?.urls || []
+          source_job_id: technicalDomainJob._id.toString(),
+          projectId: technicalDomainJob.project_id.toString()
         },
         priority: JOB_TYPE_CONFIG[JOB_TYPES.HEADLESS_ACCESSIBILITY].priority
       });
 
-      console.log(`[QUEUE] HEADLESS_ACCESSIBILITY job queued | jobId=${headlessA11yJob._id} | sourceJobId=${pageScrapingJob._id}`);
+      console.log(`[QUEUE] HEADLESS_ACCESSIBILITY job queued | jobId=${headlessA11yJob._id} | sourceJobId=${technicalDomainJob._id} | projectId=${technicalDomainJob.project_id}`);
 
       return headlessA11yJob;
 
     } catch (error) {
-      console.error(`[ERROR] HEADLESS_ACCESSIBILITY creation failed | sourceJobId=${pageScrapingJob._id} | reason="${error.message}"`);
+      console.error(`[ERROR] HEADLESS_ACCESSIBILITY creation failed | sourceJobId=${technicalDomainJob._id} | reason="${error.message}"`);
       console.error(`[ERROR] Full error stack: ${error.stack}`);
       throw error;
     }
@@ -654,21 +656,29 @@ export class JobService {
   /**
    * Atomically create and dispatch AI_VISIBILITY job
    * CRITICAL: This operation must be atomic to prevent duplicates
+   * Now accepts PAGE_SCRAPING job as source
    */
-  async createAndDispatchAiVisibilityJob(aiLinkDiscoveryJob) {
+  async createAndDispatchAiVisibilityJob(pageScrapingJob) {
+    // Debug logging before job creation
+    console.log("Creating AI_VISIBILITY job", {
+      projectId: pageScrapingJob.project_id,
+      sourceJobId: pageScrapingJob._id,
+      hasAiProjectId: !!pageScrapingJob.input_data?.aiProjectId
+    });
+
     const aiVisibilityJob = await this.createJob({
-      user_id: aiLinkDiscoveryJob.user_id,
-      seo_project_id: aiLinkDiscoveryJob.project_id,
+      user_id: pageScrapingJob.user_id,
+      seo_project_id: pageScrapingJob.project_id,  // ✅ Fixed: use seo_project_id instead of project_id
       jobType: JOB_TYPES.AI_VISIBILITY,
       input_data: {
-        source_job_id: aiLinkDiscoveryJob._id.toString(),
-        aiProjectId: aiLinkDiscoveryJob.input_data?.aiProjectId
+        source_job_id: pageScrapingJob._id.toString(),
+        aiProjectId: pageScrapingJob.input_data?.aiProjectId
       },
       priority: JOB_TYPE_CONFIG[JOB_TYPES.AI_VISIBILITY].priority
     });
 
     console.log(
-      `[QUEUE] AI_VISIBILITY job queued | jobId=${aiVisibilityJob._id}` 
+      `[QUEUE] AI_VISIBILITY job queued | jobId=${aiVisibilityJob._id} | sourceJobId=${pageScrapingJob._id}`
     );
 
     return aiVisibilityJob;

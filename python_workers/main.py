@@ -22,7 +22,6 @@ from api.performance import router as performance_router
 from api.seo_scoring import router as seo_scoring_router
 from api.ai_visibility import router as ai_visibility_router
 from api.ai_visibility_scoring_v2 import router as ai_visibility_scoring_v2_router, AIVisibilityScoringV2Job
-from api.ai_link_discovery import router as ai_link_discovery_router
 from api.technical_domain import router as technical_domain_router
 from api.headless_accessibility import router as headless_accessibility_router
 from api.crawl_graph import router as crawl_graph_router
@@ -43,7 +42,6 @@ app.include_router(performance_router, prefix="/api", tags=["performance"])
 app.include_router(seo_scoring_router, prefix="/api", tags=["seo_scoring"])
 app.include_router(ai_visibility_router, prefix="/api", tags=["ai_visibility"])
 app.include_router(ai_visibility_scoring_v2_router, prefix="/api", tags=["ai_visibility_scoring_v2"])
-app.include_router(ai_link_discovery_router, prefix="/api", tags=["ai_link_discovery"])
 app.include_router(technical_domain_router, prefix="/api", tags=["technical_domain"])
 app.include_router(headless_accessibility_router, prefix="/api", tags=["headless_accessibility"])
 app.include_router(crawl_graph_router, prefix="/api", tags=["crawl_graph"])

@@ -185,7 +185,7 @@ function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       await signIn("google", { 
-        callbackUrl: window.location.origin + "/dashboard",
+        callbackUrl: window.location.origin + "/onboarding",
         redirect: true 
       });
     } catch (error) {
@@ -322,10 +322,10 @@ function LoginPage() {
         // Show confirmation modal instead of redirecting to dashboard
         window.dispatchEvent(new CustomEvent('showPaymentConfirm'));
       } else {
-        // No payment intent, redirect to dashboard
+        // No payment intent, redirect to onboarding
         alert(`Login successful! Welcome, ${result.user.firstName}!`);
         if (typeof window !== 'undefined') {
-          window.location.href = '/dashboard';
+          window.location.href = '/onboarding';
         }
       }
       
