@@ -205,6 +205,7 @@
 .process-icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-size: 15px; flex-shrink: 0; }
 .process-icon.done { background: rgba(16,255,160,0.15); }
 .process-icon.active { background: rgba(0,229,255,0.15); animation: pulse 1.5s infinite; }
+.process-icon.failed { background: rgba(255,69,96,0.15); }
 .process-icon.pending { background: var(--surface); opacity: 0.4; }
 @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,229,255,0.3); } 50% { box-shadow: 0 0 0 6px rgba(0,229,255,0); } }
 

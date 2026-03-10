@@ -1,12 +1,7 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
 import { useAuth } from '@/contexts/AuthContext'
+import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function AIVisibilityLayout({ children }) {
   const { user, logout, isLoading } = useAuth()
@@ -31,12 +26,8 @@ export default function AIVisibilityLayout({ children }) {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <DashboardLayout user={user} onLogout={logout}>
+      {children}
+    </DashboardLayout>
   )
 }

@@ -33,136 +33,80 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { navigation, iconMap } from "@/config/navigation"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: IconDashboard,
+// Icon component mapping
+const iconComponents = {
+  IconCamera,
+  IconChartBar,
+  IconDashboard,
+  IconDatabase,
+  IconEye,
+  IconFileAi,
+  IconFileDescription,
+  IconFileWord,
+  IconFolder,
+  IconHelp,
+  IconInnerShadowTop,
+  IconListDetails,
+  IconReport,
+  IconSearch,
+  IconSettings,
+  IconUsers,
+}
+
+// Helper function to get icon component by name
+const getIcon = (iconName) => {
+  const componentKey = iconMap[iconName]
+  return componentKey ? iconComponents[componentKey] : null
+}
+
+// Transform navigation config to match existing data structure
+const getNavigationData = () => {
+  return {
+    user: {
+      name: "shadcn",
+      email: "m@example.com",
+      avatar: "/avatars/shadcn.jpg",
     },
-   
-    {
-      title: "Projects",
-      url: "/projects",
-      icon: IconFolder,
-      items: [
-        {
-          title: "All Projects",
-          url: "/projects",
-        },
-        {
-          title: "New Project",
-          url: "/projects/new",
-        },
-      ],
-    },
-    {
-      title: "AI Visibility",
-      url: "/ai-visibility",
-      icon: IconEye,
-    },
-     {
-      title: "Analytics",
-      url: "/analytics",
-      icon: IconChartBar,
-    },
-    
-    
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
+    navMain: navigation.main.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      items: item.children?.map(child => ({
+        title: child.title,
+        url: child.url
+      }))
+    })),
+    navClouds: navigation.clouds.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      isActive: item.isActive,
+      items: item.items?.map(child => ({
+        title: child.title,
+        url: child.url
+      }))
+    })),
+    navSecondary: navigation.secondary.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon)
+    })),
+    documents: navigation.documents.map(item => ({
+      name: item.name,
+      url: item.url,
+      icon: getIcon(item.icon)
+    }))
+  }
 }
 
 export function AppSidebar({
   user,
   ...props
 }) {
+  const data = getNavigationData()
+  
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>

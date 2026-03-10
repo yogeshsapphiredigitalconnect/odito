@@ -20,12 +20,7 @@ import {
   AlertTriangle as ErrorIcon
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
+import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function Dashboard() {
   const { user, logout, isLoading } = useAuth()
@@ -293,53 +288,48 @@ export default function Dashboard() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} variant="inset" />
-      <SidebarInset>
-        <SiteHeader user={user} onLogout={handleLogout} />
-        
-        <div className="flex-1 space-y-6 p-6">
-          {/* Breadcrumb equivalent */}
-          <div className="border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {projects.length > 0 ? "Your Projects" : "Welcome to Dashboard"}
-                </h1>
-                <p className="text-muted-foreground">SEO Projects</p>
-              </div>
+    <DashboardLayout user={user} onLogout={handleLogout}>
+      <div className="flex-1 space-y-6 p-6">
+        {/* Breadcrumb equivalent */}
+        <div className="border-b pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {projects.length > 0 ? "Your Projects" : "Welcome to Dashboard"}
+              </h1>
+              <p className="text-muted-foreground">SEO Projects</p>
             </div>
           </div>
-          
-          {/* Projects Card with Header */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight">Projects Overview</h2>
-                <p className="text-muted-foreground">Manage and monitor your SEO audit projects</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchProjects}
-                  disabled={loading}
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                </Button>
-                <Button 
-                  onClick={() => router.push('/projects/new')}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  New Project
-                </Button>
-              </div>
-            </div>
-            {renderContent()}
-          </Card>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+        
+        {/* Projects Card with Header */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">Projects Overview</h2>
+              <p className="text-muted-foreground">Manage and monitor your SEO audit projects</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={fetchProjects}
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button 
+                onClick={() => router.push('/projects/new')}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Project
+              </Button>
+            </div>
+          </div>
+          {renderContent()}
+        </Card>
+      </div>
+    </DashboardLayout>
   )
 }

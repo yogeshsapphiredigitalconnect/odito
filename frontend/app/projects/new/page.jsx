@@ -1,14 +1,9 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import NewProjectForm from "@/components/ui/form-layout"
+import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function ProjectsNewPage() {
   const { user, isLoading } = useAuth()
@@ -38,24 +33,14 @@ export default function ProjectsNewPage() {
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "14rem",
-          "--header-height": "calc(var(--spacing) * 12)"
-        }
-      }>
-      <AppSidebar user={user} variant="inset" />
-      <SidebarInset>
-        <SiteHeader user={user} />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <NewProjectForm />
-            </div>
+    <DashboardLayout user={user}>
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <NewProjectForm />
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </DashboardLayout>
   )
 }

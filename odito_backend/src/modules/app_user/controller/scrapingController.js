@@ -26,29 +26,29 @@ const resetProjectCrawlData = async (projectId) => {
     const db = getDb();
     const { ObjectId } = mongoose.Types;
     const projectIdObj = new ObjectId(projectId);
-    
+
     console.log(`[API] Resetting crawl data for project | projectId=${projectId}`);
-    
+
     // Clear all crawl-related collections for this project
     const collectionsToClear = [
       'seo_internal_links',
-      'seo_external_links', 
+      'seo_external_links',
       'seo_social_links',
       'seo_page_data',
       'seo_page_issues',
       'seo_first_snapshot',
       'seo_mainurl_snapshot'
     ];
-    
+
     let totalDeleted = 0;
     for (const collectionName of collectionsToClear) {
-      const result = await db.collection(collectionName).deleteMany({ 
-        projectId: projectIdObj 
+      const result = await db.collection(collectionName).deleteMany({
+        projectId: projectIdObj
       });
       totalDeleted += result.deletedCount;
       console.log(`[API] Cleared ${collectionName} | deleted=${result.deletedCount}`);
     }
-    
+
     // Reset project crawl summary fields
     await SeoProject.findByIdAndUpdate(projectId, {
       pages_discovered: 0,
@@ -61,10 +61,10 @@ const resetProjectCrawlData = async (projectId) => {
       // last_crawl_summary: null,  // REMOVED: Preserve previous audit results
       last_analysis_at: null
     });
-    
+
     console.log(`[API] Project crawl data reset complete | projectId=${projectId} | totalDeleted=${totalDeleted}`);
     return totalDeleted;
-    
+
   } catch (error) {
     console.error(`[ERROR] Failed to reset crawl data | projectId=${projectId} | error="${error.message}"`);
     throw error;
@@ -78,7 +78,7 @@ const resetProjectCrawlData = async (projectId) => {
 export const startScraping = async (req, res) => {
   try {
     const { project_id } = req.body;
-    
+
     if (!project_id) {
       return res.status(400).json({
         success: false,
@@ -190,10 +190,10 @@ export const startScraping = async (req, res) => {
  */
 export const cancelAudit = async (req, res) => {
   console.log('🔥 Cancel audit API HIT', req.body);
-  
+
   try {
     const { project_id, job_id } = req.body; // Accept both project_id and job_id
-    
+
     if (!project_id && !job_id) {
       console.log('❌ Missing project_id or job_id');
       return res.status(400).json({
@@ -203,7 +203,7 @@ export const cancelAudit = async (req, res) => {
     }
 
     let runningJobs = [];
-    
+
     if (job_id) {
       // Cancel specific job by job_id (preferred)
       console.log(`🔍 Looking for specific job: ${job_id}`);
@@ -214,18 +214,18 @@ export const cancelAudit = async (req, res) => {
     } else {
       // Legacy: find all running jobs for project
       console.log(`🔍 Looking for running jobs in project: ${project_id}`);
-      
+
       // First, let's see ALL jobs for this project for debugging
       const allJobs = await jobService.getJobsByProject(project_id, {});
-      console.log(`📋 ALL jobs for project ${project_id}:`, allJobs.map(j => ({ 
-        id: j._id, 
-        status: j.status, 
+      console.log(`📋 ALL jobs for project ${project_id}:`, allJobs.map(j => ({
+        id: j._id,
+        status: j.status,
         jobType: j.jobType,
-        project_id: j.project_id 
+        project_id: j.project_id
       })));
-      
+
       // Find running jobs for this project (PROCESSING, QUEUED, CLAIMED)
-      runningJobs = allJobs.filter(job => 
+      runningJobs = allJobs.filter(job =>
         ['PROCESSING', 'QUEUED', 'CLAIMED'].includes(job.status)
       );
     }
@@ -243,7 +243,7 @@ export const cancelAudit = async (req, res) => {
     // Mark jobs as cancelled in database
     const jobIds = runningJobs.map(job => job._id);
     console.log(`🔄 Marking jobs as cancelled: ${jobIds.join(', ')}`);
-    
+
     for (const jobId of jobIds) {
       await jobService.updateJobStatus(jobId, 'failed', {
         error_message: 'Audit cancelled by user',
@@ -256,7 +256,7 @@ export const cancelAudit = async (req, res) => {
     // Notify Python workers to stop processing these jobs
     const pythonWorkerUrl = process.env.PYTHON_WORKER_URL || 'http://localhost:8000';
     console.log(`📡 Notifying Python worker at: ${pythonWorkerUrl}`);
-    
+
     for (const jobId of jobIds) {
       try {
         console.log(`📢 Sending cancel request for job: ${jobId}`);
@@ -265,7 +265,7 @@ export const cancelAudit = async (req, res) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ jobId: jobId.toString() })
         });
-        
+
         if (response.ok) {
           console.log(`✅ Notified Python worker to cancel job: ${jobId}`);
         } else {
@@ -321,44 +321,33 @@ export const cancelAudit = async (req, res) => {
 export const getScrapingStatus = async (req, res) => {
   try {
     const { project_id } = req.params;
-    
+
     const jobs = await jobService.getJobsByProject(project_id);
-    
-    // Group jobs by type and status
-    const status = {
-      link_discovery: {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        latest: null
-      },
-      page_scraping: {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        latest: null
-      },
-      performance_mobile: {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        latest: null
-      },
-      performance_desktop: {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        latest: null
-      }
-    };
+
+    // All pipeline job types — update this list when adding new stages
+    const PIPELINE_JOB_TYPES = [
+      'link_discovery',
+      'technical_domain',
+      'page_scraping',
+      'headless_accessibility',
+      'crawl_graph',
+      'performance_mobile',
+      'performance_desktop',
+      'page_analysis',
+      'seo_scoring',
+      'ai_visibility',
+      'ai_visibility_scoring'
+    ];
+
+    // Dynamically build the status object from the list
+    const status = {};
+    PIPELINE_JOB_TYPES.forEach(type => {
+      status[type] = { pending: 0, processing: 0, completed: 0, failed: 0, latest: null };
+    });
 
     jobs.forEach(job => {
-      const key = job.jobType.toLowerCase().replace('_', '_');
-      if (status[key]) {
+      const key = job.jobType.toLowerCase();
+      if (status[key] && status[key][job.status] !== undefined) {
         status[key][job.status]++;
         if (!status[key].latest || new Date(job.created_at) > new Date(status[key].latest.created_at)) {
           status[key].latest = {

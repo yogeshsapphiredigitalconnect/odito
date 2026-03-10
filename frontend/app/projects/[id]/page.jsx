@@ -1,15 +1,10 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { useParams, useRouter } from 'next/navigation'
 import ProjectOverview from '../ProjectOverview'
+import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function ProjectPage() {
   const { user, isLoading } = useAuth()
@@ -57,29 +52,19 @@ export default function ProjectPage() {
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "14rem",
-          "--header-height": "calc(var(--spacing) * 12)"
-        }
-      }>
-      <AppSidebar user={user} variant="inset" />
-      <SidebarInset>
-        <SiteHeader user={user} />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="px-4 lg:px-6">
-                <ProjectOverview 
-                  projectId={projectId} 
-                  onBack={handleBack}
-                />
-              </div>
+    <DashboardLayout user={user}>
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="px-4 lg:px-6">
+              <ProjectOverview 
+                projectId={projectId} 
+                onBack={handleBack}
+              />
             </div>
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </DashboardLayout>
   )
 }

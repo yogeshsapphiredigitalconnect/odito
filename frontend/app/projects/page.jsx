@@ -1,14 +1,9 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import ProjectsList from './list/ProjectsList'
+import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function ProjectsPage() {
   const { user, isLoading } = useAuth()
@@ -38,39 +33,29 @@ export default function ProjectsPage() {
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "14rem",
-          "--header-height": "calc(var(--spacing) * 12)"
-        }
-      }>
-      <AppSidebar user={user} variant="inset" />
-      <SidebarInset>
-        <SiteHeader user={user} />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="px-4 lg:px-6">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h1 className="text-4xl font-bold mb-2">All Projects</h1>
-                    <p className="text-muted-foreground text-lg">
-                      View and manage all your SEO projects here.
-                    </p>
-                  </div>
-                  <Button onClick={() => window.location.href = '/projects/new'}>
-                    Create New Project
-                  </Button>
+    <DashboardLayout user={user}>
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="px-4 lg:px-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h1 className="text-4xl font-bold mb-2">All Projects</h1>
+                  <p className="text-muted-foreground text-lg">
+                    View and manage all your SEO projects here.
+                  </p>
                 </div>
-                
-                {/* Projects List Component */}
-                <ProjectsList />
+                <Button onClick={() => window.location.href = '/projects/new'}>
+                  Create New Project
+                </Button>
               </div>
+              
+              {/* Projects List Component */}
+              <ProjectsList />
             </div>
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </DashboardLayout>
   )
 }
