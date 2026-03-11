@@ -1,125 +1,54 @@
 export const navigation = {
-  // Main navigation items (primary navigation)
-  main: [
+  // AUDIT section
+  audit: [
     {
-      title: "Dashboard",
+      title: "Overview",
       url: "/dashboard",
       icon: "dashboard"
     },
     {
-      title: "Projects",
-      url: "/projects",
-      icon: "folder",
-      children: [
-        {
-          title: "All Projects",
-          url: "/projects"
-        },
-        {
-          title: "New Project",
-          url: "/projects/new"
-        }
-      ]
+      title: "On-Page Issues",
+      url: "/onpage",
+      icon: "folder"
     },
     {
-      title: "AI Visibility",
-      url: "/ai-visibility",
-      icon: "eye"
+      title: "Technical Checks",
+      url: "/technicalchecks",
+      icon: "settings"
     },
     {
-      title: "Analytics",
-      url: "/analytics",
-      icon: "chartBar"
+      title: "PageSpeed",
+      url: "/pagespeed",
+      icon: "zap"
+    },
+    {
+      title: "Keywords",
+      url: "/keywords",
+      icon: "key"
+    },
+    {
+      title: "Off-Page & Links",
+      url: "/off-page-links",
+      icon: "link"
+    }
+  ],
+
+  // AI INTELLIGENCE section
+  aiIntelligence: [
+    {
+      title: "AI Search Audit",
+      url: "/ai-search-audit",
+      icon: "fileAi"
+    },
+    {
+      title: "7-Day Growth Plan",
+      url: "/7-day-growth-plan",
+      icon: "camera"
     }
   ],
 
   // Secondary navigation items (utility links)
-  secondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: "settings"
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: "help"
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: "search"
-    }
-  ],
-
-  // Documents section (with actions)
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: "database"
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: "report"
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: "fileWord"
-    }
-  ],
-
-  // Cloud services section (currently unused but kept for structure)
-  clouds: [
-    {
-      title: "Capture",
-      icon: "camera",
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#"
-        },
-        {
-          title: "Archived",
-          url: "#"
-        }
-      ]
-    },
-    {
-      title: "Proposal",
-      icon: "fileDescription",
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#"
-        },
-        {
-          title: "Archived",
-          url: "#"
-        }
-      ]
-    },
-    {
-      title: "Prompts",
-      icon: "fileAi",
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#"
-        },
-        {
-          title: "Archived",
-          url: "#"
-        }
-      ]
-    }
-  ]
+  clouds: []
 }
 
 // Icon mapping to convert string names to actual icon components
@@ -136,5 +65,8 @@ export const iconMap = {
   fileWord: "IconFileWord",
   camera: "IconCamera",
   fileDescription: "IconFileDescription",
-  fileAi: "IconFileAi"
+  fileAi: "IconFileAi",
+  zap: "IconBolt",
+  key: "IconKey",
+  link: "IconLink"
 }

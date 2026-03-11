@@ -1,11 +1,10 @@
 "use client"
 
 import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/button'
-import ProjectsList from './list/ProjectsList'
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import IssuesPage from "@/app/dashboard/issues/page"
 
-export default function ProjectsPage() {
+export default function OnPagePage() {
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
@@ -13,7 +12,7 @@ export default function ProjectsPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading projects...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
@@ -23,10 +22,10 @@ export default function ProjectsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Please log in to access projects</h1>
-          <Button onClick={() => window.location.href = '/login'}>
+          <h1 className="text-2xl font-bold mb-4">Please log in to access this page</h1>
+          <button onClick={() => window.location.href = '/login'} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             Go to Login
-          </Button>
+          </button>
         </div>
       </div>
     )
@@ -38,20 +37,7 @@ export default function ProjectsPage() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h1 className="text-4xl font-bold mb-2">On-Page Projects</h1>
-                  <p className="text-muted-foreground text-lg">
-                    View and manage all your on-page SEO projects here.
-                  </p>
-                </div>
-                <Button onClick={() => window.location.href = '/dashboard/on-page/new'}>
-                  Create New Project
-                </Button>
-              </div>
-              
-              {/* Projects List Component */}
-              <ProjectsList />
+              <IssuesPage />
             </div>
           </div>
         </div>

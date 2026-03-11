@@ -11,6 +11,8 @@ export function SiteHeader({ user, onLogout }) {
     if (pathname === "/dashboard") return "Dashboard"
     if (pathname === "/projects") return "Projects"
     if (pathname === "/analytics") return "Analytics"
+    if (pathname === "/onpage") return "On-Page Issues"
+    if (pathname === "/technicalchecks") return "Technical Checks"
     return "Dashboard"
   }
 

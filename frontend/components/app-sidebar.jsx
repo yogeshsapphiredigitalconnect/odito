@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  IconBolt,
   IconCamera,
   IconChartBar,
   IconDashboard,
@@ -13,6 +14,8 @@ import {
   IconFolder,
   IconHelp,
   IconInnerShadowTop,
+  IconKey,
+  IconLink,
   IconListDetails,
   IconReport,
   IconSearch,
@@ -20,7 +23,6 @@ import {
   IconUsers,
 } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -28,6 +30,8 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -37,6 +41,7 @@ import { navigation, iconMap } from "@/config/navigation"
 
 // Icon component mapping
 const iconComponents = {
+  IconBolt,
   IconCamera,
   IconChartBar,
   IconDashboard,
@@ -48,6 +53,8 @@ const iconComponents = {
   IconFolder,
   IconHelp,
   IconInnerShadowTop,
+  IconKey,
+  IconLink,
   IconListDetails,
   IconReport,
   IconSearch,
@@ -69,7 +76,16 @@ const getNavigationData = () => {
       email: "m@example.com",
       avatar: "/avatars/shadcn.jpg",
     },
-    navMain: navigation.main.map(item => ({
+    audit: navigation.audit.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      items: item.children?.map(child => ({
+        title: child.title,
+        url: child.url
+      }))
+    })),
+    aiIntelligence: navigation.aiIntelligence.map(item => ({
       title: item.title,
       url: item.url,
       icon: getIcon(item.icon),
@@ -87,16 +103,6 @@ const getNavigationData = () => {
         title: child.title,
         url: child.url
       }))
-    })),
-    navSecondary: navigation.secondary.map(item => ({
-      title: item.title,
-      url: item.url,
-      icon: getIcon(item.icon)
-    })),
-    documents: navigation.documents.map(item => ({
-      name: item.name,
-      url: item.url,
-      icon: getIcon(item.icon)
     }))
   }
 }
@@ -122,9 +128,14 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <SidebarGroup>
+          <SidebarGroupLabel>AUDIT</SidebarGroupLabel>
+          <NavMain items={data.audit} />
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>AI INTELLIGENCE</SidebarGroupLabel>
+          <NavMain items={data.aiIntelligence} />
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

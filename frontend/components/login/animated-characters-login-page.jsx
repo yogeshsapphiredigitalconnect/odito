@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { signIn } from "next-auth/react";
 import { getPaymentIntent, allowPaymentResume } from "@/utils/paymentUtils";
+import apiService from "@/lib/apiService";
 
 
 const Pupil = ({ 
@@ -185,7 +186,7 @@ function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       await signIn("google", { 
-        callbackUrl: window.location.origin + "/onboarding",
+        callbackUrl: window.location.origin + "/auth/callback",
         redirect: true 
       });
     } catch (error) {
@@ -322,10 +323,22 @@ function LoginPage() {
         // Show confirmation modal instead of redirecting to dashboard
         window.dispatchEvent(new CustomEvent('showPaymentConfirm'));
       } else {
-        // No payment intent, redirect to onboarding
+        // No payment intent, check if user has existing projects
         alert(`Login successful! Welcome, ${result.user.firstName}!`);
         if (typeof window !== 'undefined') {
-          window.location.href = '/onboarding';
+          try {
+            const response = await apiService.getProjects(1, 1);
+            const projects = response?.data?.projects || [];
+            
+            if (projects.length > 0) {
+              window.location.href = '/dashboard';
+            } else {
+              window.location.href = '/onboarding';
+            }
+          } catch (error) {
+            console.error("Failed to check user projects:", error);
+            window.location.href = '/onboarding';
+          }
         }
       }
       

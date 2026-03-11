@@ -71,8 +71,8 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
+      <SidebarGroupContent className="flex flex-col gap-3">
+        <SidebarMenu className="gap-y-1">
           {items.map((item) => {
             const hasItems = item.items && item.items.length > 0
             const isOpen = openItems.has(item.title)

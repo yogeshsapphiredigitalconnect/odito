@@ -21,6 +21,10 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import ScoreGrid from "@/components/dashboard/overview/ScoreGrid"
+import AISummaryCard from "@/components/dashboard/overview/AISummaryCard"
+import SEOSummaryPanel from "@/components/dashboard/overview/SEOSummaryPanel"
+import AIVisibilityPanel from "@/components/dashboard/overview/AIVisibilityPanel"
 
 export default function Dashboard() {
   const { user, logout, isLoading } = useAuth()
@@ -295,40 +299,27 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                {projects.length > 0 ? "Your Projects" : "Welcome to Dashboard"}
+                Overview Dashboard
               </h1>
-              <p className="text-muted-foreground">SEO Projects</p>
+              <p className="text-muted-foreground">SEO & AI Visibility Audit</p>
             </div>
           </div>
         </div>
         
-        {/* Projects Card with Header */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">Projects Overview</h2>
-              <p className="text-muted-foreground">Manage and monitor your SEO audit projects</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={fetchProjects}
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button 
-                onClick={() => router.push('/projects/new')}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Project
-              </Button>
-            </div>
+        {/* AuditIQ Overview Dashboard Content */}
+        <div>
+          {/* SECTION 1 - Score Grid */}
+          <ScoreGrid />
+
+          {/* SECTION 2 - ARIA AI Explainer Card */}
+          <AISummaryCard />
+
+          {/* SECTION 3 - Two Column Grid */}
+          <div className="two-col">
+            <SEOSummaryPanel />
+            <AIVisibilityPanel />
           </div>
-          {renderContent()}
-        </Card>
+        </div>
       </div>
     </DashboardLayout>
   )

@@ -142,7 +142,7 @@ export default function ProjectsList() {
         <p className="text-muted-foreground mb-4">
           Create your first SEO project to get started with website analysis.
         </p>
-        <Button onClick={() => window.location.href = '/projects/new'}>
+        <Button onClick={() => window.location.href = '/dashboard/on-page/new'}>
           Create Your First Project
         </Button>
       </div>
@@ -258,7 +258,7 @@ export default function ProjectsList() {
                 variant="outline" 
                 size="sm"
                 className="flex-1 text-xs h-8"
-                onClick={() => router.push(`/projects/${project._id}`)}
+                onClick={() => router.push(`/dashboard/on-page/${project._id}`)}
               >
                 <Eye className="h-3 w-3 mr-1" />
                 View
