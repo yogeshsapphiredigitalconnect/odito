@@ -219,7 +219,7 @@ router.post('/:jobId/summary', async (req, res) => {
 // POST /jobs/domain-technical-report - Store domain technical report data
 router.post('/domain-technical-report', async (req, res) => {
   try {
-    const { projectId, domain, robotsStatus, robotsExists, robotsContent, sitemapStatus, sitemapExists, sitemapContent, parsedSitemapUrlCount } = req.body;
+    const { projectId, domain, robotsStatus, robotsExists, robotsContent, sitemapStatus, sitemapExists, sitemapContent, parsedSitemapUrlCount, sslValid, sslExpiryDate, sslDaysRemaining, httpsRedirect, redirectChain, finalUrl } = req.body;
 
     if (!projectId || !domain) {
       return res.status(400).json({
@@ -241,12 +241,18 @@ router.post('/domain-technical-report', async (req, res) => {
         sitemapExists: sitemapExists || false,
         sitemapContent: sitemapContent || '',
         parsedSitemapUrlCount: parsedSitemapUrlCount || 0,
+        sslValid: sslValid || false,
+        sslExpiryDate: sslExpiryDate || null,
+        sslDaysRemaining: sslDaysRemaining || null,
+        httpsRedirect: httpsRedirect || false,
+        redirectChain: redirectChain || [],
+        finalUrl: finalUrl || null,
         createdAt: new Date()
       },
       { upsert: true, new: true }
     );
 
-    console.log(`[API] Domain technical report stored | projectId=${projectId} | domain=${domain} | robotsExists=${robotsExists} | sitemapExists=${sitemapExists}`);
+    console.log(`[API] Domain technical report stored | projectId=${projectId} | domain=${domain} | robotsExists=${robotsExists} | sitemapExists=${sitemapExists} | sslValid=${sslValid} | httpsRedirect=${httpsRedirect}`);
 
     return res.json({
       success: true,

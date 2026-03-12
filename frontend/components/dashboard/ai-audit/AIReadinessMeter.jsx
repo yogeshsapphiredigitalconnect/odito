@@ -1,15 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AI_AUDIT } from "@/lib/constants/mockData"
 
-export default function AIReadinessMeter() {
-  function AnimatedRing() {
+export default function AIReadinessMeter({ aiData }) {
+  function AnimatedRing({ score }) {
     const [cur, setCur] = useState(0)
     useEffect(() => {
-      const t = setTimeout(() => setCur(AI_AUDIT.score), 300)
+      const t = setTimeout(() => setCur(score), 300)
       return () => clearTimeout(t)
-    }, [])
+    }, [score])
     const size = 120, r = 46
     const circ = 2 * Math.PI * r
     const offset = circ - (cur / 100) * circ
@@ -37,6 +36,19 @@ export default function AIReadinessMeter() {
     )
   }
 
+  // Generate label based on score
+  const getLabel = (score) => {
+    if (score >= 75) return "Excellent AI Readiness"
+    if (score >= 60) return "Good AI Readiness"
+    if (score >= 40) return "Moderate AI Readiness"
+    if (score >= 20) return "Low AI Readiness"
+    return "Poor AI Readiness"
+  }
+
+  const score = aiData?.score || 0
+  const label = getLabel(score)
+  const description = aiData?.summary || "AI visibility analysis not available."
+
   return (
     <div className="ai-card" style={{ marginBottom: 24 }}>
       {/* Top row: label + sparkle */}
@@ -52,7 +64,7 @@ export default function AIReadinessMeter() {
         
         {/* Ring with score inside */}
         <div style={{ position: "relative", flexShrink: 0 }}>
-          <AnimatedRing />
+          <AnimatedRing score={score} />
           <div style={{
             position: "absolute", inset: 0,
             display: "flex", flexDirection: "column",
@@ -63,7 +75,7 @@ export default function AIReadinessMeter() {
               fontWeight: 800, fontSize: 32,
               color: "var(--purple)"
             }}>
-              {AI_AUDIT.score}
+              {score}
             </div>
             <div style={{ fontSize: 10, color: "var(--text3)" }}>
               /100
@@ -78,15 +90,15 @@ export default function AIReadinessMeter() {
             fontWeight: 700, fontSize: 20,
             color: "var(--text)", marginBottom: 8
           }}>
-            {AI_AUDIT.label}
+            {label}
           </div>
           <div className="ai-card-text" style={{ marginBottom: 10 }}>
-            {AI_AUDIT.desc}
+            {description}
           </div>
           <div style={{ fontSize: 13, color: "var(--text2)" }}>
             Target score:{" "}
             <strong style={{ color: "var(--cyan)" }}>
-              {AI_AUDIT.target}
+              75+
             </strong>
           </div>
         </div>

@@ -8,7 +8,7 @@ class ApiService {
   // Helper method to handle API responses
   async handleResponse(response) {
     const data = await response.json();
-    
+
     console.log('📡 API Response:', {
       status: response.status,
       ok: response.ok,
@@ -16,24 +16,24 @@ class ApiService {
       message: data.message,
       dataKeys: data.data ? Object.keys(data.data) : 'no data'
     });
-    
+
     if (!response.ok) {
       throw new Error(data.message || 'Something went wrong');
     }
-    
+
     return data;
   }
 
   // Generic request method with authentication
   async request(endpoint, options = {}) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    
+
     console.log('🔑 API Request:', {
       endpoint,
       hasToken: !!token,
       tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
     });
-    
+
     const config = {
       headers: {
         'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ class ApiService {
     const endpoint = '/seo/start-scraping';
     const payload = { project_id: projectId };
     console.log('🚀 Starting audit request:', { endpoint, payload });
-    
+
     try {
       const response = await this.request(endpoint, {
         method: 'POST',
@@ -174,7 +174,7 @@ class ApiService {
     const endpoint = '/ai-visibility/start';
     const payload = { project_id: projectId };
     console.log('🚀 Starting AI Visibility request:', { endpoint, payload });
-    
+
     try {
       const response = await this.request(endpoint, {
         method: 'POST',
@@ -192,7 +192,7 @@ class ApiService {
   async getAIVisibilityEntityGraph(projectId) {
     const endpoint = `/app_user/projects/${projectId}/ai-visibility/entity-graph`;
     console.log('🔍 Getting AI visibility entity graph:', { endpoint, projectId });
-    
+
     try {
       const response = await this.request(endpoint);
       console.log('✅ AI visibility entity graph response:', response);
@@ -207,9 +207,9 @@ class ApiService {
   async getAIVisibilityPage(projectId, url) {
     const encodedUrl = encodeURIComponent(url);
     const endpoint = `/app_user/projects/${projectId}/ai-visibility/page?url=${encodedUrl}`;
-    
+
     console.log('🔍 Getting AI visibility page details:', { endpoint, projectId, url });
-    
+
     try {
       const response = await this.request(endpoint);
       console.log('✅ AI visibility page response:', response);
@@ -223,12 +223,12 @@ class ApiService {
   // Get AI visibility pages with pagination and filters
   async getAIVisibilityPages(projectId, params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    const endpoint = queryString 
+    const endpoint = queryString
       ? `/app_user/projects/${projectId}/ai-visibility/pages?${queryString}`
       : `/app_user/projects/${projectId}/ai-visibility/pages`;
-    
+
     console.log('🔍 Getting AI visibility pages:', { endpoint, projectId, params });
-    
+
     try {
       const response = await this.request(endpoint);
       console.log('✅ AI visibility pages response:', response);
@@ -243,7 +243,7 @@ class ApiService {
   async getAIVisibilityWorstPages(projectId, limit = 5) {
     const endpoint = `/app_user/projects/${projectId}/ai-visibility/worst-pages?limit=${limit}`;
     console.log('🔍 Getting AI visibility worst pages:', { endpoint, projectId, limit });
-    
+
     try {
       const response = await this.request(endpoint);
       console.log('✅ AI visibility worst pages response:', response);
@@ -258,14 +258,14 @@ class ApiService {
   async getProjectIssues(projectId, filters = {}) {
     const { category, severity, search } = filters;
     const params = new URLSearchParams();
-    
+
     if (category) params.append('category', category);
     if (severity) params.append('severity', severity);
     if (search) params.append('search', search);
-    
+
     const queryString = params.toString();
     const endpoint = `/app_user/projects/${projectId}/issues${queryString ? '?' + queryString : ''}`;
-    
+
     console.log('🔍 API Request:', endpoint, 'filters:', filters);
     return this.request(endpoint);
   }
@@ -274,17 +274,17 @@ class ApiService {
   async getProjectSubpages(projectId, filters = {}) {
     const { filter, search, sortBy, sortOrder, page = 1, limit = 50 } = filters;
     const params = new URLSearchParams();
-    
+
     if (filter) params.append('filter', filter);
     if (search) params.append('search', search);
     if (sortBy) params.append('sortBy', sortBy);
     if (sortOrder) params.append('sortOrder', sortOrder);
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
-    
+
     const queryString = params.toString();
     const endpoint = `/app_user/projects/${projectId}/pages${queryString ? '?' + queryString : ''}`;
-    
+
     console.log('🔍 API Request:', endpoint, 'filters:', filters);
     return this.request(endpoint);
   }
@@ -293,12 +293,32 @@ class ApiService {
   async getPageIssues(projectId, pageUrl) {
     const params = new URLSearchParams();
     if (pageUrl) params.append('page_url', pageUrl);
-    
+
     const queryString = params.toString();
     const endpoint = `/app_user/projects/${projectId}/page-issues${queryString ? '?' + queryString : ''}`;
-    
+
     console.log('🔍 API Request:', endpoint, 'pageUrl:', pageUrl);
     return this.request(endpoint);
+  }
+
+  // On-page issues (aggregated by issue_code)
+  async getOnPageIssues(projectId) {
+    return this.request(`/app_user/projects/${projectId}/onpage-issues`);
+  }
+
+  // Technical checks endpoint
+  async getTechnicalChecks(projectId) {
+    const endpoint = `/app_user/projects/${projectId}/technical-checks`;
+    console.log('🔍 Getting technical checks:', { endpoint, projectId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ Technical checks response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Technical checks error:', error);
+      throw error;
+    }
   }
 
   // Store authentication token

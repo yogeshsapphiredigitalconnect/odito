@@ -25,7 +25,9 @@ import {
   getAIVisibilityPage,
   getAIVisibilityPages,
   getAIVisibilityWorstPages,
-  getAIVisibilityEntityGraph
+  getAIVisibilityEntityGraph,
+  getOnPageIssues,
+  getTechnicalChecks
 } from '../controller/projectDataController.js';
 
 const router = express.Router();
@@ -54,6 +56,8 @@ router.get('/projects/:id/dashboard', getProjectDashboard);
 router.get('/projects/:id/issues', getProjectIssues);
 router.get('/projects/:id/issues-by-page', getProjectIssuesByPage);
 router.get('/projects/:id/page-issues', getPageIssues);
+router.get('/projects/:id/onpage-issues', getOnPageIssues);
+router.get('/projects/:id/technical-checks', getTechnicalChecks);
 
 // Google Visibility routes
 router.get('/projects/:id/google-visibility/status', getGoogleVisibilityStatus);
@@ -80,6 +84,8 @@ router.get('/test-routes', (req, res) => {
       '/projects/:id/issues',
       '/projects/:id/issues-by-page',
       '/projects/:id/page-issues',
+      '/projects/:id/onpage-issues',
+      '/projects/:id/technical-checks',
       '/projects/:id/screenshot'
     ]
   });

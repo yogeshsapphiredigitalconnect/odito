@@ -1,10 +1,8 @@
 "use client";
 
 import ProgressBar from "@/components/ui/ProgressBar";
-import { DATA } from "@/lib/constants/mockData";
 
-export default function AIVisibilityPanel() {
-  const { summary } = DATA;
+export default function AIVisibilityPanel({ aiReadiness = 0, schemaData = 0, aiSnippetProbability = 0 }) {
   return (
     <div>
       <div className="section-head">
@@ -13,9 +11,9 @@ export default function AIVisibilityPanel() {
       </div>
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         {[
-          { l: "AI Readiness", v: `${summary.aiReadiness}%`, c: "var(--purple)" },
-          { l: "Schema Data", v: `${summary.schemaData}%`, c: "var(--cyan)" },
-          { l: "AI Snippet Prob.", v: `${summary.aiSnippetProb}%`, c: "var(--amber)" },
+          { l: "AI Readiness", v: `${aiReadiness}%`, c: "var(--purple)" },
+          { l: "Schema Data", v: `${schemaData}%`, c: "var(--cyan)" },
+          { l: "AI Snippet Prob.", v: `${aiSnippetProbability}%`, c: "var(--amber)" },
         ].map((s, i) => (
           <div key={i} className="stat-tile">
             <div className="stat-tile-label">{s.l}</div>
@@ -25,8 +23,8 @@ export default function AIVisibilityPanel() {
       </div>
       <div className="glass-card" style={{ padding: 16 }}>
         {[
-          { l: "Entity Coverage", v: summary.entityCoverage },
-          { l: "FAQ Optimization", v: summary.faqOptimized },
+          { l: "Entity Coverage", v: 31 },
+          { l: "FAQ Optimization", v: 8 },
           { l: "Conversational Query Score", v: 48 },
         ].map((item, i) => (
           <div key={i} style={{ marginBottom: i < 2 ? 14 : 0 }}>

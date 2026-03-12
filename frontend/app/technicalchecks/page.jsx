@@ -5,7 +5,16 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import TechnicalPage from "@/components/dashboard/technical/TechnicalPage"
 
 export default function TechnicalChecksPage() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, logout } = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -32,7 +41,7 @@ export default function TechnicalChecksPage() {
   }
 
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout user={user} onLogout={handleLogout}>
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

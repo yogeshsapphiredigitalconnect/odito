@@ -11,7 +11,8 @@ import {
   getGoogleVisibilityStatus,
   connectGoogleVisibility,
   disconnectGoogleVisibility,
-  getAIVisibilityWorstPages
+  getAIVisibilityWorstPages,
+  getTechnicalChecks
 } from '../controller/projectDataController.js';
 
 const router = express.Router();
@@ -27,6 +28,7 @@ router.get('/projects/:projectId/summary', getProjectSummary);
 router.get('/projects/:projectId/issues', getProjectIssues);
 router.get('/projects/:projectId/issues-by-page', getProjectIssuesByPage);
 router.get('/projects/:projectId/page-issues', getPageIssues);
+router.get('/projects/:projectId/technical-checks', getTechnicalChecks);
 
 // AI Visibility routes
 router.get('/projects/:projectId/ai-visibility/worst-pages', getAIVisibilityWorstPages);

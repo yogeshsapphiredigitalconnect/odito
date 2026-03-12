@@ -1,10 +1,8 @@
 "use client";
 
 import ProgressBar from "@/components/ui/ProgressBar";
-import { DATA } from "@/lib/constants/mockData";
 
-export default function SEOSummaryPanel() {
-  const { summary } = DATA;
+export default function SEOSummaryPanel({ pagesCrawled = 0, totalIssues = 0, criticalIssues = 0 }) {
   return (
     <div>
       <div className="section-head">
@@ -13,9 +11,9 @@ export default function SEOSummaryPanel() {
       </div>
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         {[
-          { l: "Pages Crawled", v: summary.pagesCrawled, c: "var(--cyan)" },
-          { l: "Total Issues", v: summary.totalIssues, c: "var(--amber)" },
-          { l: "Critical", v: summary.criticalIssues, c: "var(--red)" },
+          { l: "Pages Crawled", v: pagesCrawled, c: "var(--cyan)" },
+          { l: "Total Issues", v: totalIssues, c: "var(--amber)" },
+          { l: "Critical", v: criticalIssues, c: "var(--red)" },
         ].map((s, i) => (
           <div key={i} className="stat-tile">
             <div className="stat-tile-label">{s.l}</div>
@@ -25,7 +23,7 @@ export default function SEOSummaryPanel() {
       </div>
       <div className="glass-card" style={{ padding: 16 }}>
         {[
-          { l: "Indexing Coverage", v: summary.indexed },
+          { l: "Indexing Coverage", v: 68 },
           { l: "Content Score", v: 72 },
           { l: "Internal Linking", v: 60 },
         ].map((item, i) => (

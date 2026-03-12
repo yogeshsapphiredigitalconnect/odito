@@ -39,6 +39,30 @@ const domainTechnicalReportSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  sslValid: {
+    type: Boolean,
+    default: false
+  },
+  sslExpiryDate: {
+    type: Date,
+    default: null
+  },
+  sslDaysRemaining: {
+    type: Number,
+    default: null
+  },
+  httpsRedirect: {
+    type: Boolean,
+    default: false
+  },
+  redirectChain: {
+    type: [String],
+    default: []
+  },
+  finalUrl: {
+    type: String,
+    default: null
+  },
   sitemapDeepValidation: {
     total_urls_checked: { type: Number, default: 0 },
     non_200_urls: { type: Number, default: 0 },

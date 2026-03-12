@@ -1,11 +1,13 @@
 "use client"
 
 import { useAuth } from '@/contexts/AuthContext'
+import { useProject } from '@/contexts/ProjectContext'
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import AIAuditPageContent from "@/components/dashboard/ai-audit/AIAuditPageContent"
 
 export default function AIAuditPage() {
   const { user, isLoading } = useAuth()
+  const { activeProject } = useProject()
 
   if (isLoading) {
     return (
@@ -37,7 +39,7 @@ export default function AIAuditPage() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6">
-              <AIAuditPageContent />
+              <AIAuditPageContent projectId={activeProject?._id} />
             </div>
           </div>
         </div>

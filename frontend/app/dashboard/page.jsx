@@ -20,6 +20,7 @@ import {
   AlertTriangle as ErrorIcon
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useProject } from '@/contexts/ProjectContext'
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ScoreGrid from "@/components/dashboard/overview/ScoreGrid"
 import AISummaryCard from "@/components/dashboard/overview/AISummaryCard"
@@ -28,8 +29,10 @@ import AIVisibilityPanel from "@/components/dashboard/overview/AIVisibilityPanel
 
 export default function Dashboard() {
   const { user, logout, isLoading } = useAuth()
+  const { activeProject } = useProject()
   const router = useRouter()
   const [projects, setProjects] = useState([])
+  const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -38,6 +41,21 @@ export default function Dashboard() {
       fetchProjects()
     }
   }, [user])
+
+  useEffect(() => {
+    if (!activeProject) return
+    
+    apiService
+      .getProjectById(activeProject._id)
+      .then(res => {
+        if (res.success) {
+          setProject(res.data)
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching project data:', err)
+      })
+  }, [activeProject])
 
   const fetchProjects = async () => {
     try {
@@ -114,6 +132,22 @@ export default function Dashboard() {
       console.error('Logout failed:', error)
     }
   }
+
+  // Map backend data to dashboard metrics
+  const seoHealth = project ? Math.round(project.website_score || 0) : 0
+  const aiVisibility = project ? (project.ai_visibility?.score || 0) : 0
+  const performance = 0 // Not implemented yet
+  const authority = 0 // Not implemented yet
+
+  // SEO summary data
+  const pagesCrawled = project ? (project.pages_crawled || 0) : 0
+  const totalIssues = project ? (project.total_issues || 0) : 0
+  const criticalIssues = totalIssues > 0 ? Math.round(totalIssues * 0.25) : 0
+
+  // AI visibility summary data
+  const aiReadiness = aiVisibility
+  const schemaData = 0 // Temporary value
+  const aiSnippetProbability = 0 // Temporary value
 
   
   const renderProjectCards = () => (
@@ -309,15 +343,28 @@ export default function Dashboard() {
         {/* AuditIQ Overview Dashboard Content */}
         <div>
           {/* SECTION 1 - Score Grid */}
-          <ScoreGrid />
+          <ScoreGrid 
+            seoHealth={seoHealth}
+            aiVisibility={aiVisibility}
+            performance={performance}
+            authority={authority}
+          />
 
           {/* SECTION 2 - ARIA AI Explainer Card */}
           <AISummaryCard />
 
           {/* SECTION 3 - Two Column Grid */}
           <div className="two-col">
-            <SEOSummaryPanel />
-            <AIVisibilityPanel />
+            <SEOSummaryPanel 
+              pagesCrawled={pagesCrawled}
+              totalIssues={totalIssues}
+              criticalIssues={criticalIssues}
+            />
+            <AIVisibilityPanel 
+              aiReadiness={aiReadiness}
+              schemaData={schemaData}
+              aiSnippetProbability={aiSnippetProbability}
+            />
           </div>
         </div>
       </div>

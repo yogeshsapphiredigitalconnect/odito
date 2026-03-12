@@ -19,7 +19,7 @@ export default function IssuesPage() {
       </div>
 
       <div className="two-col" style={{
-        gridTemplateColumns: selected !== null 
+        gridTemplateColumns: selected !== null
           ? "1fr 380px" : "1fr"
       }}>
         <div className="glass-card" style={{ overflow: "hidden" }}>

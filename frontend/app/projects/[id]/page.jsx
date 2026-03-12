@@ -10,7 +10,7 @@ export default function ProjectPage() {
   const { user, isLoading } = useAuth()
   const params = useParams()
   const router = useRouter()
-  
+
   // Handle different Next.js param formats
   const projectId = typeof params.id === 'string' ? params.id : params.id?.id || params.id
 
@@ -57,8 +57,8 @@ export default function ProjectPage() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6">
-              <ProjectOverview 
-                projectId={projectId} 
+              <ProjectOverview
+                projectId={projectId}
                 onBack={handleBack}
               />
             </div>

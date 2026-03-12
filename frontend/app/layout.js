@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono, Syne, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProjectProvider } from "@/contexts/ProjectContext";
 import { ThemeProvider } from "next-themes";
 import GlobalPaymentModal from "@/components/modals/GlobalPaymentModal";
 
@@ -35,17 +36,30 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          rel="stylesheet"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} ${dmSans.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+        >
           <AuthProvider>
-            {children}
-            <GlobalPaymentModal />
+            <ProjectProvider>
+              {children}
+              <GlobalPaymentModal />
+            </ProjectProvider>
           </AuthProvider>
         </ThemeProvider>
+        <script
+          src="https://ai-chat-five-self.vercel.app/chatBot.js"
+          data-owner-id="usr_115431673788629261"
+        ></script>
       </body>
     </html>
   );
