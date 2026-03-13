@@ -306,10 +306,15 @@ class ApiService {
     return this.request(`/app_user/projects/${projectId}/onpage-issues`);
   }
 
-  // Technical checks endpoint
+  // Get all URLs for a specific issue
+  async getIssueUrls(projectId, issueCode) {
+    return this.request(`/app_user/projects/${projectId}/onpage-issues/${issueCode}`);
+  }
+
+  // Technical checks endpoints
   async getTechnicalChecks(projectId) {
     const endpoint = `/app_user/projects/${projectId}/technical-checks`;
-    console.log('🔍 Getting technical checks:', { endpoint, projectId });
+    console.log('🔧 Getting technical checks:', { endpoint, projectId });
 
     try {
       const response = await this.request(endpoint);
@@ -317,6 +322,35 @@ class ApiService {
       return response;
     } catch (error) {
       console.error('❌ Technical checks error:', error);
+      throw error;
+    }
+  }
+
+  async getTechnicalCheckDetail(projectId, checkId) {
+    const endpoint = `/app_user/projects/${projectId}/technical-checks/${checkId}`;
+    console.log('🔧 Getting technical check detail:', { endpoint, projectId, checkId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ Technical check detail response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Technical check detail error:', error);
+      throw error;
+    }
+  }
+
+  // PageSpeed endpoints
+  async getPageSpeedData(projectId) {
+    const endpoint = `/app_user/projects/${projectId}/performance`;
+    console.log('🚀 Getting PageSpeed data:', { endpoint, projectId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ PageSpeed data response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ PageSpeed data error:', error);
       throw error;
     }
   }

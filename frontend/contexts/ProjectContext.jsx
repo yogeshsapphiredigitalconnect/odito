@@ -24,9 +24,16 @@ export function ProjectProvider({ children }) {
         const list = response.data?.projects || response.data || [];
         setProjects(list);
 
-        // Auto-select first project
-        if (list.length > 0) {
+        // Auto-select first project if no active project is set
+        if (list.length > 0 && !activeProject) {
           setActiveProject(list[0]);
+        } else if (activeProject && list.length > 0) {
+          // Verify active project still exists in the list
+          const stillExists = list.some(p => p._id === activeProject._id);
+          if (!stillExists) {
+            // Active project was deleted, select first available
+            setActiveProject(list[0]);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch projects:", error);
@@ -36,7 +43,7 @@ export function ProjectProvider({ children }) {
     };
 
     fetchProjects();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeProject]);
 
   const value = {
     activeProject,

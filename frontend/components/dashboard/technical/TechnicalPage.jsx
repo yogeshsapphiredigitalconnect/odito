@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useProject } from '@/contexts/ProjectContext'
 import CheckList from "@/components/dashboard/technical/CheckList"
 import StatusBreakdown from "@/components/dashboard/technical/StatusBreakdown"
+import TechCheckDetailView from "@/components/dashboard/technical/TechCheckDetailView"
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 
@@ -11,6 +12,7 @@ export default function TechnicalPage() {
   const { activeProject } = useProject()
   const [hasError, setHasError] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedCheck, setSelectedCheck] = useState(null)
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
@@ -37,12 +39,27 @@ export default function TechnicalPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Technical Checks
-            </h1>
-            <p className="text-muted-foreground">
-              Homepage technical SEO analysis for {activeProject.project_name}
-            </p>
+            {selectedCheck ? (
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setSelectedCheck(null)}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  ← Technical Checks
+                </button>
+                <span className="text-gray-600">›</span>
+                <span className="text-white text-sm font-medium">{selectedCheck.name}</span>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold tracking-tight text-white">
+                  Technical Checks
+                </h1>
+                <p className="text-gray-400">
+                  Homepage technical SEO analysis for {activeProject.project_name}
+                </p>
+              </>
+            )}
           </div>
           <button
             onClick={handleRefresh}
@@ -55,13 +72,23 @@ export default function TechnicalPage() {
       </div>
 
       {/* Main Content */}
-      <div className="two-col" style={{
-        gridTemplateColumns: "1fr 320px",
-        alignItems: "start"
-      }}>
-        <CheckList key={`checklist-${refreshKey}`} />
-        <StatusBreakdown key={`status-${refreshKey}`} />
-      </div>
+      {selectedCheck ? (
+        <TechCheckDetailView 
+          check={selectedCheck} 
+          onBack={() => setSelectedCheck(null)} 
+        />
+      ) : (
+        <div className="two-col" style={{
+          gridTemplateColumns: "1fr 320px",
+          alignItems: "start"
+        }}>
+          <CheckList 
+            key={`checklist-${refreshKey}`} 
+            onSelectCheck={setSelectedCheck}
+          />
+          <StatusBreakdown key={`status-${refreshKey}`} />
+        </div>
+      )}
     </div>
   )
 }

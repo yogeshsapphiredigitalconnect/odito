@@ -46,6 +46,12 @@ seo_page_scores = db["seo_page_scores"]
 # collection for projects (for website-level scoring)
 seoprojects = db["seoprojects"]
 
+# collection for jobs (for job status updates)
+jobs = db["jobs"]
+
+# collection for domain-level performance analysis
+seo_domain_performance = db["seo_domain_performance"]
+
 # collection for AI visibility analysis
 seo_ai_visibility = db["seo_ai_visibility"]
 
@@ -223,6 +229,20 @@ except Exception as e:
         print("✅ Unique index on seo_headless_data already exists")
     else:
         print(f"⚠️ Failed to create index on seo_headless_data: {e}")
+
+# Create unique index for domain performance data (one per project)
+try:
+    seo_domain_performance.create_index(
+        [("project_id", 1)],
+        unique=True,
+        name="unique_project_domain_performance"
+    )
+    print("✅ Created unique index on seo_domain_performance (project_id)")
+except Exception as e:
+    if "already exists" in str(e):
+        print("✅ Unique index on seo_domain_performance already exists")
+    else:
+        print(f"⚠️ Failed to create index on seo_domain_performance: {e}")
 
 # Note: Python workers do NOT create projects or jobs
 # They only write link discovery results to the collections above

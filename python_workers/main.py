@@ -7,6 +7,10 @@ import random
 import string
 from datetime import datetime
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Third-party imports
 import requests
 import uvicorn
@@ -19,6 +23,7 @@ from api.jobs import router as jobs_router, is_job_cancelled
 from api.scraping import router as scraping_router, handle_page_scraping
 from api.analysis import router as analysis_router, handle_page_analysis
 from api.performance import router as performance_router
+from api.domain_performance import router as domain_performance_router
 from api.seo_scoring import router as seo_scoring_router
 from api.ai_visibility import router as ai_visibility_router
 from api.ai_visibility_scoring_v2 import router as ai_visibility_scoring_v2_router, AIVisibilityScoringV2Job
@@ -39,6 +44,7 @@ app.include_router(jobs_router, prefix="/api", tags=["jobs"])
 app.include_router(scraping_router, prefix="/api", tags=["scraping"])
 app.include_router(analysis_router, prefix="/api", tags=["analysis"])
 app.include_router(performance_router, prefix="/api", tags=["performance"])
+app.include_router(domain_performance_router, prefix="/api", tags=["domain_performance"])
 app.include_router(seo_scoring_router, prefix="/api", tags=["seo_scoring"])
 app.include_router(ai_visibility_router, prefix="/api", tags=["ai_visibility"])
 app.include_router(ai_visibility_scoring_v2_router, prefix="/api", tags=["ai_visibility_scoring_v2"])

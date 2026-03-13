@@ -121,3 +121,34 @@ export async function getOnPageIssues(projectId) {
     },
   };
 }
+
+/**
+ * Get ALL affected URLs for a specific issue code
+ */
+export async function getIssueUrls(projectId, issueCode) {
+  const db = mongoose.connection.db;
+  const projectIdObj = new ObjectId(projectId);
+
+  const urls = await db
+    .collection('seo_page_issues')
+    .aggregate([
+      { $match: { projectId: projectIdObj, issue_code: issueCode } },
+      {
+        $group: {
+          _id: '$page_url',
+          created_at: { $first: '$created_at' }
+        }
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          _id: 0,
+          page_url: '$_id',
+          created_at: 1
+        }
+      }
+    ])
+    .toArray();
+
+  return urls.map(item => item.page_url);
+}

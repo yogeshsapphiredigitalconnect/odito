@@ -97,7 +97,7 @@ export const startScraping = async (req, res) => {
 
     // Check if there's already a LINK_DISCOVERY or PAGE_SCRAPING job running for this project
     const existingJobs = await jobService.getJobsByProject(project_id, {
-      jobType: { $in: ['LINK_DISCOVERY', 'PAGE_SCRAPING'] },
+      jobType: { $in: ['LINK_DISCOVERY', 'PAGE_SCRAPING', 'DOMAIN_PERFORMANCE'] },
       status: { $in: ['pending', 'processing'] }
     });
 
@@ -140,10 +140,25 @@ export const startScraping = async (req, res) => {
       priority: 1 // Highest priority
     });
 
-    // Dispatch job to queue for sequential processing
+    // Create DOMAIN_PERFORMANCE job
+    const domainPerformanceJob = await jobService.createJob({
+      user_id: req.user._id,
+      seo_project_id: project_id,
+      jobType: 'DOMAIN_PERFORMANCE',
+      input_data: {
+        main_url: project.main_url
+      },
+      priority: 2
+    });
+
+    // Dispatch both jobs asynchronously
     // Don't wait for dispatch to respond to user immediately
     jobDispatcher.queueLinkDiscoveryJob(linkDiscoveryJob).catch(error => {
       console.error(`Failed to queue job ${linkDiscoveryJob._id}:`, error);
+    });
+
+    jobDispatcher.queueDomainPerformanceJob(domainPerformanceJob).catch(error => {
+      console.error(`Failed to queue job ${domainPerformanceJob._id}:`, error);
     });
 
     // Update project status to active when scraping starts
@@ -162,14 +177,32 @@ export const startScraping = async (req, res) => {
       user_id: req.user._id
     });
 
+    auditProgressService.emitStarted(domainPerformanceJob._id.toString(), {
+      job_id: domainPerformanceJob._id,
+      job_type: domainPerformanceJob.jobType,
+      project_id: project_id,
+      main_url: project.main_url,
+      user_id: req.user._id
+    });
+
     res.status(201).json({
       success: true,
       message: 'Your crawling has started',
       data: {
-        job_id: linkDiscoveryJob._id,
-        job_type: linkDiscoveryJob.jobType,
-        status: linkDiscoveryJob.status,
-        priority: linkDiscoveryJob.priority,
+        jobs: [
+          {
+            job_id: linkDiscoveryJob._id,
+            job_type: linkDiscoveryJob.jobType,
+            status: linkDiscoveryJob.status,
+            priority: linkDiscoveryJob.priority
+          },
+          {
+            job_id: domainPerformanceJob._id,
+            job_type: domainPerformanceJob.jobType,
+            status: domainPerformanceJob.status,
+            priority: domainPerformanceJob.priority
+          }
+        ],
         project_id: project_id,
         main_url: project.main_url
       }
@@ -327,6 +360,7 @@ export const getScrapingStatus = async (req, res) => {
     // All pipeline job types — update this list when adding new stages
     const PIPELINE_JOB_TYPES = [
       'link_discovery',
+      'domain_performance',
       'technical_domain',
       'page_scraping',
       'headless_accessibility',

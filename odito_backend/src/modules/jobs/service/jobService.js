@@ -1072,5 +1072,16 @@ export class JobService {
 
     return result;
   }
+
+  /**
+   * Create and dispatch DOMAIN_PERFORMANCE job
+   * This is called directly from the controller, not from chaining
+   */
+  async createAndDispatchDomainPerformanceJob(inputData) {
+    // DOMAIN_PERFORMANCE jobs are created directly in the controller
+    // This method exists for consistency but is not used by chaining engine
+    console.log(`[DEBUG] createAndDispatchDomainPerformanceJob called - not used in chaining`);
+    return null;
+  }
 }
 

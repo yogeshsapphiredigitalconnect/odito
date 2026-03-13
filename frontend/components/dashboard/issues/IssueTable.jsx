@@ -31,7 +31,7 @@ export default function IssueTable({ issues = [], selected, onSelect }) {
           <th>Pages</th>
           <th>Impact %</th>
           <th>Difficulty</th>
-          <th>AI Confidence</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -60,14 +60,15 @@ export default function IssueTable({ issues = [], selected, onSelect }) {
               <DifficultyPill difficulty={iss.difficulty} />
             </td>
             <td>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 50 }}>
-                  <ProgressBar val={iss.ai_confidence} color="var(--cyan)" />
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--cyan)" }}>
-                  {iss.ai_confidence}%
-                </span>
-              </div>
+              <button
+                className="fix-ai-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSelect?.(i)
+                }}
+              >
+                ✦ Fix with AI
+              </button>
             </td>
           </tr>
         ))}

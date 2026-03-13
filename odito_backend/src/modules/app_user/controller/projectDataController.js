@@ -1,10 +1,24 @@
 import SeoProject from '../model/SeoProject.js';
 
+
+
 import GoogleConnection from '../model/GoogleConnection.js';
+
+
 
 import mongoose from 'mongoose';
 
-import { getOnPageIssues as getOnPageIssuesService } from '../../../services/onPageIssuesService.js';
+
+
+import { getOnPageIssues as getOnPageIssuesService, getIssueUrls as getIssueUrlsService } from '../../../services/onPageIssuesService.js';
+
+
+
+
+
+
+
+
 
 
 
@@ -16,7 +30,15 @@ import { getOnPageIssues as getOnPageIssuesService } from '../../../services/onP
 
 
 
+
+
+
+
 export const getProjectLinks = async (req, res) => {
+
+
+
+
 
 
 
@@ -24,7 +46,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const { id: projectId } = req.params;
+
+
+
+
 
 
 
@@ -32,7 +62,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const skip = (page - 1) * limit;
+
+
+
+
+
+
+
+
 
 
 
@@ -48,7 +90,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Verify project belongs to user
+
+
+
+
 
 
 
@@ -56,7 +110,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     if (!project) {
+
+
+
+
 
 
 
@@ -64,7 +126,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(404).json({
+
+
+
+
 
 
 
@@ -72,7 +142,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         message: 'Project not found'
+
+
+
+
 
 
 
@@ -80,7 +158,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -96,7 +186,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Check if user owns this project
+
+
+
+
 
 
 
@@ -104,7 +206,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       console.log('❌ Access denied for user:', req.user._id);
+
+
+
+
 
 
 
@@ -112,7 +222,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         success: false,
+
+
+
+
 
 
 
@@ -120,11 +238,27 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       });
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -136,7 +270,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const { ObjectId } = mongoose.Types;
+
+
+
+
 
 
 
@@ -148,7 +290,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get links from all three collections
+
+
+
+
 
 
 
@@ -160,7 +314,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get internal links
+
+
+
+
 
 
 
@@ -168,7 +334,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       const internalQuery = { projectId: projectIdObj };
+
+
+
+
 
 
 
@@ -176,7 +350,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         internalQuery.$or = [
+
+
+
+
 
 
 
@@ -184,7 +366,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
           { url: { $regex: search, $options: 'i' } }
+
+
+
+
 
 
 
@@ -192,7 +382,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -200,7 +398,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         .find(internalQuery)
+
+
+
+
 
 
 
@@ -208,7 +414,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         .toArray();  // Remove pagination here
+
+
+
+
+
+
+
+
 
 
 
@@ -220,7 +438,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -232,7 +462,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     if (!link_type || link_type === 'external') {
+
+
+
+
 
 
 
@@ -240,7 +478,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       if (search) {
+
+
+
+
 
 
 
@@ -248,7 +494,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
           { sourceUrl: { $regex: search, $options: 'i' } },
+
+
+
+
 
 
 
@@ -256,7 +510,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         ];
+
+
+
+
 
 
 
@@ -264,7 +526,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       const externalLinks = await db.collection('seo_external_links')
+
+
+
+
 
 
 
@@ -272,11 +542,27 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         .sort({ discoveredAt: -1 })
 
 
 
+
+
+
+
         .toArray();  // Remove pagination here
+
+
+
+
+
+
+
+
 
 
 
@@ -288,7 +574,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -300,7 +598,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     if (!link_type || link_type === 'social') {
+
+
+
+
 
 
 
@@ -308,7 +614,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       if (search) {
+
+
+
+
 
 
 
@@ -316,7 +630,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
           { sourceUrl: { $regex: search, $options: 'i' } },
+
+
+
+
 
 
 
@@ -324,7 +646,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         ];
+
+
+
+
 
 
 
@@ -332,7 +662,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       const socialLinks = await db.collection('seo_social_links')
+
+
+
+
 
 
 
@@ -340,7 +678,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         .sort({ discoveredAt: -1 })
+
+
+
+
 
 
 
@@ -352,11 +698,31 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
       allLinks.push(...socialLinks.map(link => ({ ...link, linkType: 'social' })));
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -372,7 +738,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get total counts for summary
+
+
+
+
 
 
 
@@ -380,7 +758,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const externalCount = await db.collection('seo_external_links').countDocuments({ projectId: projectIdObj });
+
+
+
+
 
 
 
@@ -392,7 +778,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     const summary = {
+
+
+
+
 
 
 
@@ -400,7 +798,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       external_links: externalCount,
+
+
+
+
 
 
 
@@ -408,11 +814,27 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       total: internalCount + externalCount + socialCount
 
 
 
+
+
+
+
     };
+
+
+
+
+
+
+
+
 
 
 
@@ -428,7 +850,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Group by platform for social links
+
+
+
+
 
 
 
@@ -436,7 +870,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       { $match: { projectId: projectIdObj } },
+
+
+
+
 
 
 
@@ -444,11 +886,27 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       { $sort: { count: -1 } }
 
 
 
+
+
+
+
     ]).toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -464,7 +922,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Sort all links by discoveredAt
+
+
+
+
 
 
 
@@ -476,7 +946,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Apply pagination AFTER combining all links
+
+
+
+
 
 
 
@@ -488,7 +970,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Calculate pagination values
+
+
+
+
 
 
 
@@ -496,7 +990,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const totalPages = Math.ceil(totalLinks / limit);
+
+
+
+
 
 
 
@@ -504,7 +1006,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const hasNext = currentPage < totalPages;
+
+
+
+
 
 
 
@@ -516,7 +1026,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     console.log('📊 Pagination info:', {
+
+
+
+
 
 
 
@@ -524,7 +1046,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       currentPage,
+
+
+
+
 
 
 
@@ -532,7 +1062,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       limit: parseInt(limit),
+
+
+
+
 
 
 
@@ -540,7 +1078,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       hasNext,
+
+
+
+
 
 
 
@@ -548,7 +1094,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -560,7 +1118,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     const formattedLinks = paginatedLinks.map(link => ({
+
+
+
+
 
 
 
@@ -568,7 +1134,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       sourceUrl: link.sourceUrl,
+
+
+
+
 
 
 
@@ -576,7 +1150,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       linkType: link.linkType,
+
+
+
+
 
 
 
@@ -584,11 +1166,23 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       discoveredAt: link.discoveredAt,
 
 
 
+
+
+
+
       seo_jobId: link.seo_jobId
+
+
+
+
 
 
 
@@ -600,7 +1194,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     res.json({
+
+
+
+
 
 
 
@@ -608,7 +1214,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       data: {
+
+
+
+
 
 
 
@@ -616,7 +1230,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         pagination: {
+
+
+
+
 
 
 
@@ -624,7 +1246,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
           totalPages,
+
+
+
+
 
 
 
@@ -632,7 +1262,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
           hasNext,
+
+
+
+
 
 
 
@@ -640,7 +1278,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         },
+
+
+
+
 
 
 
@@ -648,7 +1294,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
         platformSummary
+
+
+
+
 
 
 
@@ -656,7 +1310,23 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -672,7 +1342,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
     console.error('Error getting project links:', error);
+
+
+
+
 
 
 
@@ -680,7 +1358,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       success: false,
+
+
+
+
 
 
 
@@ -688,7 +1374,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
       error: error.message
+
+
+
+
 
 
 
@@ -696,7 +1390,15 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
   }
+
+
+
+
 
 
 
@@ -708,7 +1410,19 @@ export const getProjectLinks = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
 // Get project pages data
+
+
+
+
 
 
 
@@ -716,7 +1430,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
   try {
+
+
+
+
 
 
 
@@ -724,11 +1446,27 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const { page = 1, limit = 50, status, search, sortBy, sortOrder, filter } = req.query;
 
 
 
+
+
+
+
     const skip = (page - 1) * limit;
+
+
+
+
+
+
+
+
 
 
 
@@ -744,7 +1482,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Verify project belongs to user
+
+
+
+
 
 
 
@@ -752,7 +1502,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     if (!project) {
+
+
+
+
 
 
 
@@ -760,7 +1518,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(404).json({
+
+
+
+
 
 
 
@@ -768,7 +1534,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         message: 'Project not found'
+
+
+
+
 
 
 
@@ -776,7 +1550,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -788,7 +1574,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       console.log('❌ Access denied for user:', req.user._id);
+
+
+
+
 
 
 
@@ -796,7 +1590,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         success: false,
+
+
+
+
 
 
 
@@ -804,11 +1606,27 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       });
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -820,7 +1638,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const { ObjectId } = mongoose.Types;
+
+
+
+
 
 
 
@@ -832,7 +1658,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Build query for seo_page_data collection
+
+
+
+
 
 
 
@@ -844,7 +1682,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Add search filter
+
+
+
+
 
 
 
@@ -852,7 +1702,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       query.$or = [
+
+
+
+
 
 
 
@@ -860,7 +1718,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         { title: { $regex: search, $options: 'i' } }
+
+
+
+
 
 
 
@@ -868,7 +1734,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -880,7 +1758,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     if (status) {
+
+
+
+
 
 
 
@@ -888,7 +1774,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -900,7 +1798,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     if (filter === 'indexable') {
+
+
+
+
 
 
 
@@ -908,7 +1814,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     } else if (filter === 'not-indexable') {
+
+
+
+
 
 
 
@@ -916,7 +1830,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -928,7 +1854,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     console.log('🆔 Project ID:', projectIdObj);
+
+
+
+
+
+
+
+
 
 
 
@@ -940,7 +1878,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const pagesCollection = db.collection('seo_page_data');
+
+
+
+
+
+
+
+
 
 
 
@@ -952,7 +1902,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const allPages = await pagesCollection.find({ projectId: projectIdObj }).toArray();
+
+
+
+
 
 
 
@@ -964,11 +1922,27 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get total count
 
 
 
+
+
+
+
     const totalPagesCount = await pagesCollection.countDocuments(query);
+
+
+
+
 
 
 
@@ -980,7 +1954,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Build sort query
+
+
+
+
 
 
 
@@ -988,7 +1974,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     if (sortBy) {
+
+
+
+
 
 
 
@@ -996,7 +1990,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       sortQuery[sortField] = sortOrder === 'asc' ? 1 : -1;
+
+
+
+
 
 
 
@@ -1004,7 +2006,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       sortQuery.scraped_at = -1; // Default sort by most recent
+
+
+
+
 
 
 
@@ -1016,7 +2026,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get paginated pages
+
+
+
+
 
 
 
@@ -1024,7 +2046,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       .find(query)
+
+
+
+
 
 
 
@@ -1032,7 +2062,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       .skip(skip)
+
+
+
+
 
 
 
@@ -1040,7 +2078,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       .toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -1056,7 +2106,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get issues count for each page
+
+
+
+
 
 
 
@@ -1064,7 +2126,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const issuesByPage = await db.collection('seo_page_issues').aggregate([
+
+
+
+
 
 
 
@@ -1072,7 +2142,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       {
+
+
+
+
 
 
 
@@ -1080,7 +2158,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
           _id: '$page_url',
+
+
+
+
 
 
 
@@ -1088,11 +2174,23 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -1104,7 +2202,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Create issues count lookup
+
+
+
+
 
 
 
@@ -1112,11 +2222,23 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     issuesByPage.forEach(item => {
 
 
 
+
+
+
+
       issuesLookup[item._id] = item.issueCount;
+
+
+
+
 
 
 
@@ -1128,23 +2250,51 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get real scores from seo_page_scores collection
+
+
 
     const pageScores = await db.collection('seo_page_scores')
 
+
+
       .find({ projectId: projectIdObj })
+
+
 
       .toArray();
 
 
 
+
+
+
+
     // Create lookup for O(1) access
+
+
 
     const scoreLookup = Object.fromEntries(
 
+
+
       pageScores.map(s => [s.page_url, s.page_score])
 
+
+
     );
+
+
+
+
 
 
 
@@ -1152,11 +2302,21 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     // Format pages for frontend
+
+
 
     const formattedPages = pages.map(page => {
 
+
+
       // Use real score from seo_page_scores, fallback to 0
+
+
 
       const realPageScore = scoreLookup[page.url] ?? 0;
 
@@ -1164,9 +2324,21 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
       // Get issue count (kept for display)
 
+
+
       const issueCount = issuesLookup[page.url] || 0;
+
+
+
+
 
 
 
@@ -1174,7 +2346,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       const robotsTag = page.meta_tags?.robots?.[0] || '';
+
+
+
+
 
 
 
@@ -1186,7 +2366,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
       return {
+
+
+
+
 
 
 
@@ -1194,7 +2386,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         url: page.url,
+
+
+
+
 
 
 
@@ -1202,7 +2402,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         issues_count: issueCount,
+
+
+
+
 
 
 
@@ -1210,7 +2418,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         incoming_links: 0, // Could be calculated from internal_links collection
+
+
+
+
 
 
 
@@ -1218,7 +2434,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         external_links: 0, // Could be calculated from page analysis
+
+
+
+
 
 
 
@@ -1226,7 +2450,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         rankings: 0, // Not available in current schema
+
+
+
+
 
 
 
@@ -1234,7 +2466,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         is_indexable: isIndexable,
+
+
+
+
 
 
 
@@ -1242,7 +2482,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         http_status_code: page.http_status_code,
+
+
+
+
 
 
 
@@ -1250,7 +2498,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         scraped_at: page.scraped_at,
+
+
+
+
 
 
 
@@ -1258,7 +2514,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         extraction_status: page.extraction_status
+
+
+
+
 
 
 
@@ -1266,7 +2530,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1278,7 +2554,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const totalPages = Math.ceil(totalPagesCount / limit);
+
+
+
+
 
 
 
@@ -1286,7 +2570,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     const hasNext = currentPage < totalPages;
+
+
+
+
 
 
 
@@ -1298,57 +2590,119 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get summary statistics - match overview dashboard counts
+
+
 
     const projectData = await SeoProject.findById(projectId);
 
 
 
+
+
+
+
     // Count indexable pages (pages without noindex tag)
+
+
 
     const indexablePages = await pagesCollection.countDocuments({
 
+
+
       projectId: projectIdObj,
+
+
 
       'meta_tags.robots': { $not: /noindex/ }
 
+
+
     });
+
+
+
+
 
 
 
     console.log('📊 Page counts:', {
 
+
+
       total: totalPagesCount,
+
+
 
       indexable: indexablePages,
 
+
+
       crawled: projectData?.pages_crawled,
 
+
+
       analyzed: projectData?.pages_analyzed
+
+
 
     });
 
 
 
+
+
+
+
     const summary = {
+
+
 
       totalPages: totalPagesCount,
 
+
+
       scrapedPages: await pagesCollection.countDocuments({
 
+
+
         projectId: projectIdObj,
+
+
 
         scrape_status: 'completed'
 
+
+
       }),
+
+
 
       failedPages: await pagesCollection.countDocuments({
 
+
+
         projectId: projectIdObj,
+
+
 
         scrape_status: 'failed'
 
+
+
       }),
+
+
+
+
 
 
 
@@ -1356,7 +2710,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         { $match: { projectId: projectIdObj } },
+
+
+
+
 
 
 
@@ -1364,7 +2726,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       ]).toArray().then(result => result[0]?.totalWords || 0),
+
+
+
+
 
 
 
@@ -1372,7 +2742,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     };
+
+
+
+
+
+
+
+
 
 
 
@@ -1388,7 +2770,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     console.log('📊 Pagination info:', {
+
+
+
+
 
 
 
@@ -1396,7 +2790,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       currentPage,
+
+
+
+
 
 
 
@@ -1404,7 +2806,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       limit: parseInt(limit),
+
+
+
+
 
 
 
@@ -1412,7 +2822,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       hasNext,
+
+
+
+
 
 
 
@@ -1420,7 +2838,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1432,7 +2862,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       success: true,
+
+
+
+
 
 
 
@@ -1440,15 +2878,31 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         subpages: formattedPages,
+
+
+
+
 
 
 
         crawled_pages: projectData?.pages_crawled || summary.scrapedPages,
 
+
+
         found_pages: projectData?.pages_analyzed || summary.scrapedPages,
 
+
+
         analyzed_pages: projectData?.pages_analyzed || summary.scrapedPages,
+
+
+
+
 
 
 
@@ -1456,7 +2910,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
           currentPage,
+
+
+
+
 
 
 
@@ -1464,7 +2926,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
           totalItems: totalPagesCount,
+
+
+
+
 
 
 
@@ -1472,7 +2942,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
           hasPrev
+
+
+
+
 
 
 
@@ -1480,7 +2958,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         summary,
+
+
+
+
 
 
 
@@ -1488,7 +2974,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
           allPagesCount: allPages.length,
+
+
+
+
 
 
 
@@ -1496,7 +2990,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
           projectId: projectId.toString(),
+
+
+
+
 
 
 
@@ -1504,7 +3006,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -1512,7 +3022,19 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1524,7 +3046,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
     console.error('Error getting project pages:', error);
+
+
+
+
 
 
 
@@ -1532,7 +3062,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       success: false,
+
+
+
+
 
 
 
@@ -1540,7 +3078,15 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
       error: error.message
+
+
+
+
 
 
 
@@ -1548,11 +3094,21 @@ export const getProjectPages = async (req, res) => {
 
 
 
+
+
+
+
   }
 
 
 
+
+
+
+
 };
+
+
 
 
 
@@ -1562,181 +3118,206 @@ export const getProjectPages = async (req, res) => {
 
 // Get project performance data
 
-
-
 export const getProjectPerformance = async (req, res) => {
 
-
-
   try {
-
-
 
     const { id: projectId } = req.params;
 
 
 
-
-
-
-
     // Verify project belongs to user
-
-
 
     const project = await SeoProject.findById(projectId);
 
-
-
     if (!project) {
-
-
 
       return res.status(404).json({
 
-
-
         success: false,
-
-
 
         message: 'Project not found'
 
-
-
       });
 
-
-
     }
-
-
-
-
 
 
 
     if (project.user_id.toString() !== req.user._id.toString()) {
 
-
-
       return res.status(403).json({
-
-
 
         success: false,
 
-
-
         message: 'Access denied'
 
-
-
       });
-
-
 
     }
 
 
 
+    const db = mongoose.connection.db;
+
+    const { ObjectId } = mongoose.Types;
+
+    const projectIdObj = new ObjectId(projectId);
 
 
 
+    // Get PageSpeed data from seo_domain_performance collection
 
-    // Phase-1: No performance reports yet, only link discovery
+    const pagespeedData = await db.collection('seo_domain_performance').findOne({
 
-
-
-    res.status(200).json({
-
-
-
-      success: true,
-
-
-
-      data: {
-
-
-
-        mobile: null,
-
-
-
-        desktop: null,
-
-
-
-        summary: {
-
-
-
-          mobileScore: 0,
-
-
-
-          desktopScore: 0,
-
-
-
-          avgPerformance: 0
-
-
-
-        },
-
-
-
-        message: "Performance testing not implemented in Phase-1. Use link discovery APIs instead."
-
-
-
-      }
-
-
+      project_id: projectIdObj
 
     });
 
 
 
+    if (!pagespeedData) {
+
+      return res.status(200).json({
+
+        success: true,
+
+        data: {
+
+          mobile: null,
+
+          desktop: null,
+
+          summary: {
+
+            mobileScore: 0,
+
+            desktopScore: 0,
+
+            avgPerformance: 0
+
+          },
+
+          message: "No PageSpeed data available. Run a PageSpeed audit first."
+
+        }
+
+      });
+
+    }
+
+
+
+    // Calculate summary
+
+    const mobileScore = pagespeedData.mobile?.performance_score || 0;
+
+    const desktopScore = pagespeedData.desktop?.performance_score || 0;
+
+    const avgPerformance = Math.round((mobileScore + desktopScore) / 2);
+
+
+
+    // Format data for frontend compatibility
+
+    const formatDeviceData = (deviceData) => {
+
+      if (!deviceData) return null;
+
+      return {
+
+        // New structure for frontend
+
+        performance: deviceData.performance_score || 0,
+
+        accessibility: deviceData.accessibility_score || 0,
+
+        best_practices: deviceData.best_practices_score || 0,
+
+        seo: deviceData.seo_score || 0,
+
+        opportunities: deviceData.opportunities || [],
+
+        diagnostics: deviceData.diagnostics || [],
+
+        metrics: deviceData.metrics || {},
+
+        // Backward compatibility - keep existing fields
+
+        performance_score: deviceData.performance_score || 0,
+
+        fcp: deviceData.fcp,
+
+        lcp: deviceData.lcp,
+
+        cls: deviceData.cls,
+
+        tbt: deviceData.tbt,
+
+        speed_index: deviceData.speed_index,
+
+        tti: deviceData.tti
+
+      };
+
+    };
+
+
+
+    res.status(200).json({
+
+      success: true,
+
+      data: {
+
+        mobile: formatDeviceData(pagespeedData.mobile),
+
+        desktop: formatDeviceData(pagespeedData.desktop),
+
+        domain: pagespeedData.domain,
+
+        tested_at: pagespeedData.tested_at,
+
+        summary: {
+
+          mobileScore,
+
+          desktopScore,
+
+          avgPerformance
+
+        }
+
+      }
+
+    });
 
 
 
 
   } catch (error) {
 
-
-
     console.error('Error getting project performance:', error);
-
-
 
     res.status(500).json({
 
-
-
       success: false,
-
-
 
       message: 'Failed to get project performance',
 
-
-
       error: error.message
-
-
 
     });
 
-
-
   }
 
-
-
 };
+
+
+
+
+
+
 
 
 
@@ -1748,7 +3329,15 @@ export const getProjectPerformance = async (req, res) => {
 
 
 
+
+
+
+
 export const getProjectSummary = async (req, res) => {
+
+
+
+
 
 
 
@@ -1756,7 +3345,19 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
     const { id: projectId } = req.params;
+
+
+
+
+
+
+
+
 
 
 
@@ -1768,7 +3369,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
     const project = await SeoProject.findById(projectId);
+
+
+
+
 
 
 
@@ -1776,7 +3385,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(404).json({
+
+
+
+
 
 
 
@@ -1784,7 +3401,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
         message: 'Project not found'
+
+
+
+
 
 
 
@@ -1792,7 +3417,19 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -1804,7 +3441,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(403).json({
+
+
+
+
 
 
 
@@ -1812,11 +3457,23 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
         message: 'Access denied'
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -1828,7 +3485,19 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     const db = mongoose.connection.db;
+
+
+
+
 
 
 
@@ -1840,7 +3509,19 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get link counts directly from MongoDB collections
+
+
+
+
 
 
 
@@ -1848,11 +3529,27 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       projectId: new ObjectId(projectId)
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1864,11 +3561,27 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       projectId: new ObjectId(projectId)
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1880,11 +3593,27 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       projectId: new ObjectId(projectId)
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1896,7 +3625,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       internalLinks: internalLinksCount,
+
+
+
+
 
 
 
@@ -1904,7 +3641,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       socialLinks: socialLinksCount,
+
+
+
+
 
 
 
@@ -1912,7 +3657,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       pagesScraped: 0 // Phase-1: No page scraping yet
+
+
+
+
 
 
 
@@ -1924,7 +3677,19 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     res.status(200).json({
+
+
+
+
 
 
 
@@ -1932,11 +3697,27 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       data: summaryData
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1948,7 +3729,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
     console.error('Error getting project summary:', error);
+
+
+
+
 
 
 
@@ -1956,7 +3745,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       success: false,
+
+
+
+
 
 
 
@@ -1964,7 +3761,15 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
       error: error.message
+
+
+
+
 
 
 
@@ -1972,17 +3777,29 @@ export const getProjectSummary = async (req, res) => {
 
 
 
+
+
+
+
   }
+
+
+
+
 
 
 
 };
 
 
-// Get technical checks for homepage
+
+
+
+// Get comprehensive technical checks for all pages
 export const getTechnicalChecks = async (req, res) => {
   try {
     const { id: projectId } = req.params;
+
     console.log('🔧 Technical Checks API called with:', { projectId });
 
     // Verify project belongs to user
@@ -2007,258 +3824,59 @@ export const getTechnicalChecks = async (req, res) => {
     const { ObjectId } = mongoose.Types;
     const projectIdObj = new ObjectId(projectId);
 
-    // STEP 1: Load homepage document
-    const pageData = await db.collection('seo_page_data').findOne({
-      projectId: projectIdObj,
-      url: { $regex: "^https://.*\\/?$" }
-    });
+    // Run domain and page checks in parallel for performance
+    const [domainReport, pageAggregations] = await Promise.all([
+      // Domain-level checks
+      db.collection('domain_technical_reports').findOne({ projectId: projectIdObj }),
+      
+      // Page-level aggregations
+      getPageLevelAggregations(db, projectIdObj)
+    ]);
 
-    if (!pageData) {
-      console.log('❌ Homepage data not found for project:', projectId);
-      return res.status(404).json({
-        success: false,
-        message: 'Homepage data not found'
-      });
-    }
-
-    // STEP 2: Load domain report
-    const domainReport = await db.collection('domain_technical_reports').findOne({
-      projectId: projectIdObj
-    });
-
-    // STEP 3: Generate technical checks with proper analysis logic
+    // Generate all 12 technical checks
     const checks = [];
 
-    // CHECK 1: Heading Structure Check
-    const h1Headings = pageData?.content?.headings?.h1 || [];
-    const h1Count = h1Headings.length;
-    const hierarchyErrors = pageData?.seo_intelligence?.heading_analysis_extended?.hierarchy_errors || [];
-    
-    let headingStatus = 'pass';
-    let headingReason = '';
-    
-    if (h1Count === 0) {
-      headingStatus = 'critical';
-      headingReason = 'No H1 tags found';
-    } else if (h1Count > 1) {
-      headingStatus = 'warning';
-      headingReason = `Multiple H1 tags detected (${h1Count})`;
-    } else {
-      headingReason = 'Single H1 tag found';
-    }
-    
-    // Check for hierarchy issues
-    if (hierarchyErrors.length > 0) {
-      if (headingStatus === 'pass') headingStatus = 'warning';
-      headingReason += `; ${hierarchyErrors.length} heading hierarchy errors detected`;
-    }
-    
-    checks.push({
-      name: 'Heading Structure',
-      status: headingStatus,
-      message: headingReason
-    });
+    // 1. SSL Certificate Check (Domain-level)
+    checks.push(getSSLCertificateCheck(domainReport));
 
-    // CHECK 2: Security Headers Check
-    const securityHeaders = pageData?.seo_intelligence?.security?.security_headers || {};
-    const requiredHeaders = {
-      'CSP': securityHeaders.csp,
-      'HSTS': securityHeaders.hsts,
-      'X-Frame-Options': securityHeaders.x_frame_options,
-      'X-Content-Type-Options': securityHeaders.x_content_type_options
-    };
-    
-    const missingHeaders = Object.keys(requiredHeaders).filter(header => !requiredHeaders[header]);
-    const hasHSTS = requiredHeaders['HSTS'];
-    
-    let securityStatus = 'pass';
-    let securityReason = '';
-    
-    if (!hasHSTS) {
-      securityStatus = 'critical';
-      securityReason = 'HSTS header missing (critical for security)';
-    } else if (missingHeaders.length > 0) {
-      securityStatus = 'warning';
-      securityReason = `Missing security headers: ${missingHeaders.join(', ')}`;
-    } else {
-      securityReason = 'All security headers present';
-    }
-    
-    checks.push({
-      name: 'Security Headers',
-      status: securityStatus,
-      message: securityReason
-    });
+    // 2. Security Headers Check (Page-level)
+    checks.push(getSecurityHeadersCheck(pageAggregations));
 
-    // CHECK 3: Structured Data Validation
-    const schemas = pageData?.seo_intelligence?.schema_validation?.schemas || [];
-    
-    let schemaStatus = 'critical';
-    let schemaReason = 'No structured data detected';
-    
-    if (schemas.length > 0) {
-      const invalidSchemas = schemas.filter(schema => !schema.is_valid);
-      
-      if (invalidSchemas.length === 0) {
-        schemaStatus = 'pass';
-        schemaReason = `${schemas.length} valid schema(s) found`;
-      } else {
-        schemaStatus = 'warning';
-        const issues = invalidSchemas.map(schema => 
-          schema.errors?.join(', ') || 'Invalid schema structure'
-        ).join('; ');
-        schemaReason = `Schema validation issues: ${issues}`;
-      }
-    }
-    
-    checks.push({
-      name: 'Structured Data',
-      status: schemaStatus,
-      message: schemaReason
-    });
+    // 3. Canonical Tags Check (Page-level)
+    checks.push(getCanonicalTagsCheck(pageAggregations));
 
-    // CHECK 4: Sitemap Validation
-    const sitemapValidation = pageData?.sitemapDeepValidation;
-    const sitemapExists = pageData?.domain_technical_reports?.sitemapExists;
-    const sitemapStatus = pageData?.domain_technical_reports?.sitemapStatus;
-    
-    let sitemapCheckStatus = 'critical';
-    let sitemapReason = 'Sitemap not found or inaccessible';
-    
-    if (sitemapExists && sitemapStatus === 200) {
-      if (sitemapValidation) {
-        if (sitemapValidation.validation_complete && 
-            sitemapValidation.non_200_urls === 0 && 
-            sitemapValidation.redirected_urls === 0) {
-          sitemapCheckStatus = 'pass';
-          sitemapReason = 'Sitemap validated successfully';
-        } else if (!sitemapValidation.validation_complete || sitemapValidation.redirected_urls > 0) {
-          sitemapCheckStatus = 'warning';
-          sitemapReason = `Sitemap issues: ${sitemapValidation.redirected_urls || 0} redirected URLs`;
-        }
-      } else {
-        sitemapCheckStatus = 'pass';
-        sitemapReason = 'Sitemap accessible';
-      }
-    } else if (sitemapExists && sitemapStatus !== 200) {
-      sitemapCheckStatus = 'warning';
-      sitemapReason = `Sitemap returns status ${sitemapStatus}`;
-    }
-    
-    checks.push({
-      name: 'Sitemap Validation',
-      status: sitemapCheckStatus,
-      message: sitemapReason
-    });
+    // 4. Robots.txt Check (Domain-level)
+    checks.push(getRobotsTxtCheck(domainReport));
 
-    // CHECK 5A: Robots.txt Check
-    const robotsExists = domainReport?.robotsExists;
-    const robotsStatus = domainReport?.robotsStatus;
-    
-    let robotsFileStatus = 'critical';
-    let robotsFileReason = 'Robots.txt file not found';
-    
-    if (robotsExists) {
-      if (robotsStatus === 200) {
-        robotsFileStatus = 'pass';
-        robotsFileReason = 'Robots.txt accessible and valid';
-      } else {
-        robotsFileStatus = 'warning';
-        robotsFileReason = `Robots.txt returns status ${robotsStatus}`;
-      }
-    }
-    
-    checks.push({
-      name: 'Robots.txt',
-      status: robotsFileStatus,
-      message: robotsFileReason
-    });
+    // 5. Noindex on Key Pages Check (Page-level)
+    checks.push(getNoindexCheck(pageAggregations));
 
-    // CHECK 5B: Robots Meta Check
-    const robotsMeta = pageData?.meta_tags?.robots || [];
-    let robotsMetaStatus = 'warning';
-    let robotsMetaReason = 'No robots meta tag found';
-    
-    if (robotsMeta.length > 0) {
-      const robotsContent = robotsMeta.join(' ').toLowerCase();
-      if (robotsContent.includes('noindex')) {
-        robotsMetaStatus = 'critical';
-        robotsMetaReason = 'Page set to noindex';
-      } else if (robotsContent.includes('index')) {
-        robotsMetaStatus = 'pass';
-        robotsMetaReason = 'Page is indexable';
-      } else {
-        robotsMetaStatus = 'pass';
-        robotsMetaReason = 'Robots meta present';
-      }
-    }
-    
-    checks.push({
-      name: 'Robots Meta',
-      status: robotsMetaStatus,
-      message: robotsMetaReason
-    });
+    // 6. H1 Tags Check (Page-level)
+    checks.push(getH1TagsCheck(pageAggregations));
 
-    // CHECK 6: Canonical Tags Check
-    const canonical = pageData?.canonical;
-    checks.push({
-      name: 'Canonical Tags',
-      status: canonical ? 'pass' : 'warning',
-      message: canonical ? 'Canonical tag present' : 'Canonical tag missing'
-    });
+    // 7. Structured Data Check (Page-level)
+    checks.push(getStructuredDataCheck(pageAggregations));
 
-    // CHECK 7: Mobile Friendly Check
-    const viewport = pageData?.meta_tags?.viewport;
-    checks.push({
-      name: 'Mobile Friendly',
-      status: (viewport && viewport.length > 0) ? 'pass' : 'warning',
-      message: (viewport && viewport.length > 0) ? 'Viewport meta tag present' : 'Viewport meta tag missing'
-    });
+    // 8. Mobile Friendliness Check (Page-level)
+    checks.push(getMobileFriendlinessCheck(pageAggregations));
 
-    // CHECK 8: Indexability Check (combined analysis)
-    const isIndexable = robotsMetaStatus !== 'critical' && robotsFileStatus !== 'critical';
-    checks.push({
-      name: 'Indexability',
-      status: isIndexable ? 'pass' : 'critical',
-      message: isIndexable ? 'Page is indexable' : 'Indexability issues detected'
-    });
+    // 9. Broken Links Check (Page-level)
+    checks.push(getBrokenLinksCheck(pageAggregations));
 
-    // CHECK 9: Broken Links Check
-    const linkAnalysis = pageData?.seo_intelligence?.link_analysis;
-    if (linkAnalysis) {
-      const internalLinks = linkAnalysis.internal_links || [];
-      const brokenLinks = internalLinks.filter(link => link.status_code >= 400);
-      
-      let linksStatus = 'pass';
-      let linksReason = 'No broken internal links found';
-      
-      if (brokenLinks.length > 0) {
-        if (brokenLinks.length <= 5) {
-          linksStatus = 'warning';
-        } else {
-          linksStatus = 'critical';
-        }
-        linksReason = `${brokenLinks.length} broken internal links found`;
-      }
-      
-      checks.push({
-        name: 'Broken Links',
-        status: linksStatus,
-        message: linksReason
-      });
-    } else {
-      checks.push({
-        name: 'Broken Links',
-        status: 'warning',
-        message: 'Link analysis data not available'
-      });
-    }
+    // 10. XML Sitemap Check (Domain-level)
+    checks.push(getXMLSitemapCheck(domainReport));
 
-    // STEP 4: Generate summary
+    // 11. Redirect Chains Check (Domain-level)
+    checks.push(getRedirectChainsCheck(domainReport));
+
+    // 12. OG/Social Tags Check (Page-level)
+    checks.push(getSocialTagsCheck(pageAggregations));
+
+    // Generate summary
     const summary = {
-      passing: checks.filter(check => check.status === 'pass').length,
-      warnings: checks.filter(check => check.status === 'warning').length,
-      critical: checks.filter(check => check.status === 'critical').length
+      passing: checks.filter(check => check.status === 'OK').length,
+      warnings: checks.filter(check => check.status === 'Warning').length,
+      critical: checks.filter(check => check.status === 'Critical').length
     };
 
     console.log('📊 Technical checks summary:', summary);
@@ -2281,13 +3899,751 @@ export const getTechnicalChecks = async (req, res) => {
   }
 };
 
+// Get detailed information for a specific technical check
+export const getTechnicalCheckDetail = async (req, res) => {
+  try {
+    const { id: projectId, checkId } = req.params;
+
+    console.log('🔧 Technical Check Detail API called:', { projectId, checkId });
+
+    // Verify project belongs to user
+    const project = await SeoProject.findById(projectId);
+    if (!project) {
+      console.log('❌ Project not found:', projectId);
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    if (project.user_id.toString() !== req.user._id.toString()) {
+      console.log('❌ Access denied for user:', req.user._id);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    const db = mongoose.connection.db;
+    const { ObjectId } = mongoose.Types;
+    const projectIdObj = new ObjectId(projectId);
+
+    // Get page-level aggregations (same data as summary API)
+    const pageAggregations = await getPageLevelAggregations(db, projectIdObj);
+    
+    // Get domain report for domain-level checks
+    const domainReport = await db.collection('domain_technical_reports').findOne({ projectId: projectIdObj });
+
+    // Find the specific check and get its affected pages
+    let checkDetail = null;
+    let affectedPages = [];
+
+    switch (checkId) {
+      case 'h1_tags':
+        checkDetail = getH1TagsCheck(pageAggregations);
+        affectedPages = getH1AffectedPages(pageAggregations.pageStats);
+        break;
+      case 'canonical_tags':
+        checkDetail = getCanonicalTagsCheck(pageAggregations);
+        affectedPages = getCanonicalAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'security_headers':
+        checkDetail = getSecurityHeadersCheck(pageAggregations);
+        affectedPages = getSecurityHeadersAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'noindex_key_pages':
+        checkDetail = getNoindexCheck(pageAggregations);
+        affectedPages = getNoindexAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'noindex_tags':
+        checkDetail = getNoindexCheck(pageAggregations);
+        affectedPages = getNoindexAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'structured_data':
+        checkDetail = getStructuredDataCheck(pageAggregations);
+        affectedPages = getStructuredDataAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'mobile_friendliness':
+        checkDetail = getMobileFriendlinessCheck(pageAggregations);
+        affectedPages = getMobileAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'broken_links':
+        checkDetail = getBrokenLinksCheck(pageAggregations);
+        affectedPages = getBrokenLinksAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'social_tags':
+        checkDetail = getSocialTagsCheck(pageAggregations);
+        affectedPages = getSocialTagsAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'og_social_tags':
+        checkDetail = getSocialTagsCheck(pageAggregations);
+        affectedPages = getSocialTagsAffectedPages(pageAggregations.pageStats);
+        break;
+      case 'ssl_certificate':
+        checkDetail = getSSLCertificateCheck(domainReport);
+        // SSL is domain-level, no specific pages
+        break;
+      case 'robots_txt':
+        checkDetail = getRobotsTxtCheck(domainReport);
+        // Robots.txt is domain-level, no specific pages
+        break;
+      case 'xml_sitemap':
+        checkDetail = getXMLSitemapCheck(domainReport);
+        // XML Sitemap is domain-level, no specific pages
+        break;
+      case 'redirect_chains':
+        checkDetail = getRedirectChainsCheck(domainReport);
+        // Redirect chains are domain-level, no specific pages
+        break;
+      default:
+        return res.status(404).json({
+          success: false,
+          message: 'Technical check not found'
+        });
+    }
+
+    if (!checkDetail) {
+      return res.status(404).json({
+        success: false,
+        message: 'Technical check not found'
+      });
+    }
+
+    console.log(`📊 ${checkId} detail:`, {
+      affectedPagesCount: affectedPages.length,
+      checkStatus: checkDetail.status
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        check: checkDetail,
+        pages: affectedPages
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting technical check detail:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get technical check detail',
+      error: error.message
+    });
+  }
+};
+
+// Helper function to get page-level aggregations
+async function getPageLevelAggregations(db, projectIdObj) {
+  const results = {};
+
+  // Aggregate pages by various technical metrics
+  const pageStats = await db.collection('seo_page_data').aggregate([
+    { $match: { projectId: projectIdObj } },
+    {
+      $project: {
+        url: 1,
+        http_status_code: 1,
+        canonical: 1,
+        meta_tags: 1,
+        'content.headings.h1': 1,
+        'content.heading_analysis.h1_count': 1,
+        structured_data: 1,
+        'seo_intelligence.schema_validation.schemas': 1,
+        'seo_intelligence.security.security_headers': 1,
+        'social.open_graph': 1,
+        'social.twitter': 1
+      }
+    }
+  ]).toArray();
+
+  results.totalPages = pageStats.length;
+  results.pageStats = pageStats; // Store raw page data for detail queries
+  
+  // Calculate various metrics
+  results.canonicalStats = calculateCanonicalStats(pageStats);
+  results.noindexStats = calculateNoindexStats(pageStats);
+  results.h1Stats = calculateH1Stats(pageStats);
+  results.schemaStats = calculateSchemaStats(pageStats);
+  results.mobileStats = calculateMobileStats(pageStats);
+  results.brokenLinksStats = calculateBrokenLinksStats(pageStats);
+  results.securityHeadersStats = calculateSecurityHeadersStats(pageStats);
+  results.socialTagsStats = calculateSocialTagsStats(pageStats);
+
+  return results;
+}
+
+// Helper functions for each check type
+function getSSLCertificateCheck(domainReport) {
+  const isValid = domainReport?.sslValid;
+  const daysRemaining = domainReport?.sslDaysRemaining || 0;
+
+  let status = 'Critical';
+  let message = 'SSL certificate not found or invalid';
+  let affectedPages = 0;
+
+  if (isValid) {
+    if (daysRemaining < 30) {
+      status = 'Warning';
+      message = `SSL certificate expires in ${daysRemaining} days`;
+    } else {
+      status = 'OK';
+      message = 'SSL certificate is valid and properly configured';
+    }
+  }
+
+  return {
+    id: 'ssl_certificate',
+    name: 'SSL Certificate',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: affectedPages,
+    message
+  };
+}
+
+function getSecurityHeadersCheck(pageAggregations) {
+  const stats = pageAggregations.securityHeadersStats;
+  
+  let status = 'OK';
+  let message = 'Security headers properly configured';
+  
+  if (stats.pagesWithMissingHeaders > 0) {
+    if (stats.pagesWithMissingHeaders / pageAggregations.totalPages > 0.5) {
+      status = 'Critical';
+      message = `${stats.pagesWithMissingHeaders} pages missing critical security headers`;
+    } else {
+      status = 'Warning';
+      message = `${stats.pagesWithMissingHeaders} pages have missing security headers`;
+    }
+  }
+
+  return {
+    id: 'security_headers',
+    name: 'Security Headers',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: stats.pagesWithMissingHeaders,
+    message
+  };
+}
+
+function getCanonicalTagsCheck(pageAggregations) {
+  const stats = pageAggregations.canonicalStats;
+  
+  let status = 'OK';
+  let message = 'Canonical tags properly configured';
+  
+  if (stats.pagesWithoutCanonical > 0) {
+    if (stats.pagesWithoutCanonical / pageAggregations.totalPages > 0.3) {
+      status = 'Critical';
+      message = `${stats.pagesWithoutCanonical} pages missing canonical tags`;
+    } else {
+      status = 'Warning';
+      message = `${stats.pagesWithoutCanonical} pages missing canonical tags`;
+    }
+  }
+
+  return {
+    id: 'canonical_tags',
+    name: 'Canonical Tags',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: stats.pagesWithoutCanonical,
+    message
+  };
+}
+
+function getRobotsTxtCheck(domainReport) {
+  const exists = domainReport?.robotsExists;
+  const status = domainReport?.robotsStatus;
+
+  let checkStatus = 'Critical';
+  let message = 'Robots.txt file not found';
+
+  if (exists) {
+    if (status === 200) {
+      checkStatus = 'OK';
+      message = 'Robots.txt is accessible and properly configured';
+    } else {
+      checkStatus = 'Warning';
+      message = `Robots.txt returns status ${status}`;
+    }
+  }
+
+  return {
+    id: 'robots_txt',
+    name: 'Robots.txt',
+    status: checkStatus,
+    severity: checkStatus === 'Critical' ? 'high' : checkStatus === 'Warning' ? 'medium' : 'none',
+    affected_pages: 0,
+    message
+  };
+}
+
+function getNoindexCheck(pageAggregations) {
+  const stats = pageAggregations.noindexStats;
+  
+  let status = 'OK';
+  let message = 'All important pages are indexable';
+  
+  if (stats.noindexPages > 0) {
+    if (stats.noindexPages / pageAggregations.totalPages > 0.2) {
+      status = 'Critical';
+      message = `${stats.noindexPages} pages have noindex directive`;
+    } else {
+      status = 'Warning';
+      message = `${stats.noindexPages} pages have noindex directive`;
+    }
+  }
+
+  return {
+    id: 'noindex_tags',
+    name: 'Noindex on Key Pages',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: stats.noindexPages,
+    message
+  };
+}
+
+function getH1TagsCheck(pageAggregations) {
+  const stats = pageAggregations.h1Stats;
+  
+  let status = 'OK';
+  let message = 'H1 tags properly configured';
+  let affectedPages = stats.pagesWithoutH1 + stats.pagesWithMultipleH1;
+  
+  if (affectedPages > 0) {
+    if (affectedPages / pageAggregations.totalPages > 0.3) {
+      status = 'Critical';
+      message = `${stats.pagesWithoutH1} pages missing H1, ${stats.pagesWithMultipleH1} with multiple H1s`;
+    } else {
+      status = 'Warning';
+      message = `${stats.pagesWithoutH1} pages missing H1, ${stats.pagesWithMultipleH1} with multiple H1s`;
+    }
+  }
+
+  return {
+    id: 'h1_tags',
+    name: 'H1 Tags',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: affectedPages,
+    message
+  };
+}
+
+function getStructuredDataCheck(pageAggregations) {
+  const stats = pageAggregations.schemaStats;
+  
+  let status = 'Critical';
+  let message = 'No structured data found';
+  
+  if (stats.pagesWithSchema > 0) {
+    if (stats.pagesWithSchema / pageAggregations.totalPages > 0.7) {
+      status = 'OK';
+      message = `${stats.pagesWithValidSchema} pages with valid structured data`;
+    } else {
+      status = 'Warning';
+      message = `${stats.pagesWithSchema} pages have structured data (${stats.pagesWithValidSchema} valid)`;
+    }
+  }
+
+  return {
+    id: 'structured_data',
+    name: 'Structured Data / Schema',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: pageAggregations.totalPages - stats.pagesWithValidSchema,
+    message
+  };
+}
+
+function getMobileFriendlinessCheck(pageAggregations) {
+  const stats = pageAggregations.mobileStats;
+  
+  let status = 'OK';
+  let message = 'Mobile-friendly configuration detected';
+  
+  if (stats.pagesWithoutViewport > 0) {
+    if (stats.pagesWithoutViewport / pageAggregations.totalPages > 0.5) {
+      status = 'Critical';
+      message = `${stats.pagesWithoutViewport} pages missing viewport meta tag`;
+    } else {
+      status = 'Warning';
+      message = `${stats.pagesWithoutViewport} pages missing viewport meta tag`;
+    }
+  }
+
+  return {
+    id: 'mobile_friendliness',
+    name: 'Mobile Friendliness',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: stats.pagesWithoutViewport,
+    message
+  };
+}
+
+function getBrokenLinksCheck(pageAggregations) {
+  const stats = pageAggregations.brokenLinksStats;
+  
+  let status = 'OK';
+  let message = 'No broken links detected';
+  
+  if (stats.brokenLinksCount > 0) {
+    if (stats.brokenLinksCount > 10) {
+      status = 'Critical';
+      message = `${stats.brokenLinksCount} broken links found`;
+    } else {
+      status = 'Warning';
+      message = `${stats.brokenLinksCount} broken links found`;
+    }
+  }
+
+  return {
+    id: 'broken_links',
+    name: 'Broken Links (404)',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: stats.pagesWithBrokenLinks,
+    message
+  };
+}
+
+function getXMLSitemapCheck(domainReport) {
+  const exists = domainReport?.sitemapExists;
+  const status = domainReport?.sitemapStatus;
+  const urlCount = domainReport?.parsedSitemapUrlCount || 0;
+
+  let checkStatus = 'Critical';
+  let message = 'XML sitemap not found';
+
+  if (exists) {
+    if (status === 200) {
+      checkStatus = 'OK';
+      message = `XML sitemap accessible with ${urlCount} URLs`;
+    } else {
+      checkStatus = 'Warning';
+      message = `XML sitemap returns status ${status}`;
+    }
+  }
+
+  return {
+    id: 'xml_sitemap',
+    name: 'XML Sitemap',
+    status: checkStatus,
+    severity: checkStatus === 'Critical' ? 'high' : checkStatus === 'Warning' ? 'medium' : 'none',
+    affected_pages: 0,
+    message
+  };
+}
+
+function getRedirectChainsCheck(domainReport) {
+  const redirectChain = domainReport?.redirectChain || [];
+  const hasHttpsRedirect = domainReport?.httpsRedirect;
+
+  let status = 'OK';
+  let message = 'No redirect chains detected';
+  let affectedPages = 0;
+
+  if (redirectChain.length > 1) {
+    status = 'Warning';
+    message = `Redirect chain detected with ${redirectChain.length} hops`;
+    affectedPages = redirectChain.length - 1;
+  }
+
+  if (!hasHttpsRedirect) {
+    status = 'Critical';
+    message = 'HTTPS redirect not properly configured';
+    affectedPages = 1;
+  }
+
+  return {
+    id: 'redirect_chains',
+    name: 'Redirect Chains',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: affectedPages,
+    message
+  };
+}
+
+function getSocialTagsCheck(pageAggregations) {
+  const stats = pageAggregations.socialTagsStats;
+  
+  let status = 'OK';
+  let message = 'Social media tags properly configured';
+  
+  if (stats.pagesMissingOGTags > 0) {
+    if (stats.pagesMissingOGTags / pageAggregations.totalPages > 0.5) {
+      status = 'Critical';
+      message = `${stats.pagesMissingOGTags} pages missing Open Graph tags`;
+    } else {
+      status = 'Warning';
+      message = `${stats.pagesMissingOGTags} pages missing Open Graph tags`;
+    }
+  }
+
+  return {
+    id: 'og_social_tags',
+    name: 'OG / Social Tags',
+    status,
+    severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
+    affected_pages: stats.pagesMissingOGTags,
+    message
+  };
+}
+
+// Statistics calculation functions
+function calculateCanonicalStats(pages) {
+  const pagesWithoutCanonical = pages.filter(page => !page.canonical).length;
+  return { pagesWithoutCanonical };
+}
+
+function calculateNoindexStats(pages) {
+  const noindexPages = pages.filter(page => {
+    const robots = page.meta_tags?.robots || [];
+    return robots.some(tag => tag.toLowerCase().includes('noindex'));
+  }).length;
+  return { noindexPages };
+}
+
+function calculateH1Stats(pages) {
+  const pagesWithoutH1 = pages.filter(page => {
+    // Check both h1 array and h1_count for robustness
+    const h1s = page.content?.headings?.h1 || [];
+    const h1Count = page.content?.heading_analysis?.h1_count;
+    
+    if (h1Count !== undefined) {
+      return h1Count === 0;
+    }
+    return h1s.length === 0;
+  }).length;
+  
+  const pagesWithMultipleH1 = pages.filter(page => {
+    // Check both h1 array and h1_count for robustness
+    const h1s = page.content?.headings?.h1 || [];
+    const h1Count = page.content?.heading_analysis?.h1_count;
+    
+    if (h1Count !== undefined) {
+      return h1Count > 1;
+    }
+    return h1s.length > 1;
+  }).length;
+  
+  return { pagesWithoutH1, pagesWithMultipleH1 };
+}
+
+function calculateSchemaStats(pages) {
+  const pagesWithSchema = pages.filter(page => {
+    const schemas = page.seo_intelligence?.schema_validation?.schemas || [];
+    return schemas.length > 0;
+  }).length;
+  
+  const pagesWithValidSchema = pages.filter(page => {
+    const schemas = page.seo_intelligence?.schema_validation?.schemas || [];
+    return schemas.some(schema => schema.is_valid);
+  }).length;
+  
+  return { pagesWithSchema, pagesWithValidSchema };
+}
+
+function calculateMobileStats(pages) {
+  const pagesWithoutViewport = pages.filter(page => {
+    const viewport = page.meta_tags?.viewport || [];
+    return viewport.length === 0;
+  }).length;
+  
+  return { pagesWithoutViewport };
+}
+
+function calculateBrokenLinksStats(pages) {
+  let brokenLinksCount = 0;
+  let pagesWithBrokenLinks = 0;
+  
+  pages.forEach(page => {
+    if (page.http_status_code >= 400) {
+      brokenLinksCount++;
+      pagesWithBrokenLinks++;
+    }
+  });
+  
+  return { brokenLinksCount, pagesWithBrokenLinks };
+}
+
+function calculateSecurityHeadersStats(pages) {
+  const requiredHeaders = ['csp', 'hsts', 'x_frame_options', 'x_content_type_options'];
+  
+  const pagesWithMissingHeaders = pages.filter(page => {
+    const headers = page.seo_intelligence?.security?.security_headers || {};
+    return requiredHeaders.some(header => !headers[header]);
+  }).length;
+  
+  return { pagesWithMissingHeaders };
+}
+
+function calculateSocialTagsStats(pages) {
+  const requiredOGTags = ['og:title', 'og:description', 'og:image', 'og:url'];
+  
+  const pagesMissingOGTags = pages.filter(page => {
+    const ogTags = page.social?.open_graph || {};
+    return requiredOGTags.some(tag => !ogTags[tag]);
+  }).length;
+  
+  return { pagesMissingOGTags };
+}
+
+// Helper functions to get affected pages for each check type
+function getH1AffectedPages(pageStats) {
+  return pageStats.filter(page => {
+    const h1s = page.content?.headings?.h1 || [];
+    const h1Count = page.content?.heading_analysis?.h1_count;
+    
+    if (h1Count !== undefined) {
+      return h1Count === 0 || h1Count > 1;
+    }
+    return h1s.length === 0 || h1s.length > 1;
+  }).map(page => {
+    const h1s = page.content?.headings?.h1 || [];
+    const h1Count = page.content?.heading_analysis?.h1_count;
+    const actualCount = h1Count !== undefined ? h1Count : h1s.length;
+    
+    let issue = 'Missing H1';
+    if (actualCount === 0) {
+      issue = 'Missing H1';
+    } else if (actualCount > 1) {
+      issue = `Multiple H1 tags (${actualCount} found)`;
+    }
+    
+    return {
+      url: page.url,
+      issue: issue,
+      h1_count: actualCount,
+      h1_tags: h1s
+    };
+  });
+}
+
+function getCanonicalAffectedPages(pageStats) {
+  return pageStats.filter(page => {
+    const canonical = page.canonical;
+    return !canonical || canonical.length === 0;
+  }).map(page => ({
+    url: page.url,
+    issue: 'Missing canonical tag',
+    canonical: page.canonical
+  }));
+}
+
+function getSecurityHeadersAffectedPages(pageStats) {
+  const requiredHeaders = ['csp', 'hsts', 'x_frame_options', 'x_content_type_options'];
+  
+  return pageStats.filter(page => {
+    const headers = page.seo_intelligence?.security?.security_headers || {};
+    return requiredHeaders.some(header => !headers[header]);
+  }).map(page => {
+    const headers = page.seo_intelligence?.security?.security_headers || {};
+    const missingHeaders = requiredHeaders.filter(header => !headers[header]);
+    
+    return {
+      url: page.url,
+      issue: `Missing security headers: ${missingHeaders.join(', ')}`,
+      missing_headers: missingHeaders,
+      present_headers: Object.keys(headers)
+    };
+  });
+}
+
+function getNoindexAffectedPages(pageStats) {
+  return pageStats.filter(page => {
+    const robots = page.meta_tags?.robots || [];
+    return robots.some(tag => tag.toLowerCase().includes('noindex'));
+  }).map(page => ({
+    url: page.url,
+    issue: 'Page has noindex directive',
+    robots_tags: page.meta_tags?.robots || []
+  }));
+}
+
+function getStructuredDataAffectedPages(pageStats) {
+  return pageStats.filter(page => {
+    const schemas = page.seo_intelligence?.schema_validation?.schemas || [];
+    return schemas.length === 0 || !schemas.some(schema => schema.is_valid);
+  }).map(page => {
+    const schemas = page.seo_intelligence?.schema_validation?.schemas || [];
+    const validSchemas = schemas.filter(schema => schema.is_valid);
+    
+    return {
+      url: page.url,
+      issue: schemas.length === 0 ? 'Missing structured data' : 'Invalid structured data',
+      schema_count: schemas.length,
+      valid_schemas: validSchemas.length,
+      schemas: schemas
+    };
+  });
+}
+
+function getMobileAffectedPages(pageStats) {
+  return pageStats.filter(page => {
+    const viewport = page.meta_tags?.viewport || [];
+    return viewport.length === 0;
+  }).map(page => ({
+    url: page.url,
+    issue: 'Missing viewport meta tag',
+    viewport: page.meta_tags?.viewport || []
+  }));
+}
+
+function getBrokenLinksAffectedPages(pageStats) {
+  return pageStats.filter(page => page.http_status_code >= 400).map(page => ({
+    url: page.url,
+    issue: `Page returns ${page.http_status_code} error`,
+    status_code: page.http_status_code
+  }));
+}
+
+function getSocialTagsAffectedPages(pageStats) {
+  const requiredOGTags = ['og:title', 'og:description', 'og:image', 'og:url'];
+  
+  return pageStats.filter(page => {
+    const ogTags = page.social?.open_graph || {};
+    return requiredOGTags.some(tag => !ogTags[tag]);
+  }).map(page => {
+    const ogTags = page.social?.open_graph || {};
+    const missingTags = requiredOGTags.filter(tag => !ogTags[tag]);
+    
+    return {
+      url: page.url,
+      issue: `Missing OG tags: ${missingTags.join(', ')}`,
+      missing_tags: missingTags,
+      present_tags: Object.keys(ogTags)
+    };
+  });
+}
+
+
 // Get project issues grouped by page URL
+
 export const getProjectIssuesByPage = async (req, res) => {
+
   try {
 
 
 
+
+
+
+
     const { id: projectId } = req.params;
+
+
+
+
+
+
+
+
 
 
 
@@ -2303,7 +4659,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Verify project belongs to user
+
+
+
+
 
 
 
@@ -2311,7 +4679,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
     if (!project) {
+
+
+
+
 
 
 
@@ -2319,7 +4695,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(404).json({
+
+
+
+
 
 
 
@@ -2327,7 +4711,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
         message: 'Project not found'
+
+
+
+
 
 
 
@@ -2335,7 +4727,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -2351,7 +4755,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Check if user owns this project
+
+
+
+
 
 
 
@@ -2359,7 +4775,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       console.log('❌ Access denied for user:', req.user._id);
+
+
+
+
 
 
 
@@ -2367,7 +4791,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
         success: false,
+
+
+
+
 
 
 
@@ -2375,7 +4807,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -2387,11 +4827,27 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     const db = mongoose.connection.db;
 
 
 
+
+
+
+
     const { ObjectId } = mongoose.Types;
+
+
+
+
 
 
 
@@ -2403,7 +4859,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Aggregate issues by page_url
+
+
+
+
 
 
 
@@ -2411,11 +4879,23 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       { $match: { projectId: projectIdObj } },
 
 
 
+
+
+
+
       {
+
+
+
+
 
 
 
@@ -2423,7 +4903,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
           _id: '$page_url',
+
+
+
+
 
 
 
@@ -2431,7 +4919,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
           issues: {
+
+
+
+
 
 
 
@@ -2439,7 +4935,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
               id: { $toString: '$_id' },
+
+
+
+
 
 
 
@@ -2447,7 +4951,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
               rule_id: '$rule_id',
+
+
+
+
 
 
 
@@ -2455,7 +4967,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
               category: '$category',
+
+
+
+
 
 
 
@@ -2463,7 +4983,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
               detected_value: '$detected_value',
+
+
+
+
 
 
 
@@ -2471,7 +4999,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
               created_at: '$created_at'
+
+
+
+
 
 
 
@@ -2479,7 +5015,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
           }
+
+
+
+
 
 
 
@@ -2487,7 +5031,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       },
+
+
+
+
 
 
 
@@ -2495,7 +5047,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
         $project: {
+
+
+
+
 
 
 
@@ -2503,7 +5063,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
           issueCount: 1,
+
+
+
+
 
 
 
@@ -2511,7 +5079,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
           _id: 0
+
+
+
+
 
 
 
@@ -2519,7 +5095,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       },
+
+
+
+
 
 
 
@@ -2527,7 +5111,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
     ]).toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -2543,7 +5139,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Calculate total issues across all pages
+
+
+
+
 
 
 
@@ -2555,7 +5163,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     res.status(200).json({
+
+
+
+
 
 
 
@@ -2563,7 +5183,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       data: {
+
+
+
+
 
 
 
@@ -2571,7 +5199,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
         summary: {
+
+
+
+
 
 
 
@@ -2579,7 +5215,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
           totalIssues: totalIssues
+
+
+
+
 
 
 
@@ -2587,11 +5231,27 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       }
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -2603,7 +5263,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
     console.error('Error getting project issues by page:', error);
+
+
+
+
 
 
 
@@ -2611,7 +5279,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       success: false,
+
+
+
+
 
 
 
@@ -2619,7 +5295,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
       error: error.message
+
+
+
+
 
 
 
@@ -2627,7 +5311,15 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
   }
+
+
+
+
 
 
 
@@ -2639,7 +5331,19 @@ export const getProjectIssuesByPage = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
 // Get issues for a specific page URL
+
+
+
+
 
 
 
@@ -2647,7 +5351,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
   try {
+
+
+
+
 
 
 
@@ -2655,7 +5367,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     const { page_url } = req.query;
+
+
+
+
 
 
 
@@ -2667,7 +5387,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     const db = mongoose.connection.db;
+
+
+
+
 
 
 
@@ -2675,7 +5407,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     const projectIdObj = new ObjectId(projectId);
+
+
+
+
 
 
 
@@ -2687,7 +5427,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     if (!page_url) {
+
+
+
+
 
 
 
@@ -2695,7 +5447,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
         success: false,
+
+
+
+
 
 
 
@@ -2703,11 +5463,23 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       });
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -2715,7 +5487,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(400).json({
+
+
+
+
 
 
 
@@ -2723,7 +5503,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
         message: 'projectId parameter is required'
+
+
+
+
 
 
 
@@ -2731,7 +5519,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -2741,41 +5541,81 @@ export const getPageIssues = async (req, res) => {
 
     // Verify project belongs to user (consistent with other functions)
 
+
+
     const project = await SeoProject.findById(projectId);
+
+
+
+
 
 
 
     if (!project) {
 
+
+
       console.log('❌ Project not found:', projectId);
+
+
 
       return res.status(404).json({
 
+
+
         success: false,
+
+
 
         message: 'Project not found'
 
+
+
       });
 
+
+
     }
+
+
+
+
 
 
 
     // Check if user owns this project
 
+
+
     if (project.user_id.toString() !== req.user._id.toString()) {
+
+
 
       console.log('❌ Access denied for user:', req.user._id);
 
+
+
       return res.status(403).json({
+
+
 
         success: false,
 
+
+
         message: 'Access denied'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
@@ -2783,17 +5623,35 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     // Get page score from seo_page_scores collection (same source as subpages table)
+
+
 
     const pageScore = await db.collection('seo_page_scores')
 
+
+
       .findOne({
+
+
 
         projectId: projectIdObj,
 
+
+
         page_url: decodedPageUrl
 
+
+
       });
+
+
+
+
 
 
 
@@ -2801,43 +5659,87 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     console.log('📊 Page score found:', { page_url: decodedPageUrl, score: pageScoreValue });
+
+
+
+
 
 
 
     // Get page data from seo_page_data collection (this contains all the page data we need)
 
+
+
     const pageData = await db.collection('seo_page_data')
+
+
 
       .findOne({
 
+
+
         projectId: projectIdObj,
+
+
 
         url: decodedPageUrl
 
+
+
       });
+
+
+
+
 
 
 
     // Get screenshot from seo_first_snapshot collection (this contains screenshot metadata)
 
+
+
     const pageScreenshot = await db.collection('seo_first_snapshot')
+
+
 
       .findOne({
 
+
+
         project_id: projectIdObj,   // ✅ FIXED: was projectId
+
+
 
         $or: [
 
+
+
           { url: decodedPageUrl },
+
+
 
           { final_url: decodedPageUrl },
 
+
+
           { canonical_url: decodedPageUrl }
+
+
 
         ]
 
+
+
       });
+
+
+
+
 
 
 
@@ -2845,21 +5747,47 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     // Get issues for specific page URL
+
+
 
     const issues = await db.collection('seo_page_issues')
 
+
+
       .find({
+
+
 
         projectId: projectIdObj,
 
+
+
         page_url: decodedPageUrl
+
+
 
       })
 
+
+
       .sort({ created_at: -1 })
 
+
+
       .toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -2875,7 +5803,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Format issues for frontend
+
+
+
+
 
 
 
@@ -2883,7 +5823,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       id: issue._id.toString(),
+
+
+
+
 
 
 
@@ -2891,7 +5839,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       rule_id: issue.rule_id,
+
+
+
+
 
 
 
@@ -2899,7 +5855,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       category: issue.category,
+
+
+
+
 
 
 
@@ -2907,7 +5871,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       detected_value: issue.detected_value,
+
+
+
+
 
 
 
@@ -2915,7 +5887,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       data_key: issue.data_key,
+
+
+
+
 
 
 
@@ -2923,7 +5903,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       created_at: issue.created_at
+
+
+
+
 
 
 
@@ -2935,7 +5923,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Extract page data if available
+
+
+
+
 
 
 
@@ -2943,7 +5943,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       title: pageData.title,
+
+
+
+
 
 
 
@@ -2951,7 +5959,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       word_count: pageData.content?.word_count,
+
+
+
+
 
 
 
@@ -2959,7 +5975,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       size: JSON.stringify(pageData).length, // Approximate size in bytes
+
+
+
+
 
 
 
@@ -2967,11 +5991,27 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       response_time: pageData.response_time_ms
 
 
 
+
+
+
+
     } : null;
+
+
+
+
+
+
+
+
 
 
 
@@ -2983,7 +6023,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     const page_data_preview = pageData ? {
+
+
+
+
 
 
 
@@ -2991,7 +6039,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       meta_description: pageData.meta_tags?.description?.[0] || null,
+
+
+
+
 
 
 
@@ -2999,7 +6055,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       robots: pageData.meta_tags?.robots?.[0] || null,
+
+
+
+
 
 
 
@@ -3007,7 +6071,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       word_count: pageData.content?.word_count || 0,
+
+
+
+
 
 
 
@@ -3015,7 +6087,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       images: pageData.images || [],
+
+
+
+
 
 
 
@@ -3023,7 +6103,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       structured_data: pageData.structured_data || [],
+
+
+
+
 
 
 
@@ -3031,7 +6119,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       twitter_tags: pageData.social?.twitter || {},
+
+
+
+
 
 
 
@@ -3039,7 +6135,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       hreflangs: pageData.hreflangs || [],
+
+
+
+
 
 
 
@@ -3047,11 +6151,27 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       meta_tags: pageData.meta_tags || {}
 
 
 
+
+
+
+
     } : null;
+
+
+
+
+
+
+
+
 
 
 
@@ -3063,7 +6183,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     const metadata = pageData ? {
+
+
+
+
 
 
 
@@ -3071,7 +6199,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       http_status_code: pageData.http_status_code,
+
+
+
+
 
 
 
@@ -3079,7 +6215,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       crawledAt: pageData.scrapedAt || pageData.scraped_at,
+
+
+
+
 
 
 
@@ -3087,7 +6231,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       seo_status: pageData.extraction_status
+
+
+
+
 
 
 
@@ -3099,69 +6251,147 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     const responseData = {
+
+
 
       page_url: decodedPageUrl,
 
+
+
       page_score: pageScoreValue, // Add page score from same source as subpages table
+
+
 
       page_metadata: metadata,
 
+
+
       page_screenshot: pageScreenshot
+
+
 
         ? (() => {
 
+
+
           // Normalize path to ensure browser-valid URL
+
+
 
           const rawPath = pageScreenshot.screenshot_path;
 
+
+
           const normalizedPath = rawPath
+
+
 
             .replace(/\\/g, '/')                 // windows → unix
 
+
+
             .replace(/^(\.\.\/)+/, '')           // remove ../
+
+
 
             .replace(/^.*storage\//, 'storage/'); // force public root
 
 
 
+
+
+
+
           const screenshotUrl = `${req.protocol}://${req.get('host')}/${normalizedPath}`;
+
+
 
           console.log('🔗 Normalized screenshot URL:', screenshotUrl);
 
 
 
+
+
+
+
           return {
+
+
 
             screenshot_path: screenshotUrl,
 
+
+
             final_url: pageScreenshot.final_url,
+
+
 
             canonical_url: pageScreenshot.canonical_url,
 
+
+
             scroll_height: pageScreenshot.scroll_height,
+
+
 
             captured_at: pageScreenshot.captured_at
 
+
+
           };
+
+
 
         })()
 
+
+
         : null,
+
+
 
       page_data: data,
 
+
+
       page_data_preview: page_data_preview,
+
+
 
       issues: formattedIssues,
 
+
+
       summary: {
+
+
 
         totalIssues: formattedIssues.length
 
+
+
       }
 
+
+
     };
+
+
+
+
+
+
+
+
 
 
 
@@ -3173,7 +6403,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       success: true,
+
+
+
+
 
 
 
@@ -3181,7 +6419,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -3193,7 +6443,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     console.error('Error getting page issues:', error);
+
+
+
+
 
 
 
@@ -3201,7 +6459,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       success: false,
+
+
+
+
 
 
 
@@ -3209,7 +6475,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
       error: error.message
+
+
+
+
 
 
 
@@ -3217,7 +6491,15 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
   }
+
+
+
+
 
 
 
@@ -3229,7 +6511,19 @@ export const getPageIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
 // Get project issues
+
+
+
+
 
 
 
@@ -3237,7 +6531,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
   try {
+
+
+
+
 
 
 
@@ -3245,11 +6547,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     const { page = 1, limit = 1000, category, severity, search } = req.query;
 
 
 
+
+
+
+
     const skip = (page - 1) * limit;
+
+
+
+
+
+
+
+
 
 
 
@@ -3265,7 +6583,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Verify project belongs to user
+
+
+
+
 
 
 
@@ -3273,7 +6603,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     if (!project) {
+
+
+
+
 
 
 
@@ -3281,7 +6619,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       return res.status(404).json({
+
+
+
+
 
 
 
@@ -3289,7 +6635,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
         message: 'Project not found'
+
+
+
+
 
 
 
@@ -3297,7 +6651,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -3313,7 +6679,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Check if user owns this project
+
+
+
+
 
 
 
@@ -3321,7 +6699,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       console.log('❌ Access denied for user:', req.user._id);
+
+
+
+
 
 
 
@@ -3329,7 +6715,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
         success: false,
+
+
+
+
 
 
 
@@ -3337,11 +6731,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       });
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -3353,7 +6763,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     const { ObjectId } = mongoose.Types;
+
+
+
+
 
 
 
@@ -3365,7 +6783,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Build query for issues
+
+
+
+
 
 
 
@@ -3377,7 +6807,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Add filters
+
+
+
+
 
 
 
@@ -3385,11 +6827,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       query.category = { $regex: category, $options: 'i' };
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -3401,11 +6859,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       query.severity = severity;
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -3417,7 +6891,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       query.$or = [
+
+
+
+
 
 
 
@@ -3425,7 +6907,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
         { page_url: { $regex: search, $options: 'i' } },
+
+
+
+
 
 
 
@@ -3433,11 +6923,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       ];
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -3453,7 +6959,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get issues from seo_page_issues collection
+
+
+
+
 
 
 
@@ -3465,7 +6983,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get total count
+
+
+
+
 
 
 
@@ -3477,7 +7007,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get paginated issues
+
+
+
+
 
 
 
@@ -3485,7 +7027,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       .find(query)
+
+
+
+
 
 
 
@@ -3493,7 +7043,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       .skip(skip)
+
+
+
+
 
 
 
@@ -3501,7 +7059,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       .toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -3517,7 +7087,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     // Get category and severity summaries
+
+
+
+
 
 
 
@@ -3525,7 +7107,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       { $match: { projectId: projectIdObj } },
+
+
+
+
 
 
 
@@ -3533,11 +7123,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       { $sort: { count: -1 } }
 
 
 
+
+
+
+
     ]).toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -3549,7 +7155,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       { $match: { projectId: projectIdObj } },
+
+
+
+
 
 
 
@@ -3557,11 +7171,27 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       { $sort: { count: -1 } }
 
 
 
+
+
+
+
     ]).toArray();
+
+
+
+
+
+
+
+
 
 
 
@@ -3573,7 +7203,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     const formattedIssues = issues.map(issue => ({
+
+
+
+
 
 
 
@@ -3581,7 +7219,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       type: issue.severity === 'high' ? 'warning' : 'warning', // All issues as warnings for now
+
+
+
+
 
 
 
@@ -3589,7 +7235,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       category: issue.category,
+
+
+
+
 
 
 
@@ -3597,7 +7251,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       rule_no: issue.rule_no,
+
+
+
+
 
 
 
@@ -3605,7 +7267,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       page_url: issue.page_url,
+
+
+
+
 
 
 
@@ -3613,7 +7283,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       expected_value: issue.expected_value,
+
+
+
+
 
 
 
@@ -3621,7 +7299,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     }));
+
+
+
+
+
+
+
+
 
 
 
@@ -3633,7 +7323,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     const totalPages = Math.ceil(totalIssues / limit);
+
+
+
+
 
 
 
@@ -3641,7 +7339,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     const hasNext = currentPage < totalPages;
+
+
+
+
 
 
 
@@ -3653,7 +7359,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
     console.log('📊 Pagination info:', {
+
+
+
+
 
 
 
@@ -3661,7 +7379,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       currentPage,
+
+
+
+
 
 
 
@@ -3669,7 +7395,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       limit: parseInt(limit),
+
+
+
+
 
 
 
@@ -3677,7 +7411,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       hasNext,
+
+
+
+
 
 
 
@@ -3685,7 +7427,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -3697,11 +7451,23 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       success: true,
 
 
 
+
+
+
+
       data: {
+
+
+
+
 
 
 
@@ -3709,7 +7475,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
         pagination: {
+
+
+
+
 
 
 
@@ -3717,7 +7491,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
           totalPages,
+
+
+
+
 
 
 
@@ -3725,7 +7507,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
           hasNext,
+
+
+
+
 
 
 
@@ -3733,11 +7523,23 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
         },
 
 
 
+
+
+
+
         summary: {
+
+
+
+
 
 
 
@@ -3745,7 +7547,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
           severity: severitySummary,
+
+
+
+
 
 
 
@@ -3753,11 +7563,23 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -3769,7 +7591,19 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
   } catch (error) {
+
+
+
+
 
 
 
@@ -3777,11 +7611,23 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
     res.status(500).json({
 
 
 
+
+
+
+
       success: false,
+
+
+
+
 
 
 
@@ -3789,7 +7635,15 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
       error: error.message
+
+
+
+
 
 
 
@@ -3797,191 +7651,383 @@ export const getProjectIssues = async (req, res) => {
 
 
 
+
+
+
+
   }
 
 
 
+
+
+
+
 };
+
+
+
+
 
 
 
 // Google Visibility Status Check
 
+
+
 export const getGoogleVisibilityStatus = async (req, res) => {
 
+
+
   try {
+
+
 
     console.log('[GOOGLE_VISIBILITY] Status check function started');
 
 
 
+
+
+
+
     const { id } = req.params;
 
+
+
     const userId = req.user._id;
+
+
+
+
 
 
 
     console.log('[GOOGLE_VISIBILITY] Status check | projectId=', id, 'userId=', userId);
 
+
+
     console.log('[GOOGLE_VISIBILITY] Project ID type:', typeof id);
+
+
 
     console.log('[GOOGLE_VISIBILITY] User ID type:', typeof userId);
 
 
 
+
+
+
+
     // Verify project belongs to user
+
+
 
     console.log('[GOOGLE_VISIBILITY] Searching for project with _id:', id);
 
+
+
     const project = await SeoProject.findById(id);
+
+
 
     console.log('[GOOGLE_VISIBILITY] Found project:', project ? 'YES' : 'NO');
 
 
 
+
+
+
+
     if (!project) {
+
+
 
       console.log('[GOOGLE_VISIBILITY] Project not found:', id);
 
 
 
+
+
+
+
       // Let's try to find what projects exist for this user
 
+
+
       const userProjects = await SeoProject.find({ user_id: userId }).select('_id project_name').limit(5);
+
+
 
       console.log('[GOOGLE_VISIBILITY] User projects:', userProjects.map(p => ({ _id: p._id, name: p.project_name })));
 
 
 
+
+
+
+
       return res.status(404).json({
+
+
 
         success: false,
 
+
+
         message: 'Project not found'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     if (project.user_id.toString() !== userId.toString()) {
 
+
+
       console.log('[GOOGLE_VISIBILITY] Access denied - user does not own project');
+
+
 
       return res.status(403).json({
 
+
+
         success: false,
+
+
 
         message: 'Access denied'
 
+
+
       });
 
+
+
     }
+
+
+
+
 
 
 
     // Check for active Google connection
 
+
+
     console.log('[GOOGLE_VISIBILITY] Checking for active Google connection...');
+
+
 
     try {
 
+
+
       const connection = await GoogleConnection.findActiveConnection(userId, id);
+
+
 
       console.log('[GOOGLE_VISIBILITY] Connection query result:', connection ? 'FOUND' : 'NOT FOUND');
 
 
 
+
+
+
+
       if (!connection) {
+
+
 
         console.log('[GOOGLE_VISIBILITY] No active connection found');
 
+
+
         return res.json({
+
+
 
           success: true,
 
+
+
           data: {
+
+
 
             connected: false
 
+
+
           }
 
+
+
         });
+
+
 
       }
 
 
 
+
+
+
+
       console.log('[GOOGLE_VISIBILITY] Active connection found | googleEmail=', connection.google_email);
+
+
 
       return res.json({
 
+
+
         success: true,
+
+
 
         data: {
 
+
+
           connected: true,
+
+
 
           google_email: connection.google_email,
 
+
+
           google_name: connection.google_name,
+
+
 
           google_avatar: connection.google_avatar,
 
+
+
           connected_at: connection.connected_at
+
+
 
         }
 
+
+
       });
+
+
 
     } catch (connectionError) {
 
+
+
       console.error('[GOOGLE_VISIBILITY] Connection query error:', connectionError);
+
+
 
       return res.status(500).json({
 
+
+
         success: false,
+
+
 
         message: 'Failed to check Google connection',
 
+
+
         error: connectionError.message
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
   } catch (error) {
+
+
 
     console.error('[GOOGLE_VISIBILITY] Status check error:', error);
 
+
+
     return res.status(500).json({
+
+
 
       success: false,
 
+
+
       message: 'Internal server error',
+
+
 
       error: error.message
 
+
+
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 // Google Visibility Connect Initiation
+
+
 
 export const connectGoogleVisibility = async (req, res) => {
 
+
+
   try {
+
+
 
     const { id } = req.params;
 
+
+
     const userId = req.user._id;
+
+
+
+
 
 
 
@@ -3989,115 +8035,231 @@ export const connectGoogleVisibility = async (req, res) => {
 
 
 
+
+
+
+
     // Verify project belongs to user
+
+
 
     const project = await SeoProject.findById(id);
 
+
+
     if (!project) {
+
+
 
       console.log('[GOOGLE_VISIBILITY] Project not found:', id);
 
+
+
       return res.status(404).json({
+
+
 
         success: false,
 
+
+
         message: 'Project not found'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     if (project.user_id.toString() !== userId.toString()) {
 
+
+
       console.log('[GOOGLE_VISIBILITY] Access denied - user does not own project');
+
+
 
       return res.status(403).json({
 
+
+
         success: false,
+
+
 
         message: 'Access denied'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     // Import OAuth2Client dynamically to avoid circular dependencies
+
+
 
     const { OAuth2Client } = await import('google-auth-library');
 
 
 
+
+
+
+
     const googleClient = new OAuth2Client(
+
+
 
       process.env.GOOGLE_CLIENT_ID,
 
+
+
       process.env.GOOGLE_CLIENT_SECRET,
 
+
+
       process.env.GOOGLE_OAUTH_REDIRECT
+
+
 
     );
 
 
 
+
+
+
+
     // Debug: Log OAuth configuration for Google Visibility
+
+
 
     console.log('[GOOGLE_VISIBILITY] OAuth Config:', {
 
+
+
       client_id: process.env.GOOGLE_CLIENT_ID,
+
+
 
       redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT,
 
+
+
       projectId: id,
+
+
 
       userId: userId
 
+
+
     });
+
+
+
+
 
 
 
     // Generate auth URL with purpose and projectId
 
+
+
     const authUrl = googleClient.generateAuthUrl({
+
+
 
       client_id: process.env.GOOGLE_CLIENT_ID,
 
+
+
       redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT,
+
+
 
       response_type: "code",
 
+
+
       access_type: "offline",
+
+
 
       scope: [
 
+
+
         "profile",
+
+
 
         "email",
 
+
+
         "https://www.googleapis.com/auth/webmasters.readonly",  // Search Console
+
+
 
         "https://www.googleapis.com/auth/analytics.readonly",   // Analytics
 
+
+
         "https://www.googleapis.com/auth/business.manage"      // Business Profile
+
+
 
       ],
 
+
+
       prompt: "select_account consent", // Force consent to get refresh token
+
+
 
       state: JSON.stringify({
 
+
+
         purpose: "google_visibility",
+
+
 
         projectId: id,  // ✅ Use 'id' instead of 'projectId'
 
+
+
         userId: userId
+
+
 
       })
 
+
+
     });
+
+
+
+
 
 
 
@@ -4105,51 +8267,103 @@ export const connectGoogleVisibility = async (req, res) => {
 
 
 
+
+
+
+
     console.log('[GOOGLE_VISIBILITY] Generated auth URL for projectId=', id);
+
+
 
     return res.json({
 
+
+
       success: true,
+
+
 
       data: {
 
+
+
         authUrl: authUrl
+
+
 
       }
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[GOOGLE_VISIBILITY] Connect initiation error:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Internal server error',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 // Google Visibility Disconnect
+
+
 
 export const disconnectGoogleVisibility = async (req, res) => {
 
+
+
   try {
+
+
 
     const { id } = req.params;
 
+
+
     const userId = req.user._id;
+
+
+
+
 
 
 
@@ -4157,135 +8371,271 @@ export const disconnectGoogleVisibility = async (req, res) => {
 
 
 
+
+
+
+
     // Verify project belongs to user
+
+
 
     const project = await SeoProject.findById(id);
 
+
+
     if (!project) {
+
+
 
       console.log('[GOOGLE_VISIBILITY] Project not found:', id);
 
+
+
       return res.status(404).json({
+
+
 
         success: false,
 
+
+
         message: 'Project not found'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     if (project.user_id.toString() !== userId.toString()) {
 
+
+
       console.log('[GOOGLE_VISIBILITY] Access denied - user does not own project');
+
+
 
       return res.status(403).json({
 
+
+
         success: false,
+
+
 
         message: 'Access denied'
 
+
+
       });
 
+
+
     }
+
+
+
+
 
 
 
     // Revoke the connection
 
+
+
     const result = await GoogleConnection.revokeConnection(userId, id);
+
+
+
+
 
 
 
     if (result.modifiedCount === 0) {
 
+
+
       console.log('[GOOGLE_VISIBILITY] No active connection found to disconnect');
+
+
 
       return res.status(404).json({
 
+
+
         success: false,
+
+
 
         message: 'No active Google connection found'
 
+
+
       });
 
+
+
     }
+
+
+
+
 
 
 
     console.log('[GOOGLE_VISIBILITY] Connection revoked successfully');
 
+
+
     return res.json({
+
+
 
       success: true,
 
+
+
       message: 'Google connection disconnected successfully'
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[GOOGLE_VISIBILITY] Disconnect error:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Internal server error',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 // Get AI visibility worst performing pages
+
+
 
 export const getAIVisibilityEntityGraph = async (req, res) => {
 
+
+
   try {
+
+
 
     const { id: projectId } = req.params;
 
 
 
+
+
+
+
     console.log("Entity Graph Controller - Incoming projectId:", projectId);
 
+
+
     console.log("Entity Graph Controller - projectId type:", typeof projectId);
+
+
 
     console.log("Entity Graph Controller - projectId isValid:", mongoose.Types.ObjectId.isValid(projectId));
 
 
 
+
+
+
+
     // Validate projectId format
+
+
 
     if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
 
+
+
       console.log("Entity Graph Controller - Invalid projectId format");
+
+
 
       return res.status(400).json({
 
+
+
         success: false,
+
+
 
         message: 'Invalid project ID format'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const projectIdObj = new mongoose.Types.ObjectId(projectId);
 
+
+
     console.log("Entity Graph Controller - Converted to ObjectId:", projectIdObj);
+
+
+
+
 
 
 
@@ -4293,45 +8643,91 @@ export const getAIVisibilityEntityGraph = async (req, res) => {
 
 
 
+
+
+
+
     // Get latest AI visibility data for the project
 
+
+
     const db = mongoose.connection.db;
+
+
 
     console.log("Entity Graph Controller - Querying seo_ai_visibility collection...");
 
 
 
+
+
+
+
     const latestData = await db.collection('seo_ai_visibility')
+
+
 
       .find({ projectId: projectIdObj })
 
+
+
       .sort({ extraction_timestamp: -1 }) // Get latest
+
+
 
       .limit(1)
 
+
+
       .project({
+
+
 
         projectId: 1,
 
+
+
         raw_json_ld_blocks: 1,
+
+
 
         parsed_entities: 1,
 
+
+
         entity_types: 1,
+
+
 
         entity_relationship_graph: 1,
 
+
+
         primary_entity: 1,
+
+
 
         entity_graph_integrity: 1,
 
+
+
         extraction_timestamp: 1,
+
+
 
         ai_jobId: 1
 
+
+
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -4339,259 +8735,519 @@ export const getAIVisibilityEntityGraph = async (req, res) => {
 
 
 
+
+
+
+
     if (latestData.length > 0) {
+
+
 
       console.log("Entity Graph Controller - Found document with keys:", Object.keys(latestData[0]));
 
+
+
       console.log("Entity Graph Controller - parsed_entities count:", latestData[0].parsed_entities?.length || 0);
+
+
 
       console.log("Entity Graph Controller - entity_relationship_graph count:", latestData[0].entity_relationship_graph?.length || 0);
 
+
+
     }
+
+
+
+
 
 
 
     if (!latestData || latestData.length === 0) {
 
+
+
       console.log("Entity Graph Controller - No AI visibility data found, returning empty response");
+
+
 
       return res.json({
 
+
+
         success: true,
+
+
 
         data: {
 
+
+
           summary: {
+
+
 
             json_ld_blocks: 0,
 
+
+
             primary_entity: "None",
+
+
 
             synthetic_ids_count: 0,
 
+
+
             graph_connectivity: "Fragmented"
+
+
 
           },
 
+
+
           entity_distribution: [],
+
+
 
           relationship_matrix: [],
 
+
+
           analysis_status: "failed"
+
+
 
         }
 
+
+
       });
 
+
+
     }
+
+
+
+
 
 
 
     const data = latestData[0];
 
+
+
     const parsedEntities = data.parsed_entities || [];
 
+
+
     const relationshipGraph = data.entity_relationship_graph || [];
+
+
 
     const rawJsonLdBlocks = data.raw_json_ld_blocks || [];
 
 
 
+
+
+
+
     // Calculate json_ld_blocks
+
+
 
     const json_ld_blocks = rawJsonLdBlocks.length;
 
 
 
+
+
+
+
     // Get primary_entity
+
+
 
     const primary_entity = data.primary_entity?.primary_entity_type || "None";
 
 
 
+
+
+
+
     // Calculate synthetic_ids_count
+
+
 
     const synthetic_ids_count = parsedEntities.filter(entity => {
 
+
+
       const entityId = entity['@id'];
 
+
+
       return entityId && entityId.includes('#') && entityId.includes('_');
+
+
 
     }).length;
 
 
 
+
+
+
+
     // Calculate entity_distribution
+
+
 
     const entityDistribution = {};
 
+
+
     parsedEntities.forEach(entity => {
+
+
 
       const entityType = entity['@type'];
 
+
+
       if (Array.isArray(entityType)) {
+
+
 
         entityType.forEach(type => {
 
+
+
           entityDistribution[type] = (entityDistribution[type] || 0) + 1;
+
+
 
         });
 
+
+
       } else if (entityType) {
+
+
 
         entityDistribution[entityType] = (entityDistribution[entityType] || 0) + 1;
 
+
+
       }
+
+
 
     });
 
+
+
     const entity_distribution = Object.entries(entityDistribution).map(([type, count]) => ({
+
+
 
       type,
 
+
+
       count
+
+
 
     }));
 
 
 
+
+
+
+
     // Calculate relationship_matrix
+
+
 
     const relationshipCounts = {};
 
+
+
     relationshipGraph.forEach(relationship => {
+
+
 
       // Count relationships by source entity
 
+
+
       if (relationship.source) {
+
+
 
         relationshipCounts[relationship.source] = (relationshipCounts[relationship.source] || 0) + 1;
 
+
+
       }
+
+
 
       // Count relationships by target entity
 
+
+
       if (relationship.target) {
+
+
 
         relationshipCounts[relationship.target] = (relationshipCounts[relationship.target] || 0) + 1;
 
+
+
       }
 
+
+
     });
+
+
+
+
 
 
 
     const relationship_matrix = parsedEntities.map(entity => {
 
+
+
       const nodeId = entity['@id'];
 
+
+
       const relationships_count = relationshipCounts[nodeId] || 0;
+
+
 
       const orphan = relationships_count === 0;
 
 
 
+
+
+
+
       // Safe type handling for arrays
+
+
 
       const type = Array.isArray(entity['@type'])
 
+
+
         ? entity['@type'][0]
+
+
 
         : entity['@type'] || 'Unknown';
 
 
 
+
+
+
+
       const safeType = typeof type === 'string'
 
+
+
         ? type.toLowerCase()
+
+
 
         : 'unknown';
 
 
 
+
+
+
+
       return {
+
+
 
         node_id: nodeId || `#${safeType}_unknown`,
 
+
+
         type: Array.isArray(entity['@type']) ? entity['@type'][0] : entity['@type'] || 'Unknown',
+
+
 
         relationships_count,
 
+
+
         orphan
 
+
+
       };
+
+
 
     });
 
 
 
+
+
+
+
     // Calculate graph_connectivity (simplified as noted)
 
+
+
     const hasOrphans = relationship_matrix.some(entity => entity.orphan);
+
+
 
     const graph_connectivity = hasOrphans ? "Fragmented" : "Unified";
 
 
 
+
+
+
+
     // Determine analysis_status from ai_jobId (not hardcoded)
+
+
 
     let analysis_status = "failed";
 
+
+
     if (data.ai_jobId) {
+
+
 
       try {
 
+
+
         // Check job status in jobs collection
+
+
 
         const jobDoc = await db.collection('jobs').findOne({
 
+
+
           _id: data.ai_jobId
+
+
 
         });
 
 
 
+
+
+
+
         if (jobDoc) {
+
+
 
           switch (jobDoc.status) {
 
+
+
             case 'queued':
+
+
 
             case 'running':
 
+
+
               analysis_status = "active";
 
+
+
               break;
+
+
 
             case 'completed':
 
+
+
               analysis_status = "completed";
 
+
+
               break;
+
+
 
             case 'failed':
 
+
+
               analysis_status = "failed";
+
+
 
               break;
 
+
+
             default:
+
+
 
               analysis_status = "failed";
 
+
+
           }
+
+
 
         }
 
+
+
       } catch (jobError) {
+
+
 
         console.warn('[AI_VISIBILITY] Could not fetch job status, defaulting to failed:', jobError.message);
 
+
+
         analysis_status = "failed";
+
+
 
       }
 
+
+
     }
+
+
+
+
 
 
 
@@ -4599,53 +9255,107 @@ export const getAIVisibilityEntityGraph = async (req, res) => {
 
 
 
+
+
+
+
     const responseData = {
+
+
 
       success: true,
 
+
+
       data: {
+
+
 
         summary: {
 
+
+
           json_ld_blocks,
+
+
 
           primary_entity,
 
+
+
           synthetic_ids_count,
+
+
 
           graph_connectivity
 
+
+
         },
+
+
 
         entity_distribution,
 
+
+
         relationship_matrix,
+
+
 
         analysis_status,
 
+
+
         raw_json_ld_blocks: rawJsonLdBlocks || []
 
+
+
       }
+
+
 
     };
 
 
 
+
+
+
+
     console.log("Entity Graph Controller - Sending response:", {
+
+
 
       success: responseData.success,
 
+
+
       dataKeys: Object.keys(responseData.data),
+
+
 
       entityDistributionCount: responseData.data.entity_distribution.length,
 
+
+
       relationshipMatrixCount: responseData.data.relationship_matrix.length,
+
+
 
       rawJsonLdBlocksCount: responseData.data.raw_json_ld_blocks.length,
 
+
+
       analysisStatus: responseData.data.analysis_status
 
+
+
     });
+
+
+
+
 
 
 
@@ -4653,71 +9363,143 @@ export const getAIVisibilityEntityGraph = async (req, res) => {
 
 
 
+
+
+
+
   } catch (error) {
+
+
 
     console.error('[AI_VISIBILITY] Error getting entity graph:', error);
 
+
+
     return res.status(500).json({
+
+
 
       success: false,
 
+
+
       message: 'Internal server error',
+
+
 
       error: error.message
 
+
+
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 export const getAIVisibilityPage = async (req, res) => {
+
+
 
   try {
 
+
+
     const { id: projectId } = req.params;
+
+
 
     const { url } = req.query;
 
 
 
+
+
+
+
     // Validate projectId format
+
+
 
     if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'Invalid project ID format'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     // Validate URL parameter
 
+
+
     if (!url) {
+
+
 
       return res.status(400).json({
 
+
+
         success: false,
+
+
 
         message: 'URL parameter is required'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const projectIdObj = new mongoose.Types.ObjectId(projectId);
 
+
+
     const decodedUrl = decodeURIComponent(url);
+
+
+
+
 
 
 
@@ -4725,141 +9507,283 @@ export const getAIVisibilityPage = async (req, res) => {
 
 
 
+
+
+
+
     // Query seo_ai_page_scores collection for specific page
+
+
 
     const db = mongoose.connection.db;
 
 
 
+
+
+
+
     // Check if collection exists before querying
 
+
+
     const collections = await db.listCollections().toArray();
+
+
 
     const hasCollection = collections.some(c => c.name === 'seo_ai_page_scores');
 
 
 
+
+
+
+
     if (!hasCollection) {
+
+
 
       console.log(`[AI_VISIBILITY] Collection seo_ai_page_scores does not exist | projectId=${projectId}`);
 
+
+
       return res.status(404).json({
+
+
 
         success: false,
 
+
+
         message: 'No AI visibility data found for this project'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     // Find the specific page
 
+
+
     const pageData = await db.collection('seo_ai_page_scores')
+
+
 
       .findOne({
 
+
+
         projectId: projectIdObj,
+
+
 
         page_url: decodedUrl
 
+
+
       });
+
+
+
+
 
 
 
     if (!pageData) {
 
+
+
       console.log(`[AI_VISIBILITY] Page not found | projectId=${projectId} | url=${decodedUrl}`);
+
+
 
       return res.status(404).json({
 
+
+
         success: false,
+
+
 
         message: 'Page not found in AI visibility data'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     // Query for real issues from the database
+
+
 
     let issues = [];
 
 
 
+
+
+
+
     // Check if seo_ai_visibility_issues collection exists
+
+
 
     const issuesCollection = collections.find(c => c.name === 'seo_ai_visibility_issues');
 
 
 
+
+
+
+
     if (issuesCollection) {
+
+
 
       console.log(`[AI_VISIBILITY] Found seo_ai_visibility_issues collection, querying for page issues | projectId=${projectId} | url=${decodedUrl}`);
 
 
 
+
+
+
+
       // Query the issues collection for this specific page
+
+
 
       const pageIssues = await db.collection('seo_ai_visibility_issues')
 
+
+
         .find({
+
+
 
           projectId: projectIdObj,
 
+
+
           page_url: decodedUrl
 
+
+
         })
+
+
 
         .project({
 
+
+
           severity: 1,
+
+
 
           rule_id: 1,
 
+
+
           issue_message: 1,
+
+
 
           detected_value: 1,
 
+
+
           expected_value: 1,
+
+
 
           data_path: 1,
 
+
+
           data_key: 1,
+
+
 
           created_at: 1
 
+
+
         })
+
+
 
         .toArray();
 
 
 
+
+
+
+
       // Format issues to match expected structure - USE CORRECT FIELD NAMES
+
+
 
       issues = pageIssues.map(issue => ({
 
+
+
         severity: issue.severity || 'unknown',
+
+
 
         rule_id: issue.rule_id || 'UNKNOWN',
 
+
+
         issue_message: issue.issue_message,
+
+
 
         detected_value: issue.detected_value,
 
+
+
         expected_value: issue.expected_value,
+
+
 
         data_path: issue.data_path || issue.data_key,
 
+
+
         data_key: issue.data_key,
+
+
 
         created_at: issue.created_at
 
+
+
       }));
+
+
+
+
 
 
 
@@ -4867,53 +9791,107 @@ export const getAIVisibilityPage = async (req, res) => {
 
 
 
+
+
+
+
       console.log(`[AI_VISIBILITY] Found ${issues.length} real issues for page | projectId=${projectId} | url=${decodedUrl}`);
+
+
 
     } else {
 
+
+
       console.log(`[AI_VISIBILITY] seo_ai_visibility_issues collection does not exist, returning empty issues array | projectId=${projectId}`);
+
+
 
       // No issues collection exists, return empty array
 
+
+
       // This is the correct behavior - no synthetic issues should be generated
+
+
 
     }
 
 
 
+
+
+
+
     // Calculate actual issue counts from the real issues data
+
+
 
     const actualHighIssues = issues.filter(issue => issue.severity.toLowerCase() === 'high').length;
 
+
+
     const actualMediumIssues = issues.filter(issue => issue.severity.toLowerCase() === 'medium').length;
 
+
+
     const actualLowIssues = issues.filter(issue => issue.severity.toLowerCase() === 'low').length;
+
+
 
     const actualTotalIssues = issues.length;
 
 
 
+
+
+
+
     // Format response with pure scoring fields
+
+
 
     const responseData = {
 
+
+
       url: pageData.page_url,
+
+
 
       score: pageData.final_score || 0,
 
+
+
       category_scores: pageData.category_scores || {},
+
+
 
       rule_breakdown: pageData.rule_breakdown || [],
 
+
+
       word_count: pageData.word_count || 0,
+
+
 
       issues: issues,
 
+
+
       total_issues: actualTotalIssues,
+
+
 
       last_crawled: pageData.updated_at
 
+
+
     };
+
+
+
+
 
 
 
@@ -4921,85 +9899,171 @@ export const getAIVisibilityPage = async (req, res) => {
 
 
 
+
+
+
+
     return res.json({
+
+
 
       success: true,
 
+
+
       data: responseData
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[AI_VISIBILITY] Error getting AI visibility page:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Internal server error',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 export const getAIVisibilityPages = async (req, res) => {
+
+
 
   try {
 
+
+
     const { id: projectId } = req.params;
+
+
 
     const {
 
+
+
       page = 1,
+
+
 
       limit = 20,
 
+
+
       grade,
+
+
 
       minScore,
 
+
+
       maxScore,
+
+
 
       severity,
 
+
+
       search
+
+
 
     } = req.query;
 
 
 
+
+
+
+
     // Validate projectId format
+
+
 
     if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'Invalid project ID format'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const projectIdObj = new mongoose.Types.ObjectId(projectId);
+
+
 
     const pageNum = Math.max(parseInt(page), 1);
 
+
+
     const limitNum = Math.min(parseInt(limit), 100); // Cap at 100 for performance
 
+
+
     const skip = (pageNum - 1) * limitNum;
+
+
+
+
 
 
 
@@ -5007,25 +10071,51 @@ export const getAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Build query filter for pure scoring structure
+
+
 
     const filter = { projectId: projectIdObj };
 
 
 
+
+
+
+
     if (minScore !== undefined) {
+
+
 
       filter.final_score = { ...filter.final_score, $gte: parseFloat(minScore) };
 
+
+
     }
+
+
+
+
 
 
 
     if (maxScore !== undefined) {
 
+
+
       filter.final_score = { ...filter.final_score, $lte: parseFloat(maxScore) };
 
+
+
     }
+
+
+
+
 
 
 
@@ -5033,131 +10123,263 @@ export const getAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     if (search) {
+
+
 
       filter.page_url = { $regex: search, $options: 'i' };
 
+
+
     }
+
+
+
+
 
 
 
     // Query seo_ai_page_scores collection
 
+
+
     const db = mongoose.connection.db;
+
+
+
+
 
 
 
     // Check if collection exists before querying
 
+
+
     const collections = await db.listCollections().toArray();
+
+
 
     const hasCollection = collections.some(c => c.name === 'seo_ai_page_scores');
 
 
 
+
+
+
+
     if (!hasCollection) {
+
+
 
       console.log(`[AI_VISIBILITY] Collection seo_ai_page_scores does not exist | projectId=${projectId}`);
 
+
+
       return res.json({
+
+
 
         success: true,
 
+
+
         data: {
+
+
 
           pages: [],
 
+
+
           summary: {
+
+
 
             total_pages: 0,
 
+
+
             avg_score: 0,
+
+
 
             critical_issues: 0,
 
+
+
             crawl_duration: 0
+
+
 
           },
 
+
+
           pagination: {
+
+
 
             page: pageNum,
 
+
+
             total: 0,
+
+
 
             limit: limitNum
 
+
+
           }
+
+
 
         }
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     // Get total count for pagination
+
+
 
     const totalCount = await db.collection('seo_ai_page_scores').countDocuments(filter);
 
 
 
+
+
+
+
     // Get pages with pagination using pure scoring fields
+
+
 
     const pages = await db.collection('seo_ai_page_scores')
 
+
+
       .find(filter)
+
+
 
       .sort({ final_score: -1 }) // Sort by final_score descending
 
+
+
       .skip(skip)
+
+
 
       .limit(limitNum)
 
+
+
       .project({
+
+
 
         page_url: 1,
 
+
+
         final_score: 1,
+
+
 
         category_scores: 1,
 
+
+
         rule_breakdown: 1,
+
+
 
         updated_at: 1
 
+
+
       })
+
+
 
       .toArray();
 
 
 
+
+
+
+
     // Get summary metrics using pure scoring fields
+
+
 
     const summaryResults = await db.collection('seo_ai_page_scores').aggregate([
 
+
+
       { $match: filter },
+
+
 
       {
 
+
+
         $group: {
+
+
 
           _id: null,
 
+
+
           total_pages: { $sum: 1 },
+
+
 
           avg_score: { $avg: '$final_score' },
 
+
+
           min_updated: { $min: '$updated_at' },
+
+
 
           max_updated: { $max: '$updated_at' }
 
+
+
         }
+
+
 
       }
 
+
+
     ]).toArray();
+
+
+
+
 
 
 
@@ -5165,79 +10387,159 @@ export const getAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     const summary = summaryData || {
+
+
 
       total_pages: 0,
 
+
+
       avg_score: 0,
+
+
 
       critical_issues: 0,
 
+
+
       min_updated: null,
+
+
 
       max_updated: null
 
+
+
     };
+
+
+
+
 
 
 
     // Calculate crawl duration in minutes
 
+
+
     let crawlDuration = 0;
+
+
 
     if (summary.min_updated && summary.max_updated) {
 
+
+
       crawlDuration = Math.round((summary.max_updated - summary.min_updated) / (1000 * 60));
+
+
 
     }
 
 
 
+
+
+
+
     // Format response with pure scoring structure
+
+
 
     const formattedPages = pages.map(page => ({
 
+
+
       url: page.page_url,
+
+
 
       score: page.final_score || 0,
 
+
+
       category_scores: page.category_scores || {},
+
+
 
       rule_breakdown: page.rule_breakdown || [],
 
+
+
       last_crawled: page.updated_at
+
+
 
     }));
 
 
 
+
+
+
+
     const responseData = {
+
+
 
       pages: formattedPages,
 
+
+
       summary: {
+
+
 
         total_pages: summary.total_pages,
 
+
+
         avg_score: Math.round(summary.avg_score * 10) / 10, // Round to 1 decimal
+
+
 
         critical_issues: summary.critical_issues,
 
+
+
         crawl_duration: crawlDuration
+
+
 
       },
 
+
+
       pagination: {
+
+
 
         page: pageNum,
 
+
+
         total: Math.ceil(totalCount / limitNum),
+
+
 
         limit: limitNum
 
+
+
       }
 
+
+
     };
+
+
+
+
 
 
 
@@ -5245,65 +10547,131 @@ export const getAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     return res.json({
+
+
 
       success: true,
 
+
+
       data: responseData
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[AI_VISIBILITY] Error getting AI visibility pages:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Internal server error',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 export const getAIVisibilityWorstPages = async (req, res) => {
+
+
 
   try {
 
+
+
     const { id: projectId } = req.params;
+
+
 
     const { limit = 5 } = req.query;
 
 
 
+
+
+
+
     // Validate projectId format
+
+
 
     if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'Invalid project ID format'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const projectIdObj = new mongoose.Types.ObjectId(projectId);
 
+
+
     const limitNum = Math.min(parseInt(limit), 50); // Cap at 50 for performance
+
+
+
+
 
 
 
@@ -5311,59 +10679,119 @@ export const getAIVisibilityWorstPages = async (req, res) => {
 
 
 
+
+
+
+
     // Query ONLY seo_ai_page_scores collection
+
+
 
     const db = mongoose.connection.db;
 
 
 
+
+
+
+
     // Check if collection exists before querying
 
+
+
     const collections = await db.listCollections().toArray();
+
+
 
     const hasCollection = collections.some(c => c.name === 'seo_ai_page_scores');
 
 
 
+
+
+
+
     if (!hasCollection) {
+
+
 
       console.log(`[AI_VISIBILITY] Collection seo_ai_page_scores does not exist | projectId=${projectId}`);
 
+
+
       return res.json({
+
+
 
         success: true,
 
+
+
         data: []
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const worstPages = await db.collection('seo_ai_page_scores')
+
+
 
       .find({ projectId: projectIdObj })
 
+
+
       .sort({ final_score: 1 }) // Sort ascending — lowest final_score are worst
+
+
 
       .limit(limitNum)
 
+
+
       .project({
+
+
 
         page_url: 1,
 
+
+
         final_score: 1,
+
+
 
         category_scores: 1,
 
+
+
         rule_breakdown: 1,
+
+
 
         updated_at: 1
 
+
+
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -5371,61 +10799,123 @@ export const getAIVisibilityWorstPages = async (req, res) => {
 
 
 
+
+
+
+
     // Format response for frontend with pure scoring fields
+
+
 
     const formattedPages = worstPages.map(page => ({
 
+
+
       url: page.page_url,
+
+
 
       ai_score: page.final_score || 0,
 
+
+
       category_scores: page.category_scores || {},
+
+
 
       rule_breakdown: page.rule_breakdown || [],
 
+
+
       last_crawled: page.updated_at
+
+
 
     }));
 
 
 
+
+
+
+
     return res.json({
+
+
 
       success: true,
 
+
+
       data: formattedPages
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[AI_VISIBILITY] Error getting worst pages:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Internal server error',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 export const getStandaloneAIVisibilityPages = async (req, res) => {
+
+
 
   try {
 
+
+
     const { id: aiProjectId } = req.params;
 
+
+
     const { limit = 50, page = 1 } = req.query;
+
+
+
+
 
 
 
@@ -5433,79 +10923,159 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Validate aiProjectId format
+
+
 
     if (!aiProjectId || !mongoose.Types.ObjectId.isValid(aiProjectId)) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'Invalid AI project ID format'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     // 🔒 SECURITY: Verify AI project ownership before accessing child collections
 
+
+
     const AIVisibilityProject = (await import('../../ai_visibility/model/AIVisibilityProject.js')).default;
+
+
 
     const aiProject = await AIVisibilityProject.findByIdAndUser(aiProjectId, req.user._id);
 
+
+
     if (!aiProject) {
+
+
 
       return res.status(403).json({
 
+
+
         success: false,
+
+
 
         message: 'Access denied: AI project not found or you do not have permission'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const aiProjectIdObj = new mongoose.Types.ObjectId(aiProjectId);
+
+
 
     const pageNum = Math.max(parseInt(page), 1);
 
+
+
     const limitNum = Math.min(parseInt(limit), 100);
+
+
 
     const skip = (pageNum - 1) * limitNum;
 
 
 
+
+
+
+
     // Get database connection
+
+
 
     const db = mongoose.connection.db;
 
 
 
+
+
+
+
     // Fetch URLs from seo_ai_internal_links where aiProjectId matches
+
+
 
     console.log(`[AI_VISIBILITY] Fetching from seo_ai_internal_links | aiProjectId=${aiProjectId}`);
 
+
+
     const internalLinks = await db.collection('seo_ai_internal_links')
+
+
 
       .find({ aiProjectId: aiProjectIdObj })
 
+
+
       .project({
+
+
 
         url: 1,
 
+
+
         score: 1,
+
+
 
         issues_count: 1,
 
+
+
         updated_at: 1
+
+
 
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -5513,27 +11083,55 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Optionally fetch from seo_ai_visibility where projectId matches
+
+
 
     console.log(`[AI_VISIBILITY] Fetching from seo_ai_visibility | projectId=${aiProjectId}`);
 
+
+
     const visibilityPages = await db.collection('seo_ai_visibility')
+
+
 
       .find({ projectId: aiProjectIdObj })
 
+
+
       .project({
+
+
 
         url: 1,
 
+
+
         score: 1,
+
+
 
         issues_count: 1,
 
+
+
         updated_at: 1
+
+
 
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -5541,29 +11139,59 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Fetch page scores from seo_ai_page_scores where projectId matches
+
+
 
     console.log(`[AI_VISIBILITY] Fetching scores from seo_ai_page_scores | projectId=${aiProjectId}`);
 
+
+
     const pageScores = await db.collection('seo_ai_page_scores')
+
+
 
       .find({ projectId: aiProjectIdObj })
 
+
+
       .project({
+
+
 
         page_url: 1,
 
+
+
         final_score: 1,
+
+
 
         category_scores: 1,
 
+
+
         rule_breakdown: 1,
+
+
 
         updated_at: 1
 
+
+
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -5571,23 +11199,47 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Fetch issues from seo_ai_visibility_issues collection
+
+
 
     console.log(`[AI_VISIBILITY] Fetching issues from seo_ai_visibility_issues | projectId=${aiProjectId}`);
 
+
+
     const issues = await db.collection('seo_ai_visibility_issues')
+
+
 
       .find({ projectId: aiProjectIdObj })
 
+
+
       .project({
+
+
 
         page_url: 1,
 
+
+
         severity: 1
+
+
 
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -5595,23 +11247,47 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Group issues by page_url
+
+
 
     const issuesMap = {};
 
+
+
     issues.forEach(issue => {
+
+
 
       if (!issuesMap[issue.page_url]) {
 
+
+
         issuesMap[issue.page_url] = {
+
+
 
           total: 0,
 
+
+
           high: 0
+
+
 
         };
 
+
+
       }
+
+
+
+
 
 
 
@@ -5619,173 +11295,347 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
       if (issue.severity === 'high') {
+
+
 
         issuesMap[issue.page_url].high++;
 
+
+
       }
 
+
+
     });
+
+
+
+
 
 
 
     // Create score map for quick lookup
 
+
+
     const scoreMap = new Map();
+
+
 
     pageScores.forEach(scoreDoc => {
 
+
+
       if (scoreDoc.page_url) {
+
+
 
         // Normalize URL (remove trailing slash for consistent matching)
 
+
+
         const normalizedUrl = scoreDoc.page_url.replace(/\/$/, '');
+
+
 
         scoreMap.set(normalizedUrl, scoreDoc);
 
+
+
       }
 
+
+
     });
+
+
+
+
 
 
 
     // Merge both URL lists and remove duplicates
 
+
+
     const urlMap = new Map();
+
+
+
+
 
 
 
     // Add internal links
 
+
+
     internalLinks.forEach(page => {
+
+
 
       if (page.url) {
 
+
+
         const normalizedUrl = page.url.replace(/\/$/, '');
+
+
 
         urlMap.set(normalizedUrl, {
 
+
+
           url: page.url,
+
+
 
           score: page.score || 0,
 
+
+
           issues: page.issues_count || 0,
+
+
 
           updated_at: page.updated_at
 
+
+
         });
+
+
 
       }
 
+
+
     });
+
+
+
+
 
 
 
     // Add visibility pages (will overwrite duplicates with latest data)
 
+
+
     visibilityPages.forEach(page => {
+
+
 
       if (page.url) {
 
+
+
         const normalizedUrl = page.url.replace(/\/$/, '');
+
+
 
         urlMap.set(normalizedUrl, {
 
+
+
           url: page.url,
+
+
 
           score: page.score || 0,
 
+
+
           issues: page.issues_count || 0,
+
+
 
           updated_at: page.updated_at
 
+
+
         });
+
+
 
       }
 
+
+
     });
+
+
+
+
 
 
 
     // Merge scores into page list
 
+
+
     let matchedCount = 0;
+
+
 
     const pagesWithScores = Array.from(urlMap.values()).map(page => {
 
+
+
       const normalizedUrl = page.url.replace(/\/$/, '');
 
+
+
       const scoreDoc = scoreMap.get(normalizedUrl);
+
+
 
       const pageIssues = issuesMap[page.url] || { total: 0, high: 0 };
 
 
 
+
+
+
+
       if (scoreDoc) {
 
+
+
         matchedCount++;
+
+
 
         const categoryScores = scoreDoc.category_scores || {};
 
 
 
+
+
+
+
         return {
 
+
+
           url: page.url,
+
+
 
           finalScore: scoreDoc.final_score || 0,
 
+
+
           aeo: categoryScores.aeo_score || 0,
+
+
 
           llm: categoryScores.llm_readiness || 0,
 
+
+
           cite: categoryScores.citation_probability || 0,
+
+
 
           aeoPercent: Math.round(categoryScores.aeo_score || 0),
 
+
+
           llmPercent: Math.round(categoryScores.llm_readiness || 0),
+
+
 
           citePercent: Math.round(categoryScores.citation_probability || 0),
 
+
+
           issuesCount: pageIssues.total,
 
+
+
           criticalCount: pageIssues.high,
+
+
 
           updated_at: page.updated_at || scoreDoc.updated_at
 
+
+
         };
+
+
 
       } else {
 
+
+
         return {
+
+
 
           url: page.url,
 
+
+
           finalScore: 0,
+
+
 
           aeo: 0,
 
+
+
           llm: 0,
+
+
 
           cite: 0,
 
+
+
           aeoPercent: 0,
+
+
 
           llmPercent: 0,
 
+
+
           citePercent: 0,
+
+
 
           issuesCount: pageIssues.total,
 
+
+
           criticalCount: pageIssues.high,
+
+
 
           updated_at: page.updated_at
 
+
+
         };
+
+
 
       }
 
+
+
     });
+
+
+
+
 
 
 
@@ -5793,21 +11643,43 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     // Apply pagination
 
+
+
     const totalPages = pagesWithScores.length;
+
+
 
     const paginatedPages = pagesWithScores.slice(skip, skip + limitNum);
 
 
 
+
+
+
+
     // Calculate metrics
+
+
 
     const scores = pagesWithScores.map(p => p.finalScore).filter(s => s > 0);
 
+
+
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
+
+
     const totalCritical = pagesWithScores.reduce((sum, p) => sum + p.criticalCount, 0);
+
+
+
+
 
 
 
@@ -5815,63 +11687,127 @@ export const getStandaloneAIVisibilityPages = async (req, res) => {
 
 
 
+
+
+
+
     return res.json({
+
+
 
       success: true,
 
+
+
       message: 'Standalone AI visibility pages retrieved successfully',
+
+
 
       data: {
 
+
+
         pages: paginatedPages,
+
+
 
         totalPages: totalPages,
 
+
+
         avgScore: avgScore,
+
+
 
         totalCritical: totalCritical,
 
+
+
         pagination: {
+
+
 
           page: pageNum,
 
+
+
           limit: limitNum,
+
+
 
           total: Math.ceil(totalPages / limitNum)
 
+
+
         }
+
+
 
       }
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[AI_VISIBILITY] Error getting standalone AI visibility pages:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Failed to get standalone AI visibility pages',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 export const getPageScore = async (req, res) => {
+
+
 
   try {
 
+
+
     const { projectId, url } = req.query;
+
+
+
+
 
 
 
@@ -5879,53 +11815,107 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     // Validate inputs
+
+
 
     if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'Invalid project ID format'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     if (!url) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'URL parameter is required'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     // 🔒 SECURITY: Verify AI project ownership before accessing child collections
 
+
+
     const AIVisibilityProject = (await import('../../ai_visibility/model/AIVisibilityProject.js')).default;
+
+
 
     const aiProject = await AIVisibilityProject.findByIdAndUser(projectId, req.user._id);
 
+
+
     if (!aiProject) {
+
+
 
       return res.status(403).json({
 
+
+
         success: false,
+
+
 
         message: 'Access denied: AI project not found or you do not have permission'
 
+
+
       });
 
+
+
     }
+
+
+
+
 
 
 
@@ -5933,43 +11923,87 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     // Robust URL normalization for matching
+
+
 
     const normalizeUrl = (url) => {
 
+
+
       try {
+
+
 
         const parsed = new URL(url);
 
+
+
         // Force https protocol
+
+
 
         parsed.protocol = "https:";
 
+
+
         // Remove trailing slash and duplicate slashes
+
+
 
         parsed.pathname = parsed.pathname.replace(/\/+$/, "").replace(/\/+/g, "/");
 
+
+
         // Standardize www (remove it)
+
+
 
         parsed.hostname = parsed.hostname?.replace(/^www\./, "");
 
+
+
         return parsed.origin + parsed.pathname;
+
+
 
       } catch {
 
+
+
         // Fallback for malformed URLs
+
+
 
         return url.replace(/^https?:\/\//, "")
 
+
+
           .replace(/^www\./, "")
+
+
 
           .replace(/\/+$/, "")
 
+
+
           .replace(/\/+/g, "/");
+
+
 
       }
 
+
+
     };
+
+
+
+
 
 
 
@@ -5977,27 +12011,55 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     console.log(`[AI_VISIBILITY] URL normalization | original=${url} | normalized=${normalizedUrl}`);
+
+
+
+
 
 
 
     // Get database connection
 
+
+
     const db = mongoose.connection.db;
+
+
+
+
 
 
 
     // Fetch page score from seo_ai_page_scores
 
+
+
     console.log(`[AI_VISIBILITY] Fetching page score from seo_ai_page_scores | normalized=${normalizedUrl}`);
+
+
+
+
 
 
 
     // Create flexible regex pattern for URL matching
 
+
+
     const pathname = new URL(normalizedUrl).pathname;
 
+
+
     const urlPattern = new RegExp(pathname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
+
+
+
+
 
 
 
@@ -6005,35 +12067,71 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     const pageScore = await db.collection('seo_ai_page_scores').findOne(
 
+
+
       {
+
+
 
         projectId: projectIdObj,
 
+
+
         page_url: { $regex: urlPattern }
+
+
 
       },
 
+
+
       {
+
+
 
         projection: {
 
+
+
           page_url: 1,
+
+
 
           final_score: 1,
 
+
+
           category_scores: 1,
+
+
 
           rule_breakdown: 1,
 
+
+
           updated_at: 1
+
+
 
         }
 
+
+
       }
 
+
+
     );
+
+
+
+
 
 
 
@@ -6041,55 +12139,111 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     // 🔍 DEBUG: Log raw database values
+
+
 
     if (pageScore) {
 
+
+
       console.log(`[AI_VISIBILITY] RAW DB DATA:`);
+
+
 
       console.log(`  - final_score: ${pageScore.final_score}`);
 
+
+
       console.log(`  - category_scores:`, pageScore.category_scores);
 
+
+
       console.log(`  - ai_impact from category_scores: ${pageScore.category_scores?.ai_impact}`);
+
+
 
     }
 
 
 
+
+
+
+
     // Fetch issues from seo_ai_visibility_issues
+
+
 
     console.log(`[AI_VISIBILITY] Fetching issues from seo_ai_visibility_issues | pattern=${urlPattern}`);
 
+
+
     const issues = await db.collection('seo_ai_visibility_issues')
+
+
 
       .find({
 
+
+
         projectId: projectIdObj,
+
+
 
         page_url: { $regex: urlPattern }
 
+
+
       })
+
+
 
       .project({
 
+
+
         page_url: 1,
+
+
 
         rule_name: 1,
 
+
+
         category: 1,
+
+
 
         severity: 1,
 
+
+
         description: 1,
+
+
 
         recommended_fix: 1,
 
+
+
         created_at: 1
+
+
 
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -6097,71 +12251,143 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     if (!pageScore) {
+
+
 
       return res.status(404).json({
 
+
+
         success: false,
+
+
 
         message: 'Page not found in AI visibility data'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     // Calculate metrics
 
+
+
     const categoryScores = pageScore.category_scores || {};
+
+
 
     const highSeverityCount = issues.filter(issue => issue.severity === 'high').length;
 
 
 
+
+
+
+
     const responseData = {
+
+
 
       url: pageScore.page_url,
 
+
+
       finalScore: pageScore.final_score || 0,
+
+
 
       categoryScores: {
 
+
+
         ai_impact: categoryScores.ai_impact || 0,  // 🔍 DEBUG: Added ai_impact
+
+
 
         aeo_score: categoryScores.aeo_score || 0,
 
+
+
         llm_readiness: categoryScores.llm_readiness || 0,
+
+
 
         citation_probability: categoryScores.citation_probability || 0,
 
+
+
         topical_authority: categoryScores.topical_authority || 0,
+
+
 
         voice_intent: categoryScores.voice_intent || 0
 
+
+
       },
+
+
 
       issues: issues,
 
+
+
       issuesCount: issues.length,
+
+
 
       highSeverityCount: highSeverityCount,
 
+
+
       ruleBreakdown: pageScore.rule_breakdown || [],
 
+
+
       updatedAt: pageScore.updated_at
+
+
 
     };
 
 
 
+
+
+
+
     console.log(`[AI_VISIBILITY] API RESPONSE PAYLOAD:`);
+
+
 
     console.log(`  - finalScore: ${responseData.finalScore}`);
 
+
+
     console.log(`  - categoryScores.ai_impact: ${responseData.categoryScores.ai_impact}`);
 
+
+
     console.log(`  - categoryScores:`, responseData.categoryScores);
+
+
+
+
 
 
 
@@ -6169,43 +12395,87 @@ export const getPageScore = async (req, res) => {
 
 
 
+
+
+
+
     return res.json({
+
+
 
       success: true,
 
+
+
       message: 'Page score retrieved successfully',
+
+
 
       data: responseData
 
+
+
     });
+
+
+
+
 
 
 
   } catch (error) {
 
+
+
     console.error('[AI_VISIBILITY] Error getting page score:', error);
+
+
 
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Failed to get page score',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
+
+
 
 };
 
 
 
+
+
+
+
 export const getAIVisibilityPageIssues = async (req, res) => {
+
+
 
   try {
 
+
+
     const { projectId, page_url } = req.query;
+
+
+
+
 
 
 
@@ -6213,103 +12483,207 @@ export const getAIVisibilityPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     // Validate inputs
+
+
 
     if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'Invalid project ID format'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     if (!page_url) {
 
+
+
       return res.status(400).json({
+
+
 
         success: false,
 
+
+
         message: 'page_url parameter is required'
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
     // 🔒 SECURITY: Verify AI project ownership before accessing child collections
 
+
+
     const AIVisibilityProject = (await import('../../ai_visibility/model/AIVisibilityProject.js')).default;
+
+
 
     const aiProject = await AIVisibilityProject.findByIdAndUser(projectId, req.user._id);
 
+
+
     if (!aiProject) {
+
+
 
       return res.status(403).json({
 
+
+
         success: false,
+
+
 
         message: 'Access denied: AI project not found or you do not have permission'
 
+
+
       });
+
+
 
     }
 
 
 
+
+
+
+
     const projectIdObj = new mongoose.Types.ObjectId(projectId);
+
+
 
     const decodedUrl = decodeURIComponent(page_url);
 
 
 
+
+
+
+
     // Get database connection
+
+
 
     const db = mongoose.connection.db;
 
 
 
+
+
+
+
     // Fetch issues from seo_ai_visibility_issues collection
+
+
 
     console.log(`[AI_VISIBILITY] Querying seo_ai_visibility_issues | projectId=${projectId} | page_url=${decodedUrl}`);
 
 
 
+
+
+
+
     const issues = await db.collection('seo_ai_visibility_issues')
+
+
 
       .find({
 
+
+
         projectId: projectIdObj,
+
+
 
         page_url: decodedUrl
 
+
+
       })
+
+
 
       .sort({ created_at: -1 })
 
+
+
       .project({
+
+
 
         rule_id: 1,
 
+
+
         category: 1,
+
+
 
         severity: 1,
 
+
+
         message: 1,
+
+
 
         rule_score: 1,
 
+
+
         created_at: 1
+
+
 
       })
 
+
+
       .toArray();
+
+
+
+
 
 
 
@@ -6317,91 +12691,245 @@ export const getAIVisibilityPageIssues = async (req, res) => {
 
 
 
+
+
+
+
     // Map database fields to frontend format
+
+
 
     const formattedIssues = issues.map((issue, index) => ({
 
+
+
       id: issue._id.toString(),
+
+
 
       rule_name: issue.rule_id || 'Unknown Rule',
 
+
+
       issue_code: issue.rule_id || `ISSUE-${index}`,
+
+
 
       category: issue.category || 'General',
 
+
+
       severity: issue.severity || 'low',
+
+
 
       description: issue.message || 'No description available',
 
+
+
       recommended_fix: `Review and fix the rule: ${issue.rule_id}`,
+
+
 
       score: issue.rule_score || 0,
 
+
+
       created_at: issue.created_at
+
+
 
     }));
 
 
 
+
+
+
+
     return res.json({
 
+
+
       success: true,
+
+
 
       message: 'Issues retrieved successfully',
 
+
+
       data: formattedIssues
+
+
 
     });
 
 
 
+
+
+
+
   } catch (error) {
+
+
 
     console.error('[AI_VISIBILITY] Error getting AI visibility page issues:', error);
 
+
+
     return res.status(500).json({
 
+
+
       success: false,
+
+
 
       message: 'Failed to get page issues',
 
+
+
       error: error.message
+
+
 
     });
 
+
+
   }
 
+
+
 };
+
+
+
 
 
 // ─── On-Page Issues (aggregated) ───────────────────────────────────────
+
 export const getOnPageIssues = async (req, res) => {
+
   try {
+
     const { id: projectId } = req.params;
 
+
+
     // Verify project exists
+
     const project = await SeoProject.findById(projectId);
+
     if (!project) {
+
       return res.status(404).json({ success: false, message: 'Project not found' });
+
     }
 
+
+
     // Check ownership
+
     if (project.user_id.toString() !== req.user._id.toString()) {
+
       return res.status(403).json({ success: false, message: 'Access denied' });
+
     }
+
+
 
     const result = await getOnPageIssuesService(projectId);
 
+
+
     return res.json({
+
       success: true,
+
       data: result,
+
     });
+
   } catch (error) {
+
     console.error('Error getting on-page issues:', error);
+
     return res.status(500).json({
+
       success: false,
+
       message: 'Failed to get on-page issues',
+
       error: error.message,
+
     });
+
   }
+
 };
+
+
+
+export const getIssueUrls = async (req, res) => {
+
+  try {
+
+    const { id: projectId, issueCode } = req.params;
+
+
+
+    // Verify project exists
+
+    const project = await SeoProject.findById(projectId);
+
+    if (!project) {
+
+      return res.status(404).json({ success: false, message: 'Project not found' });
+
+    }
+
+
+
+    // Check ownership
+
+    if (project.user_id.toString() !== req.user._id.toString()) {
+
+      return res.status(403).json({ success: false, message: 'Access denied' });
+
+    }
+
+
+
+    const urls = await getIssueUrlsService(projectId, issueCode);
+
+
+
+    return res.json({
+
+      success: true,
+
+      data: urls,
+
+    });
+
+  } catch (error) {
+
+    console.error('Error getting issue URLs:', error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: 'Failed to get issue URLs',
+
+      error: error.message,
+
+    });
+
+  }
+
+};
+

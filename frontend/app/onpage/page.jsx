@@ -6,7 +6,7 @@ import { useProject } from "@/contexts/ProjectContext"
 import apiService from "@/lib/apiService"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import IssueTable from "@/components/dashboard/issues/IssueTable"
-import IssueDetailPanel from "@/components/dashboard/issues/IssueDetailPanel"
+import IssueDetailView from "@/components/dashboard/issues/IssueDetailView"
 
 export default function OnPagePage() {
   const { user, isLoading: authLoading } = useAuth()
@@ -15,8 +15,24 @@ export default function OnPagePage() {
   const [issues, setIssues] = useState([])
   const [summary, setSummary] = useState(null)
   const [selected, setSelected] = useState(null)
+  const [selectedIssue, setSelectedIssue] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const handleIssueSelect = (index) => {
+    if (selected === index) {
+      setSelected(null)
+      setSelectedIssue(null)
+    } else {
+      setSelected(index)
+      setSelectedIssue(issues[index])
+    }
+  }
+
+  const handleBack = () => {
+    setSelected(null)
+    setSelectedIssue(null)
+  }
 
   useEffect(() => {
     if (!activeProject) return
@@ -68,55 +84,52 @@ export default function OnPagePage() {
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6">
               <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold">On-Page SEO Issues</h1>
-                    <p className="text-muted-foreground">
-                      {summary
-                        ? `${summary.total_issue_types} issue types · ${summary.total_issues_found} total issues · ${summary.total_pages_analyzed} pages analyzed`
-                        : "View and manage on-page SEO issues"}
-                    </p>
-                  </div>
-                  {issues.length > 0 && (
-                    <span className="text-xs font-bold px-2 py-1 rounded bg-primary/10 text-primary">
-                      {issues.length} FOUND
-                    </span>
-                  )}
-                </div>
+                {selectedIssue ? (
+                  <IssueDetailView issue={selectedIssue} onBack={handleBack} />
+                ) : (
+                  <>
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-2xl font-bold">On-Page SEO Issues</h1>
+                        <p className="text-muted-foreground">
+                          {summary
+                            ? `${summary.total_issue_types} issue types · ${summary.total_issues_found} total issues · ${summary.total_pages_analyzed} pages analyzed`
+                            : "View and manage on-page SEO issues"}
+                        </p>
+                      </div>
+                      {issues.length > 0 && (
+                        <span className="text-xs font-bold px-2 py-1 rounded bg-primary/10 text-primary">
+                          {issues.length} FOUND
+                        </span>
+                      )}
+                    </div>
 
-                {/* Content */}
-                <div className="bg-card rounded-lg border p-6">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-3"></div>
-                      <span className="text-muted-foreground">Loading issues...</span>
-                    </div>
-                  ) : error ? (
-                    <div className="text-center py-12 text-red-500">
-                      Failed to load issues: {error}
-                    </div>
-                  ) : issues.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      No on-page issues found. Your site looks great!
-                    </div>
-                  ) : (
-                    <div className="flex gap-6">
-                      <div className="flex-1 min-w-0">
+                    {/* Content */}
+                    <div className="bg-card rounded-lg border p-6">
+                      {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-3"></div>
+                          <span className="text-muted-foreground">Loading issues...</span>
+                        </div>
+                      ) : error ? (
+                        <div className="text-center py-12 text-red-500">
+                          Failed to load issues: {error}
+                        </div>
+                      ) : issues.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                          No on-page issues found. Your site looks great!
+                        </div>
+                      ) : (
                         <IssueTable
                           issues={issues}
                           selected={selected}
-                          onSelect={setSelected}
+                          onSelect={handleIssueSelect}
                         />
-                      </div>
-                      {selected !== null && issues[selected] && (
-                        <div className="w-80 shrink-0">
-                          <IssueDetailPanel issue={issues[selected]} />
-                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

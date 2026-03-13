@@ -13,6 +13,9 @@ export function SiteHeader({ user, onLogout }) {
     if (pathname === "/analytics") return "Analytics"
     if (pathname === "/onpage") return "On-Page Issues"
     if (pathname === "/technicalchecks") return "Technical Checks"
+    if (pathname === "/pagespeed") return "PageSpeed Insights"
+    if (pathname === "/keywords") return "Keywords"
+    if (pathname === "/off-page-links") return "Off-Page & Links"
     return "Dashboard"
   }
 

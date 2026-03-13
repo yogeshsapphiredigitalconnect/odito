@@ -23,6 +23,16 @@ class JobDispatcher {
   }
 
   /**
+   * Queue DOMAIN_PERFORMANCE job for immediate dispatch
+   */
+  async queueDomainPerformanceJob(job) {
+    // DOMAIN_PERFORMANCE jobs are dispatched immediately (no queue)
+    this.dispatchDomainPerformanceJob(job).catch(error => {
+      console.error(`[ERROR] DOMAIN_PERFORMANCE dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+    });
+  }
+
+  /**
    * Process jobs sequentially from queue (internal only)
    */
   async processQueue() {
@@ -515,6 +525,52 @@ class JobDispatcher {
       return {
         success: false,
         message: 'Failed to dispatch AI_VISIBILITY_SCORING job to Python worker',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Dispatch DOMAIN_PERFORMANCE job directly to Python worker via HTTP
+   * This is PUSH model - Node actively calls Python
+   */
+  async dispatchDomainPerformanceJob(job) {
+    try {
+      // Update job status to processing first
+      await jobService.updateJobStatus(job._id, 'PROCESSING', {
+        started_at: new Date(),
+        last_attempted_at: new Date()
+      });
+
+      // Direct HTTP call to Python worker
+      const response = await axios.post(`${this.pythonBaseURL}/api/jobs/domain-performance`, {
+        jobId: job._id.toString(),
+        projectId: job.project_id.toString(),
+        userId: job.user_id.toString(),
+        main_url: job.input_data.main_url
+      }, {
+        timeout: 240000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return {
+        success: true,
+        jobId: job._id
+      };
+    } catch (error) {
+      console.error(`[ERROR] DOMAIN_PERFORMANCE dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+
+      // Mark job as failed if dispatch fails
+      await jobService.updateJobStatus(job._id, 'FAILED', {
+        completed_at: new Date(),
+        error_message: `Dispatch failed: ${error.message}`
+      });
+
+      return {
+        success: false,
+        message: 'Failed to dispatch DOMAIN_PERFORMANCE job to Python worker',
         error: error.message
       };
     }
