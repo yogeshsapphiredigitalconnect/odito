@@ -267,7 +267,7 @@ class ContentCitesSourcesRule(BaseRule):
         
         return min(score, self.max_score)
 
-# Register all AEO Score rules (5 rules)
+# Register all AEO Score rules (6 rules)
 def register_aeo_score_rules(registry):
     """Register all AEO Score category rules"""
     registry.register(First60WordsDirectAnswerRule())
@@ -275,3 +275,4 @@ def register_aeo_score_rules(registry):
     registry.register(FAQSection5To10QuestionsRule())
     registry.register(QuestionBasedH2HeadingsRule())
     registry.register(DirectAnswerFormatRule())
+    registry.register(ContentCitesSourcesRule())

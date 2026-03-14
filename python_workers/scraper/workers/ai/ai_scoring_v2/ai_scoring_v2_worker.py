@@ -19,7 +19,7 @@ from pymongo import UpdateOne
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.append(os.path.dirname(__file__))  # Add current directory
 
-from db import seo_ai_visibility, seo_ai_page_scores, seo_ai_visibility_project, seo_ai_visibility_issues
+from db import seo_ai_visibility, seo_ai_page_scores, seo_ai_visibility_project, seo_ai_visibility_issues, seoprojects
 from scraper.shared.utils import send_completion_callback
 
 def send_progress_update(job_id: str, percentage: int, step: str, message: str, subtext: str = None):
@@ -51,6 +51,7 @@ def send_progress_update(job_id: str, percentage: int, step: str, message: str, 
 # Import new scoring engine
 from rule_registry import rule_registry
 from scoring_engine import ScoringEngine
+from metric_mapper import derive_dashboard_metrics
 from categories.ai_impact import register_ai_impact_rules
 from categories.citation_probability import register_citation_probability_rules
 from categories.llm_readiness import register_llm_readiness_rules
@@ -267,6 +268,15 @@ def execute_ai_visibility_scoring_v2(job_data: Dict[str, Any]) -> Dict[str, Any]
                     # Log but do not fail scoring if issue storage fails
                     logger.warning(f"[WORKER] Issue storage failed but continuing scoring | url={page_score.get('page_url', '')} | error={issue_error}")
                 
+                # Calculate and store dashboard metrics in seo_ai_visibility collection
+                try:
+                    category_scores = page_score.get("category_scores", {})
+                    dashboard_metrics = derive_dashboard_metrics(category_scores)
+                    update_page_ai_visibility(page_score, dashboard_metrics, job.projectId)
+                except Exception as metrics_error:
+                    # Log but do not fail scoring if metrics storage fails
+                    logger.warning(f"[WORKER] Dashboard metrics storage failed but continuing scoring | url={page_score.get('page_url', '')} | error={metrics_error}")
+                
                 # Update progress
                 progress = 40 + (50 * (i + 1) / len(pages_data))
                 send_progress_update(
@@ -405,6 +415,52 @@ def store_page_issues(issues: List[Dict[str, Any]], project_id: str, page_url: s
         logger.error(f"[WORKER] Error storing page issues | url={page_url} | error={e}")
         # Do not raise - issues are informational only and should not break scoring
 
+def update_page_ai_visibility(page_score: Dict[str, Any], dashboard_metrics: Dict[str, float], project_id: str):
+    """
+    Update seo_ai_visibility collection with dashboard metrics while preserving existing fields.
+    
+    This function adds dashboard_metrics to the existing ai_visibility structure:
+    ai_visibility.dashboard_metrics
+    """
+    try:
+        page_url = page_score.get("page_url", "")
+        category_scores = page_score.get("category_scores", {})
+        
+        if not page_url:
+            logger.warning("[WORKER] Cannot update AI visibility - missing page URL")
+            return
+        
+        # Debug log: Show derived dashboard metrics
+        logger.info(f"[METRICS] Derived dashboard metrics: {dashboard_metrics}")
+        
+        # Update the seo_ai_visibility collection, preserving existing fields
+        update_doc = {
+            "$set": {
+                "ai_visibility.score": page_score.get("page_ai_score", 0),
+                "ai_visibility.categories": category_scores,
+                "ai_visibility.dashboard_metrics": dashboard_metrics,
+                "updated_at": datetime.utcnow()
+            }
+        }
+        
+        # Use the detected URL field for the query
+        url_field = detect_url_field()
+        filter_doc = {
+            "projectId": ObjectId(project_id),
+            url_field: page_url
+        }
+        
+        result = seo_ai_visibility.update_one(filter_doc, update_doc)
+        
+        if result.matched_count > 0:
+            logger.info(f"[WORKER] Updated AI visibility with dashboard metrics | url={page_url} | metrics={len(dashboard_metrics)}")
+        else:
+            logger.warning(f"[WORKER] AI visibility document not found for update | url={page_url}")
+        
+    except Exception as e:
+        logger.error(f"[WORKER] Error updating AI visibility | url={page_url} | error={e}")
+        # Do not raise - dashboard metrics are non-critical
+
 def store_page_scores(page_scores: List[Dict[str, Any]], project_id: str, url_field: str):
     """Store page scores in database"""
     try:
@@ -447,13 +503,17 @@ def store_page_scores(page_scores: List[Dict[str, Any]], project_id: str, url_fi
         raise
 
 def store_website_score(website_result: Dict[str, Any], project_id: str):
-    """Store website-level score in project document"""
+    """Store website-level score in BOTH project collections"""
     try:
-        # Prepare update document
-        update_doc = {
+        # Derive 12 dashboard metrics from 6 category averages
+        dashboard_metrics = derive_dashboard_metrics(website_result.get("category_averages", {}))
+        
+        # === UPDATE 1: seo_ai_visibility_project (existing - preserve functionality) ===
+        update_doc_project = {
             "$set": {
                 "summary.overallScore": website_result["website_ai_score"],
                 "summary.categoryAverages": website_result["category_averages"],
+                "summary.dashboardMetrics": dashboard_metrics,
                 "summary.pagesScored": website_result["pages_scored"],
                 "summary.totalPages": website_result["pages_scored"],
                 "aiStatus": "completed",
@@ -463,16 +523,37 @@ def store_website_score(website_result: Dict[str, Any], project_id: str):
             }
         }
         
-        # Update project document
-        result = seo_ai_visibility_project.update_one(
+        # === UPDATE 2: seoprojects (NEW - store where frontend expects it) ===
+        update_doc_seo = {
+            "$set": {
+                "ai_visibility.score": website_result["website_ai_score"],
+                "ai_visibility.pages_scored": website_result["pages_scored"],
+                "ai_visibility.categories": website_result["category_averages"],
+                "ai_visibility.dashboard_metrics": dashboard_metrics,
+                "ai_visibility.scoring_version": "v2",
+                "last_ai_analysis_at": datetime.utcnow()
+            }
+        }
+        
+        # Execute both updates
+        result1 = seo_ai_visibility_project.update_one(
             {"_id": ObjectId(project_id)},
-            update_doc
+            update_doc_project
         )
         
-        if result.matched_count > 0:
-            logger.info(f"[WORKER] Updated project score | projectId={project_id} | score={website_result['website_ai_score']}")
+        result2 = seoprojects.update_one(
+            {"_id": ObjectId(project_id)},
+            update_doc_seo
+        )
+        
+        if result1.matched_count > 0 and result2.matched_count > 0:
+            logger.info(f"[WORKER] Updated both collections | projectId={project_id} | dashboardMetrics={len(dashboard_metrics)} metrics")
+        elif result1.matched_count > 0:
+            logger.warning(f"[WORKER] Updated seo_ai_visibility_project only | seoprojects not found | projectId={project_id}")
+        elif result2.matched_count > 0:
+            logger.warning(f"[WORKER] Updated seoprojects only | seo_ai_visibility_project not found | projectId={project_id}")
         else:
-            logger.warning(f"[WORKER] Project not found for score update | projectId={project_id}")
+            logger.warning(f"[WORKER] Neither collection found for update | projectId={project_id}")
         
     except Exception as e:
         logger.error(f"Error storing website score: {e}")
