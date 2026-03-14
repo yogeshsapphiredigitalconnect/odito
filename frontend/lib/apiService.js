@@ -218,6 +218,53 @@ class ApiService {
     }
   }
 
+  // Get AI Search Audit issue details
+  async getAISearchAuditIssue(projectId, issueId) {
+    const endpoint = `/ai-visibility/projects/${projectId}/ai-search-audit/issues/${issueId}`;
+    console.log('🔍 Getting AI Search Audit issue details:', { endpoint, projectId, issueId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ AI Search Audit issue response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ AI Search Audit issue error:', error);
+      throw error;
+    }
+  }
+
+  // Get AI Search Audit issues list
+  async getAISearchAuditIssues(projectId) {
+    const endpoint = `/ai-visibility/projects/${projectId}/ai-search-audit/issues`;
+    console.log('🔍 Getting AI Search Audit issues:', { endpoint, projectId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ AI Search Audit issues response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ AI Search Audit issues error:', error);
+      throw error;
+    }
+  }
+
+  // Get AI Search Audit issue affected pages
+  async getAISearchAuditIssuePages(projectId, issueId, options = {}) {
+    const { page = 1, limit = 50 } = options;
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    const endpoint = `/ai-visibility/projects/${projectId}/ai-search-audit/issues/${issueId}/affected-pages?${params}`;
+    console.log('🔍 Getting AI Search Audit issue pages:', { endpoint, projectId, issueId, options });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ AI Search Audit issue pages response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ AI Search Audit issue pages error:', error);
+      throw error;
+    }
+  }
+
   // Get AI visibility page details
   async getAIVisibilityPage(projectId, url) {
     const encodedUrl = encodeURIComponent(url);

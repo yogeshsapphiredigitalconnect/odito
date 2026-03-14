@@ -1,4 +1,38 @@
-export const CAT_COLORS = { GEO:"#8b5cf6", AEO:"#06b6d4", AISEO:"#00dfff" };
+export const CAT_COLORS = { 
+  GEO:"#8b5cf6", 
+  AEO:"#06b6d4", 
+  AISEO:"#00dfff", 
+  LLM:"#f59e0b", 
+  Voice:"#ef4444", 
+  Knowledge:"#ec4899",
+  ai_impact:"#8b5cf6",
+  citation_probability:"#06b6d4", 
+  llm_readiness:"#00dfff",
+  aeo_score:"#f59e0b",
+  topical_authority:"#ef4444",
+  voice_intent:"#ec4899"
+};
+
+// Fallback color function for unknown categories
+export function getCategoryColor(category) {
+  return CAT_COLORS[category] || "#6b7280"; // Gray fallback
+}
+
+// Icon function for categories
+export function getCategoryIcon(category) {
+  const iconMap = {
+    'GEO': '🌍',
+    'AEO': '💬',
+    'AISEO': '🤖',
+    'topical_authority': '💡',
+    'citation_probability': '🎓',
+    'ai_impact': '🧠',
+    'voice_intent': '🗣️',
+    'llm_readiness': '✨',
+    'aeo_score': '🎯'
+  };
+  return iconMap[category] || '🔍'; // Default fallback icon
+}
 
 export const ISSUES = [
   {
@@ -15,8 +49,6 @@ export const ISSUES = [
       { url:"/blog/ai-seo-2025",           sub:"Suggested: Article + FAQPage" },
       { url:"/features/rank-tracking",     sub:"Suggested: SoftwareApplication" },
     ],
-    b4:`<!-- No structured data -->\n<head>\n  <title>SEO Audit Guide</title>\n</head>`,
-    af:`[JSON-LD in <head>]\n{\n  "@type": "Article",\n  "headline": "SEO Audit Guide",\n  "datePublished": "2025-03-01",\n  "author": { "@type":"Person","name":"Jane Smith" }\n}`,
     steps:[
       { t:"Find the right schema type",   d:"Blog posts → Article. Service pages → Service. Products → Product." },
       { t:"Write the JSON-LD block",       d:"Place inside a script type='application/ld+json' tag in <head>." },
@@ -38,8 +70,6 @@ export const ISSUES = [
       { url:"/pricing",                      sub:"Pricing FAQ section · no schema" },
       { url:"/blog/core-web-vitals-guide",   sub:"3 Q&A pairs detected · no schema" },
     ],
-    b4:`<!-- FAQ in HTML but no schema -->\n<h3>What is an SEO audit?</h3>\n<p>An SEO audit is a systematic analysis...</p>`,
-    af:`[JSON-LD FAQPage]\n{\n  "@type": "FAQPage",\n  "mainEntity": [{\n    "@type": "Question",\n    "name": "What is an SEO audit?",\n    "acceptedAnswer": { "@type":"Answer","text":"..." }\n  }]\n}`,
     steps:[
       { t:"Identify pages with Q&A content", d:"Any page with accordion sections or H3 questions followed by paragraph answers." },
       { t:"Copy question text exactly",       d:"Use the exact H3/H4 text for the name field. Keep answers under 300 characters." },
@@ -53,7 +83,7 @@ export const ISSUES = [
     id:"conv-content", sev:"crit", cat:"GEO", icon:"💬",
     title:"Conversational Content Too Low (31%)",
     desc:"Your content is written for keywords, not conversational AI queries. AI models prefer content that answers questions directly in the first paragraph.",
-    pages:38, impact:"+24% GEO Score", diff:"Medium",
+    pages:38, impact:"+24% GEO", diff:"Medium",
     urls:[
       { url:"/blog/seo-audit-guide",   sub:"Definition buried 400 words in · needs P1 answer" },
       { url:"/features/ai-visibility", sub:"Feature list only · no conversational explanation" },
@@ -61,8 +91,6 @@ export const ISSUES = [
       { url:"/blog/what-is-seo",       sub:"Keyword-dense intro · no direct question answer" },
       { url:"/blog/ai-seo-tools",      sub:"List format only · no narrative prose" },
     ],
-    b4:`<!-- Keyword-stuffed -->\n<h1>SEO Audit Tool – Best SEO Software</h1>\n<p>Looking for the best SEO audit tool?...</p>`,
-    af:`<!-- Conversational: answer first -->\n<h1>What is an SEO Audit Tool?</h1>\n<p><strong>An SEO audit tool automatically\nscans your website</strong> for technical issues...</p>`,
     steps:[
       { t:"Rewrite the intro to answer in <60 words", d:"AI models weight the first 50-100 words most heavily." },
       { t:"Use question-based H2/H3 headings",        d:"How does X work? What is Y? — match how users query AI." },
@@ -82,8 +110,6 @@ export const ISSUES = [
       { url:"linkedin.com/company/",sub:"sameAs not linked in schema" },
       { url:"crunchbase.com/org/",  sub:"No profile linked" },
     ],
-    b4:`// KG check result:\n{ "itemListElement": [] }\n// Brand not in Knowledge Graph`,
-    af:`// Organization schema with sameAs:\n{\n  "@type": "Organization",\n  "name": "AuditIQ",\n  "sameAs": [\n    "https://linkedin.com/company/auditiq",\n    "https://twitter.com/auditiq"\n  ]\n}`,
     steps:[
       { t:"Verify Google Business Profile",    d:"Go to business.google.com and complete verification." },
       { t:"Add sameAs links to homepage schema",d:"Point to LinkedIn, Twitter/X, Crunchbase, Wikipedia." },
@@ -103,8 +129,6 @@ export const ISSUES = [
       { url:"/features/technical-seo", sub:"No author markup · E-E-A-T missing" },
       { url:"/case-studies/ecommerce", sub:"No summary block · LLMs skip long pages" },
     ],
-    b4:`<!-- Poor LLM signals -->\n<div class="content">\n  <div id="app"></div><!-- JS-rendered -->\n</div>`,
-    af:`<!-- Strong LLM signals -->\n<article>\n  <h1 itemprop="headline">...</h1>\n  <address>By <a rel="author">John Doe</a></address>\n  <p><strong>Summary: ...</strong></p>\n</article>`,
     steps:[
       { t:"Server-render all key content",  d:"JS-rendered content is invisible to AI crawlers. Enable SSR." },
       { t:"Use semantic HTML elements",      d:"Replace div with article, section, address, time." },
@@ -124,8 +148,6 @@ export const ISSUES = [
       { url:"/blog/technical-seo-checklist", sub:"Steps in prose · needs ol list" },
       { url:"/features/vs-competitors",      sub:"Comparison in prose · needs table" },
     ],
-    b4:`<!-- Not snippet-ready -->\n<h1>Technical SEO Checklist</h1>\n<p>Technical SEO covers many areas... [wall of text]</p>`,
-    af:`<!-- Snippet-ready -->\n<h1>Technical SEO Checklist (12 Steps)</h1>\n<p><strong>A checklist covering 12 areas.</strong></p>\n<ol>\n  <li><strong>Check robots.txt</strong></li>\n</ol>`,
     steps:[
       { t:"Start every page with a direct definition",d:"First paragraph = direct answer in <60 words." },
       { t:"Convert steps to ordered lists",           d:"Prose steps have 4x lower AI extraction rate than ol lists." },
@@ -147,8 +169,6 @@ export const ISSUES = [
       { url:"/blog/ (missing)", sub:"No page: Answer Engine Optimization" },
       { url:"/blog/ (missing)", sub:"No page: Perplexity SEO" },
     ],
-    b4:`// Missing entity pages:\n"E-E-A-T"      → no page\n"AI Overviews" → no page\n"GEO"          → no page`,
-    af:`// After entity pages created:\n"E-E-A-T"      → /blog/eeat-guide\n"AI Overviews" → /blog/ai-overviews\n"GEO"          → /blog/geo-guide`,
     steps:[
       { t:"Map gaps vs top-ranking competitors",d:"Compare topic coverage vs Semrush Blog, Moz Blog, SEJ." },
       { t:"Create a hub page per missing entity",d:"Each entity: definition <60 words, how it works, 5 FAQ pairs." },

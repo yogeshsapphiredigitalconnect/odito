@@ -14,7 +14,7 @@ import mongoose from "mongoose";
 
 import { getWebsiteOptimizationAggregation } from "../../../services/aiVisibilityAggregationService.js";
 
-import { getAISearchAuditAggregation } from "../../../services/aiSearchAuditAggregationService.js";
+import { getAISearchAuditAggregation, getAISearchAuditIssues as getAISearchAuditIssuesService, getAISearchAuditIssuePages as getAISearchAuditIssuePagesService } from "../../../services/aiSearchAuditAggregationService.js";
 
 // Import SeoProject for ownership verification
 import SeoProject from "../../app_user/model/SeoProject.js";
@@ -749,6 +749,203 @@ export const getAISearchAudit = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to get AI search audit data',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get AI Search Audit Issues
+ * GET /api/ai-visibility/projects/:projectId/ai-search-audit/issues
+ */
+export const getAISearchAuditIssues = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Validate projectId presence and format
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'projectId is required',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    // Convert to ObjectId for MongoDB query
+    const projectObjectId = new mongoose.Types.ObjectId(projectId);
+
+    // 🔒 SECURITY: Verify SEO project ownership before accessing child collections
+    const seoProject = await SeoProject.findOne({ 
+      _id: projectObjectId, 
+      user_id: req.user._id 
+    });
+    
+    if (!seoProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Project not found or you do not have permission',
+      });
+    }
+
+    // Call aggregation service with verified projectId
+    const issues = await getAISearchAuditIssuesService(projectId);
+
+    // Handle case where no issues found
+    if (!issues || issues.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No AI Search Audit issues found for this project. Please run an AI audit first.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: issues,
+      count: issues.length
+    });
+  } catch (error) {
+    console.error('[AI_VISIBILITY][AI_SEARCH_AUDIT_ISSUES]', error);
+
+    // Handle specific error cases with exact error matching
+    if (error.message === 'INVALID_PROJECT_ID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    if (error.message === 'DATABASE_CONNECTION_ERROR') {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error. Please try again later.',
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get AI Search Audit issues',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get AI Search Audit Issue Pages
+ * GET /api/ai-visibility/projects/:projectId/ai-search-audit/issues/:issueId/affected-pages
+ */
+export const getAISearchAuditIssuePages = async (req, res) => {
+  try {
+    const { projectId, issueId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+
+    // Validate projectId presence and format
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'projectId is required',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    // Validate issueId
+    if (!issueId) {
+      return res.status(400).json({
+        success: false,
+        message: 'issueId is required',
+      });
+    }
+
+    // Convert to ObjectId for MongoDB query
+    const projectObjectId = new mongoose.Types.ObjectId(projectId);
+
+    // 🔒 SECURITY: Verify SEO project ownership before accessing child collections
+    const seoProject = await SeoProject.findOne({ 
+      _id: projectObjectId, 
+      user_id: req.user._id 
+    });
+    
+    if (!seoProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Project not found or you do not have permission',
+      });
+    }
+
+    // Parse pagination parameters
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    if (isNaN(pageNum) || pageNum < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid page parameter',
+      });
+    }
+
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid limit parameter (must be between 1 and 100)',
+      });
+    }
+
+    // Call aggregation service with verified parameters
+    const result = await getAISearchAuditIssuePagesService(projectId, issueId, {
+      page: pageNum,
+      limit: limitNum
+    });
+
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[AI_VISIBILITY][AI_SEARCH_AUDIT_ISSUE_PAGES]', error);
+
+    // Handle specific error cases with exact error matching
+    if (error.message === 'INVALID_PROJECT_ID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    if (error.message === 'INVALID_ISSUE_ID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid issueId parameter',
+      });
+    }
+
+    if (error.message === 'ISSUE_NOT_FOUND') {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found',
+      });
+    }
+
+    if (error.message === 'DATABASE_CONNECTION_ERROR') {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error. Please try again later.',
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get affected pages for issue',
       error: error.message,
     });
   }

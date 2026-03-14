@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../../user/middleware/auth.js';
-import { startAiVisibility, getAiVisibilityProjects, startAudit, getWebsiteOptimization, getAISearchAudit } from '../../ai_visibility/controller/aiVisibilityController.js';
+import { startAiVisibility, getAiVisibilityProjects, startAudit, getWebsiteOptimization, getAISearchAudit, getAISearchAuditIssues, getAISearchAuditIssuePages } from '../../ai_visibility/controller/aiVisibilityController.js';
 import { getStandaloneAIVisibilityPages, getPageScore, getAIVisibilityPageIssues } from '../../app_user/controller/projectDataController.js';
 
 const router = express.Router();
@@ -15,6 +15,12 @@ router.get('/projects/:projectId/website-optimization', getWebsiteOptimization);
 
 // NEW: Get AI Search Audit aggregation
 router.get('/projects/:projectId/ai-search-audit', getAISearchAudit);
+
+// NEW: Get AI Search Audit issues
+router.get('/projects/:projectId/ai-search-audit/issues', getAISearchAuditIssues);
+
+// NEW: Get AI Search Audit issue affected pages
+router.get('/projects/:projectId/ai-search-audit/issues/:issueId/affected-pages', getAISearchAuditIssuePages);
 
 // NEW: Get pages for standalone AI visibility records
 router.get('/:id/pages', getStandaloneAIVisibilityPages);
