@@ -14,22 +14,22 @@ import mongoose from "mongoose";
 
 import { getWebsiteOptimizationAggregation } from "../../../services/aiVisibilityAggregationService.js";
 
+import { getAISearchAuditAggregation } from "../../../services/aiSearchAuditAggregationService.js";
+
+// Import SeoProject for ownership verification
+import SeoProject from "../../app_user/model/SeoProject.js";
+
 const jobService = new JobService();
 
-const jobDispatcher = new JobDispatcher();
-
 /**
-
-
-
  * Start AI Audit for existing AI project
-
-
-
+ * 
+ * 
+ * 
  * POST /api/ai-visibility/start-audit
-
-
-
+ * 
+ * 
+ * 
  */
 
 export const startAudit = async (req, res) => {
@@ -669,6 +669,86 @@ export const getWebsiteOptimization = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to get website optimization data',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get AI Search Audit Aggregation
+ * GET /api/ai-visibility/projects/:projectId/ai-search-audit
+ */
+export const getAISearchAudit = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Validate projectId presence and format
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'projectId is required',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    // Convert to ObjectId for MongoDB query
+    const projectObjectId = new mongoose.Types.ObjectId(projectId);
+
+    // 🔒 SECURITY: Verify SEO project ownership before accessing child collections
+    const seoProject = await SeoProject.findOne({ 
+      _id: projectObjectId, 
+      user_id: req.user._id 
+    });
+    
+    if (!seoProject) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Project not found or you do not have permission',
+      });
+    }
+
+    // Call aggregation service with verified projectId
+    const aggregationResult = await getAISearchAuditAggregation(projectId);
+
+    // Handle case where no pages found
+    if (aggregationResult.total_pages === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No AI visibility data found for this project. Please run an AI audit first.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: aggregationResult,
+    });
+  } catch (error) {
+    console.error('[AI_VISIBILITY][AI_SEARCH_AUDIT]', error);
+
+    // Handle specific error cases with exact error matching
+    if (error.message === 'INVALID_PROJECT_ID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format',
+      });
+    }
+
+    if (error.message === 'DATABASE_CONNECTION_ERROR') {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error. Please try again later.',
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get AI search audit data',
       error: error.message,
     });
   }

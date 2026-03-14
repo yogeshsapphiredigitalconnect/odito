@@ -203,6 +203,21 @@ class ApiService {
     }
   }
 
+  // Get AI Search Audit metrics
+  async getAISearchAudit(projectId) {
+    const endpoint = `/ai-visibility/projects/${projectId}/ai-search-audit`;
+    console.log('🔍 Getting AI Search Audit metrics:', { endpoint, projectId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ AI Search Audit response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ AI Search Audit error:', error);
+      throw error;
+    }
+  }
+
   // Get AI visibility page details
   async getAIVisibilityPage(projectId, url) {
     const encodedUrl = encodeURIComponent(url);
