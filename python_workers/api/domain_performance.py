@@ -63,6 +63,30 @@ def handle_domain_performance(job: DomainPerformanceJob):
             "error": str(e)
         }
 
+def validate_scores(metrics, device_type):
+    """Validate scores and log warnings for zero values"""
+    if 'error' in metrics:
+        print(f"[VALIDATION] {device_type} metrics contain error, skipping score validation")
+        return
+        
+    score_fields = ['performance_score', 'accessibility_score', 'best_practices_score', 'seo_score']
+    zero_scores = []
+    
+    for field in score_fields:
+        score = metrics.get(field, 0)
+        if score == 0:
+            zero_scores.append(field)
+    
+    if zero_scores:
+        print(f"[WARNING] {device_type} scores that are 0: {zero_scores}")
+        print(f"[WARNING] This may indicate missing categories in Lighthouse response or API configuration issues")
+        
+        # Log available categories for debugging
+        if 'categories_debug' in metrics:
+            print(f"[DEBUG] Available categories in {device_type}: {metrics['categories_debug']}")
+    else:
+        print(f"[VALIDATION] All {device_type} scores are non-zero: { {field: metrics.get(field, 'N/A') for field in score_fields} }")
+
 def execute_domain_performance_logic(job: DomainPerformanceJob):
     """Execute domain-level PageSpeed analysis for both mobile and desktop"""
     print(f"[DOMAIN_PERFORMANCE] Starting analysis for {job.main_url}")
@@ -108,7 +132,7 @@ def execute_domain_performance_logic(job: DomainPerformanceJob):
             'url': main_url,
             'strategy': 'mobile',
             'key': api_key,
-            'category': 'performance'  # Keep as string for now to ensure basic functionality
+            'category': ['performance', 'accessibility', 'best-practices', 'seo']  # Request all categories
         }
         
         print(f"[DOMAIN_PERFORMANCE] Mobile request params: {mobile_params}")
@@ -127,7 +151,13 @@ def execute_domain_performance_logic(job: DomainPerformanceJob):
     except Exception as e:
         print(f"[ERROR] Mobile performance test failed: {str(e)}")
         # Continue with desktop test even if mobile fails
-        mobile_metrics = {'error': str(e), 'performance_score': 0}
+        mobile_metrics = {
+            'error': str(e), 
+            'performance_score': 0,
+            'accessibility_score': 0,
+            'best_practices_score': 0,
+            'seo_score': 0
+        }
     
     # Test desktop performance
     print(f"[DOMAIN_PERFORMANCE] Testing desktop performance for {domain}")
@@ -136,7 +166,7 @@ def execute_domain_performance_logic(job: DomainPerformanceJob):
             'url': main_url,
             'strategy': 'desktop',
             'key': api_key,
-            'category': 'performance'  # Keep as string for now to ensure basic functionality
+            'category': ['performance', 'accessibility', 'best-practices', 'seo']  # Request all categories
         }
         
         print(f"[DOMAIN_PERFORMANCE] Desktop request params: {desktop_params}")
@@ -155,11 +185,21 @@ def execute_domain_performance_logic(job: DomainPerformanceJob):
     except Exception as e:
         print(f"[ERROR] Desktop performance test failed: {str(e)}")
         # Continue with storing partial results even if desktop fails
-        desktop_metrics = {'error': str(e), 'performance_score': 0}
+        desktop_metrics = {
+            'error': str(e), 
+            'performance_score': 0,
+            'accessibility_score': 0,
+            'best_practices_score': 0,
+            'seo_score': 0
+        }
     
     # Check if both tests failed
     if 'error' in mobile_metrics and 'error' in desktop_metrics:
         raise Exception("Both mobile and desktop PageSpeed tests failed")
+    
+    # Validate scores before storing
+    validate_scores(mobile_metrics, 'mobile')
+    validate_scores(desktop_metrics, 'desktop')
     
     # Store results in MongoDB
     performance_doc = {
@@ -221,15 +261,25 @@ def extract_metrics(pagespeed_data):
         metrics['best_practices_score'] = categories.get('best-practices', {}).get('score', 0) * 100
         metrics['seo_score'] = categories.get('seo', {}).get('score', 0) * 100
         
-        # Log available categories
+        # Log available categories for debugging
         print(f"[CATEGORIES] Available categories: {list(categories.keys())}")
+        
+        # Store categories debug info for validation
+        metrics['categories_debug'] = list(categories.keys())
+        
         print(f"[CATEGORIES] Performance score: {metrics['performance_score']}")
         if 'accessibility' in categories:
             print(f"[CATEGORIES] Accessibility score: {metrics['accessibility_score']}")
+        else:
+            print(f"[CATEGORIES] Accessibility category NOT FOUND in response")
         if 'best-practices' in categories:
             print(f"[CATEGORIES] Best practices score: {metrics['best_practices_score']}")
+        else:
+            print(f"[CATEGORIES] Best practices category NOT FOUND in response")
         if 'seo' in categories:
             print(f"[CATEGORIES] SEO score: {metrics['seo_score']}")
+        else:
+            print(f"[CATEGORIES] SEO category NOT FOUND in response")
         
         # Log available audit keys (sample)
         print(f"[AUDITS] Total audits available: {len(audits)}")

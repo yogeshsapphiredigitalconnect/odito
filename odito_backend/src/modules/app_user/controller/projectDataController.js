@@ -3224,6 +3224,22 @@ export const getProjectPerformance = async (req, res) => {
 
       if (!deviceData) return null;
 
+      // Extract TTFB from diagnostics if available
+      let ttfb = null;
+      if (deviceData.diagnostics && Array.isArray(deviceData.diagnostics)) {
+        const serverResponseTime = deviceData.diagnostics.find(d => d.id === 'server-response-time');
+        if (serverResponseTime && serverResponseTime.details && serverResponseTime.details.items && serverResponseTime.details.items.length > 0) {
+          const responseTime = serverResponseTime.details.items[0].responseTime;
+          if (responseTime !== undefined) {
+            ttfb = {
+              value: responseTime,
+              unit: 'ms',
+              display_value: `${responseTime} ms`
+            };
+          }
+        }
+      }
+
       return {
 
         // New structure for frontend
@@ -3239,6 +3255,8 @@ export const getProjectPerformance = async (req, res) => {
         opportunities: deviceData.opportunities || [],
 
         diagnostics: deviceData.diagnostics || [],
+
+        passed_audits: deviceData.passed_audits || [],
 
         metrics: deviceData.metrics || {},
 
@@ -3256,7 +3274,9 @@ export const getProjectPerformance = async (req, res) => {
 
         speed_index: deviceData.speed_index,
 
-        tti: deviceData.tti
+        tti: deviceData.tti,
+
+        ttfb: ttfb
 
       };
 
