@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useProject } from "@/contexts/ProjectContext"
 import apiService from "@/lib/apiService"
 
-export default function IssueDetailView({ issue, onBack }) {
+export default function IssueDetailView({ issue, onBack, onOpenUrl }) {
   const { activeProject } = useProject()
   const [mode, setMode] = useState("ai")
   const [selUrl, setSelUrl] = useState(null)
@@ -169,7 +169,7 @@ export default function IssueDetailView({ issue, onBack }) {
           {issue.severity === "high" ? "⚠" : issue.severity === "medium" ? "⚡" : "✓"}
         </div>
         <h2 style={{ 
-          fontFamily: "Syne, sans-serif", 
+          fontFamily: "/dashboard", 
           fontSize: 28, 
           fontWeight: 800, 
           flex: 1, 
@@ -210,7 +210,7 @@ export default function IssueDetailView({ issue, onBack }) {
             marginBottom: 8
           }}>PAGES AFFECTED</div>
           <div style={{
-            fontFamily: "Syne, sans-serif",
+            fontFamily: "/dashboard",
             fontWeight: 800,
             fontSize: 32,
             lineHeight: 1,
@@ -232,7 +232,7 @@ export default function IssueDetailView({ issue, onBack }) {
             marginBottom: 8
           }}>SEO IMPACT</div>
           <div style={{
-            fontFamily: "Syne, sans-serif",
+            fontFamily: "/dashboard",
             fontWeight: 800,
             fontSize: 32,
             lineHeight: 1,
@@ -254,7 +254,7 @@ export default function IssueDetailView({ issue, onBack }) {
             marginBottom: 8
           }}>DIFFICULTY</div>
           <div style={{
-            fontFamily: "Syne, sans-serif",
+            fontFamily: "/dashboard",
             fontWeight: 800,
             fontSize: 32,
             lineHeight: 1,
@@ -277,7 +277,7 @@ export default function IssueDetailView({ issue, onBack }) {
             marginBottom: 8
           }}>FIXED</div>
           <div style={{
-            fontFamily: "Syne, sans-serif",
+            fontFamily: "/dashboard",
             fontWeight: 800,
             fontSize: 32,
             lineHeight: 1,
@@ -338,7 +338,7 @@ export default function IssueDetailView({ issue, onBack }) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "/dashboard",
                 fontSize: 16,
                 fontWeight: 700,
                 color: "#eef2ff"
@@ -382,7 +382,7 @@ export default function IssueDetailView({ issue, onBack }) {
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    fontFamily: "'DM Mono', monospace",
+                    fontFamily: "/dashboard",
                     fontSize: "12.5px",
                     color: "#00dfff",
                     fontWeight: 500,
@@ -399,50 +399,69 @@ export default function IssueDetailView({ issue, onBack }) {
                     textOverflow: "ellipsis"
                   }}>{issue.issue || issue.issue_message || 'Issue detected on this page'}</div>
                 </div>
-                <span style={{
-                  fontSize: "9.5px",
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: 5,
-                  flexShrink: 0,
-                  background: isFixed ? "rgba(0,245,160,0.09)" : "rgba(255,56,96,0.11)",
-                  border: isFixed ? "1px solid rgba(0,245,160,0.18)" : "1px solid rgba(255,56,96,0.2)",
-                  color: isFixed ? "#00f5a0" : "#ff3860"
-                }}>
-                  {isFixed ? "✓ Fixed" : "Open"}
-                </span>
-                {!isFixed && (
-                  <button 
-                    style={{
-                      background: "linear-gradient(135deg,#7730ed,#00dfff)",
-                      color: "#fff",
-                      border: "none",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      padding: "5px 12px",
-                      borderRadius: 7,
-                      cursor: "pointer",
-                      flexShrink: 0,
-                      boxShadow: "0 0 12px rgba(0,223,255,0.2)",
-                      transition: "all 0.2s ease"
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelUrl(url)
-                      setMode("ai")
-                      startStream(url)
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = "translateY(-1px)"
-                      e.target.style.boxShadow = "0 3px 16px rgba(0,223,255,0.3)"
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = "translateY(0)"
-                      e.target.style.boxShadow = "0 0 12px rgba(0,223,255,0.2)"
-                    }}
-                  >
-                    ✦ Fix
-                  </button>
+                                {!isFixed && (
+                  <>
+                    <button 
+                      style={{
+                        background: "rgba(255,56,96,0.11)",
+                        color: "#ff3860",
+                        border: "1px solid rgba(255,56,96,0.2)",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "5px 10px",
+                        borderRadius: 7,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        marginRight: "6px",
+                        transition: "all 0.2s ease"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onOpenUrl?.(url)
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = "rgba(255,255,255,0.15)"
+                        e.target.style.borderColor = "rgba(255,255,255,0.3)"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = "rgba(255,255,255,0.1)"
+                        e.target.style.borderColor = "rgba(255,255,255,0.2)"
+                      }}
+                    >
+                      Open
+                    </button>
+                    <button 
+                      style={{
+                        background: "linear-gradient(135deg,#7730ed,#00dfff)",
+                        color: "#fff",
+                        border: "none",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "5px 12px",
+                        borderRadius: 7,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        boxShadow: "0 0 12px rgba(0,223,255,0.2)",
+                        transition: "all 0.2s ease"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelUrl(url)
+                        setMode("ai")
+                        startStream(url)
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = "translateY(-1px)"
+                        e.target.style.boxShadow = "0 3px 16px rgba(0,223,255,0.3)"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = "translateY(0)"
+                        e.target.style.boxShadow = "0 0 12px rgba(0,223,255,0.2)"
+                      }}
+                    >
+                      ✦ Fix
+                    </button>
+                  </>
                 )}
               </div>
             )
@@ -508,7 +527,7 @@ export default function IssueDetailView({ issue, onBack }) {
           }}>
             <div>
               <div style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "/dashboard",
                 fontSize: 14,
                 fontWeight: 700,
                 color: "#eef2ff"
@@ -621,7 +640,7 @@ export default function IssueDetailView({ issue, onBack }) {
                       padding: "13px 15px",
                       minHeight: 72,
                       marginBottom: 12,
-                      fontFamily: "'DM Mono', monospace",
+                      fontFamily: "/dashboard",
                       fontSize: 12,
                       lineHeight: 1.7,
                       color: "#8494b0"
@@ -738,7 +757,7 @@ export default function IssueDetailView({ issue, onBack }) {
                             color: "#8494b0",
                             lineHeight: 1.65
                           }}>
-                            This fix resolves <strong style={{ color: "#eef2ff" }}>{issue.title || issue.issue}</strong> on <strong style={{ color: "#00dfff", fontFamily: "'DM Mono', monospace" }}>{selUrl}</strong>. Estimated recovery: <strong style={{ color: "#00f5a0" }}>+{issue.impact || 0}% SEO</strong>. Difficulty: <strong style={{ color: "#eef2ff" }}>{issue.difficulty || "Medium"}</strong>.
+                            This fix resolves <strong style={{ color: "#eef2ff" }}>{issue.title || issue.issue}</strong> on <strong style={{ color: "#00dfff", fontFamily: "/dashboard" }}>{selUrl}</strong>. Estimated recovery: <strong style={{ color: "#00f5a0" }}>+{issue.impact || 0}% SEO</strong>. Difficulty: <strong style={{ color: "#eef2ff" }}>{issue.difficulty || "Medium"}</strong>.
                           </div>
                         </div>
 
@@ -751,7 +770,7 @@ export default function IssueDetailView({ issue, onBack }) {
                             fontWeight: 600,
                             cursor: "pointer",
                             border: "none",
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "/dashboard",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -774,7 +793,7 @@ export default function IssueDetailView({ issue, onBack }) {
                             fontWeight: 600,
                             cursor: "pointer",
                             border: "none",
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "/dashboard",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -796,7 +815,7 @@ export default function IssueDetailView({ issue, onBack }) {
                             fontWeight: 600,
                             cursor: "pointer",
                             border: "none",
-                            fontFamily: "'DM Sans', sans-serif",
+                            fontFamily: "/dashboard",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -821,7 +840,7 @@ export default function IssueDetailView({ issue, onBack }) {
                       fontSize: "11.5px",
                       marginBottom: 14,
                       color: selUrl ? "#00dfff" : "#4e5f7a",
-                      fontFamily: selUrl ? "'DM Mono', monospace" : "'DM Sans', sans-serif"
+                      fontFamily: "/dashboard"
                     }}>
                       {selUrl ? `Selected: ${selUrl}` : "👆 Select a URL from the list to generate a targeted AI fix"}
                     </div>
@@ -935,7 +954,7 @@ export default function IssueDetailView({ issue, onBack }) {
                         fontWeight: 600,
                         cursor: "pointer",
                         border: "none",
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "/dashboard",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -959,7 +978,7 @@ export default function IssueDetailView({ issue, onBack }) {
                         fontWeight: 600,
                         cursor: "pointer",
                         border: "none",
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "/dashboard",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1077,7 +1096,7 @@ export default function IssueDetailView({ issue, onBack }) {
                     fontWeight: 600,
                     cursor: "pointer",
                     border: "none",
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "/dashboard",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1099,7 +1118,7 @@ export default function IssueDetailView({ issue, onBack }) {
                     fontWeight: 600,
                     cursor: "pointer",
                     border: "none",
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "/dashboard",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1137,7 +1156,7 @@ export default function IssueDetailView({ issue, onBack }) {
                     🤝
                   </div>
                   <div style={{ 
-                    fontFamily: "Syne, sans-serif", 
+                    fontFamily: "/dashboard", 
                     fontSize: 17, 
                     fontWeight: 800, 
                     marginBottom: 6 
@@ -1242,7 +1261,7 @@ export default function IssueDetailView({ issue, onBack }) {
                     fontWeight: 600,
                     cursor: "pointer",
                     border: "none",
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "/dashboard",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1264,7 +1283,7 @@ export default function IssueDetailView({ issue, onBack }) {
                     fontWeight: 600,
                     cursor: "pointer",
                     border: "none",
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "/dashboard",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1286,7 +1305,7 @@ export default function IssueDetailView({ issue, onBack }) {
                     fontWeight: 600,
                     cursor: "pointer",
                     border: "none",
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "/dashboard",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

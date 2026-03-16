@@ -409,3 +409,62 @@ export const getScrapingStatus = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get raw HTML for a specific URL from stored page data
+ */
+export const getPageRawHtml = async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'URL parameter is required'
+      });
+    }
+
+    console.log(`🔍 Fetching raw HTML from stored data for URL: ${url}`);
+
+    // Get the page data from seo_page_data collection
+    const db = getDb();
+    const pageData = await db.collection('seo_page_data').findOne({
+      url: url
+    });
+
+    if (!pageData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Page data not found for this URL'
+      });
+    }
+
+    // Check if HTML content exists in the stored data (field is raw_html)
+    if (!pageData.raw_html) {
+      return res.status(404).json({
+        success: false,
+        message: 'HTML content not found for this URL'
+      });
+    }
+
+    console.log(`✅ Found HTML for ${url} | length: ${pageData.raw_html.length} characters`);
+
+    res.json({
+      success: true,
+      data: {
+        html: pageData.raw_html,
+        url: url,
+        fetched_at: pageData.scrapedAt || pageData.scraped_at || new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error(`❌ Error getting raw HTML for ${req.query.url}:`, error.message);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get HTML from stored data',
+      error: error.message
+    });
+  }
+};

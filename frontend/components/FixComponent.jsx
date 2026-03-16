@@ -532,18 +532,6 @@ export default function FixComponent({
                     textOverflow: "ellipsis"
                   }}>{item.issue || item.description || 'Issue detected on this page'}</div>
                 </div>
-                <span style={{
-                  fontSize: "9.5px",
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: 5,
-                  flexShrink: 0,
-                  background: isItemFixed ? "rgba(0,245,160,0.09)" : "rgba(255,56,96,0.11)",
-                  border: isItemFixed ? "1px solid rgba(0,245,160,0.18)" : "1px solid rgba(255,56,96,0.2)",
-                  color: isItemFixed ? "#00f5a0" : "#ff3860"
-                }}>
-                  {isItemFixed ? "✓ Fixed" : "Open"}
-                </span>
                 {!isItemFixed && (
                   <button 
                     style={{

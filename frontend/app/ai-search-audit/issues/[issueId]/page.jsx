@@ -8,6 +8,7 @@ import apiService from '@/lib/apiService'
 import { ISSUES, getCategoryIcon } from '../../data/issuesData'
 import styles from '../../ai-search-audit.module.css'
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import PageDetailView from "@/app/onpage/components/PageDetailView"
 
 export default function AISearchAuditIssuePage() {
   const { user, isLoading } = useAuth()
@@ -20,6 +21,10 @@ export default function AISearchAuditIssuePage() {
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [selectedUrl, setSelectedUrl] = useState(null)
+  const [pageData, setPageData] = useState(null)
+  const [pageDetailsLoading, setPageDetailsLoading] = useState(false)
+  const [pageDetailsError, setPageDetailsError] = useState(null)
 
   // Fetch issue details and affected pages
   useEffect(() => {
@@ -145,6 +150,75 @@ export default function AISearchAuditIssuePage() {
     }
   }
 
+  // Handle URL selection for Page Details View
+  const handleUrlSelect = async (url) => {
+    setSelectedUrl(url)
+    setPageDetailsLoading(true)
+    setPageDetailsError(null)
+
+    try {
+      // Use the same API call as OnPagePage
+      const response = await apiService.getPageIssues(activeProject._id, url)
+      console.log('🔍 Page Issues API Response:', response)
+      
+      if (response.success) {
+        const issuesData = response.data
+        const pageIssues = issuesData.issues || []
+        const pData = issuesData.page_data || {}
+        const pageMetadata = issuesData.page_metadata || {}
+        
+        console.log('📊 Issues Data:', issuesData)
+        console.log('📄 Page Data:', pData)
+        console.log('📋 Page Metadata:', pageMetadata)
+        
+        const finalPageData = {
+          url: url,
+          name: pData.title ? pData.title.split(' | ')[0] : derivePageNameFromUrl(url),
+          title: pData.title || deriveTitleFromUrl(url),
+          description: pData.meta_description || pageMetadata.meta_description || 'No meta description available',
+          statusCode: pData.status_code || pageMetadata.http_status_code || 200,
+          wordCount: pData.word_count || 0,
+          loadTime: pData.response_time ? `${Math.round(pData.response_time)}ms` : '0s',
+          issues: {
+            crit: pageIssues.filter(i => i.severity === 'critical' || i.severity === 'high').length,
+            warn: pageIssues.filter(i => i.severity === 'warning' || i.severity === 'medium').length,
+            low: pageIssues.filter(i => i.severity === 'low').length,
+            pass: pageIssues.filter(i => i.severity === 'pass' || i.severity === 'info').length,
+          },
+          issues_list: pageIssues
+        }
+        
+        console.log('🎯 Final Page Data:', finalPageData)
+        setPageData(finalPageData)
+      }
+    } catch (err) {
+      console.error('Failed to load page details:', err)
+      setPageDetailsError(err.message)
+    } finally {
+      setPageDetailsLoading(false)
+    }
+  }
+
+  const handlePageDetailBack = () => {
+    setSelectedUrl(null)
+    setPageData(null)
+  }
+
+  // Helper functions to derive values from URL when API doesn't provide them
+  const derivePageNameFromUrl = (url) => {
+    if (url === '/' || url === '') return 'Home'
+    const segments = url.split('/').filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+    return lastSegment ? lastSegment.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ') : 'Page'
+  }
+
+  const deriveTitleFromUrl = (url) => {
+    const name = derivePageNameFromUrl(url)
+    return name
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -224,7 +298,21 @@ export default function AISearchAuditIssuePage() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6">
-              <AIssueDetailView issue={issue} onBack={() => router.push('/ai-search-audit')} />
+              {selectedUrl ? (
+                <PageDetailView 
+                  url={selectedUrl}
+                  pageData={pageData}
+                  loading={pageDetailsLoading}
+                  error={pageDetailsError}
+                  onBack={handlePageDetailBack}
+                />
+              ) : (
+                <AIssueDetailView 
+                  issue={issue} 
+                  onBack={() => router.push('/ai-search-audit')} 
+                  onOpenUrl={handleUrlSelect}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -234,7 +322,7 @@ export default function AISearchAuditIssuePage() {
 }
 
 // Reuse the same IssueDetailView component but adapted for AI Search Audit
-function AIssueDetailView({ issue, onBack }) {
+function AIssueDetailView({ issue, onBack, onOpenUrl }) {
   const { activeProject } = useProject()
   const [mode, setMode] = useState("ai")
   const [selUrl, setSelUrl] = useState(null)
@@ -638,50 +726,75 @@ function AIssueDetailView({ issue, onBack }) {
                     textOverflow: "ellipsis"
                   }}>{subtitle}</div>
                 </div>
-                <span style={{
-                  fontSize: "9.5px",
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: 5,
-                  flexShrink: 0,
-                  background: isFixedUrl ? "rgba(0,245,160,0.09)" : "rgba(255,56,96,0.11)",
-                  border: isFixedUrl ? "1px solid rgba(0,245,160,0.18)" : "1px solid rgba(255,56,96,0.2)",
-                  color: isFixedUrl ? "#00f5a0" : "#ff3860"
-                }}>
-                  {isFixedUrl ? "✓ Fixed" : "Open"}
-                </span>
                 {!isFixedUrl && (
-                  <button 
-                    style={{
-                      background: "linear-gradient(135deg,#7730ed,#00dfff)",
-                      color: "#fff",
-                      border: "none",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      padding: "5px 12px",
-                      borderRadius: 7,
-                      cursor: "pointer",
-                      flexShrink: 0,
-                      boxShadow: "0 0 12px rgba(0,223,255,0.2)",
-                      transition: "all 0.2s ease"
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelUrl(url)
-                      setMode("ai")
-                      startStream(url)
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = "translateY(-1px)"
-                      e.target.style.boxShadow = "0 3px 16px rgba(0,223,255,0.3)"
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = "translateY(0)"
-                      e.target.style.boxShadow = "0 0 12px rgba(0,223,255,0.2)"
-                    }}
-                  >
-                    ✦ Fix
-                  </button>
+                  <>
+                    <button 
+                      style={{
+                        background: "rgba(255,56,96,0.11)",
+                        color: "#ff3860",
+                        border: "1px solid rgba(255,56,96,0.2)",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "5px 10px",
+                        borderRadius: 7,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        marginRight: "6px",
+                        transition: "all 0.2s ease"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // This will be handled by the parent component
+                        if (typeof onOpenUrl === 'function') {
+                          onOpenUrl(url)
+                        } else {
+                          // Fallback: navigate to page details with URL parameter
+                          window.open(url, '_blank')
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = "rgba(255,255,255,0.15)"
+                        e.target.style.borderColor = "rgba(255,255,255,0.3)"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = "rgba(255,56,96,0.11)"
+                        e.target.style.borderColor = "rgba(255,56,96,0.2)"
+                      }}
+                    >
+                      Open
+                    </button>
+                    <button 
+                      style={{
+                        background: "linear-gradient(135deg,#7730ed,#00dfff)",
+                        color: "#fff",
+                        border: "none",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "5px 12px",
+                        borderRadius: 7,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        boxShadow: "0 0 12px rgba(0,223,255,0.2)",
+                        transition: "all 0.2s ease"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelUrl(url)
+                        setMode("ai")
+                        startStream(url)
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = "translateY(-1px)"
+                        e.target.style.boxShadow = "0 3px 16px rgba(0,223,255,0.3)"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = "translateY(0)"
+                        e.target.style.boxShadow = "0 0 12px rgba(0,223,255,0.2)"
+                      }}
+                    >
+                      ✦ Fix
+                    </button>
+                  </>
                 )}
               </div>
             )

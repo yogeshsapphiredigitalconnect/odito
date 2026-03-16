@@ -2,6 +2,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Add dashboard font */
+@font-face {
+  font-family: '/dashboard';
+  src: local('/dashboard');
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* AuditIQ CSS Variables */
@@ -24,9 +31,9 @@
   --re: #ff3860;
   --g1: linear-gradient(135deg, #7730ed, #00dfff);
   --g2: linear-gradient(135deg, #9d4edd, #ff2d9b);
-  --fd: 'Syne', sans-serif;
-  --fb: 'DM Sans', sans-serif;
-  --fm: 'DM Mono', monospace;
+  --fd: '/dashboard', sans-serif;
+  --fb: '/dashboard', sans-serif;
+  --fm: '/dashboard', monospace;
   --r: 14px;
   --tr: all .2s ease;
 }
@@ -174,8 +181,8 @@
   --red: #ff4560;
   --grad1: linear-gradient(135deg, #7c3aed, #00e5ff);
   --grad2: linear-gradient(135deg, #a855f7, #ec4899);
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-display: '/dashboard', sans-serif;
+  --font-body: '/dashboard', sans-serif;
   --radius: 16px;
   --shadow: 0 8px 32px rgba(0,0,0,0.5);
   --shadow-glow: 0 0 40px rgba(0,229,255,0.12);
@@ -236,8 +243,8 @@
   --purple: #a855f7;
   --green: #10ffa0;
   --grad1: linear-gradient(135deg, #7c3aed, #00e5ff);
-  --font-display: var(--font-syne);
-  --font-body: var(--font-dm-sans);
+  --font-display: '/dashboard', sans-serif;
+  --font-body: '/dashboard', sans-serif;
   --radius: 16px;
   --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
   --bg3: #0c1a2e;
@@ -339,6 +346,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: '/dashboard', sans-serif !important;
+  }
+  * {
+    font-family: '/dashboard', sans-serif !important;
   }
 }
 

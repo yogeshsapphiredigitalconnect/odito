@@ -1,5 +1,5 @@
 import express from 'express';
-import { startScraping, getScrapingStatus, cancelAudit } from '../controller/scrapingController.js';
+import { startScraping, getScrapingStatus, cancelAudit, getPageRawHtml } from '../controller/scrapingController.js';
 import auth from '../../user/middleware/auth.js';
 
 const router = express.Router();
@@ -27,5 +27,12 @@ router.get('/scraping-status/:project_id', getScrapingStatus);
  * @access  Private
  */
 router.post('/cancel-audit', cancelAudit);
+
+/**
+ * @route   GET /api/seo/raw-html
+ * @desc    Get raw HTML for a specific URL from stored page data
+ * @access  Private
+ */
+router.get('/raw-html', getPageRawHtml);
 
 export default router;

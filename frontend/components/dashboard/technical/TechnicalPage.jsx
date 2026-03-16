@@ -5,18 +5,92 @@ import { useProject } from '@/contexts/ProjectContext'
 import CheckList from "@/components/dashboard/technical/CheckList"
 import StatusBreakdown from "@/components/dashboard/technical/StatusBreakdown"
 import TechCheckDetailView from "@/components/dashboard/technical/TechCheckDetailView"
+import PageDetailView from "@/app/onpage/components/PageDetailView"
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import apiService from '@/lib/apiService'
 
 export default function TechnicalPage() {
   const { activeProject } = useProject()
   const [hasError, setHasError] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedCheck, setSelectedCheck] = useState(null)
+  const [selectedUrl, setSelectedUrl] = useState(null)
+  const [pageData, setPageData] = useState(null)
+  const [pageDetailsLoading, setPageDetailsLoading] = useState(false)
+  const [pageDetailsError, setPageDetailsError] = useState(null)
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
     setHasError(false)
+  }
+
+  const handleUrlSelect = async (url) => {
+    setSelectedUrl(url)
+    setPageDetailsLoading(true)
+    setPageDetailsError(null)
+
+    try {
+      // Use the same API call as OnPagePage
+      const response = await apiService.getPageIssues(activeProject._id, url)
+      console.log('🔍 Page Issues API Response:', response)
+      
+      if (response.success) {
+        const issuesData = response.data
+        const pageIssues = issuesData.issues || []
+        const pData = issuesData.page_data || {}
+        const pageMetadata = issuesData.page_metadata || {}
+        
+        console.log('📊 Issues Data:', issuesData)
+        console.log('📄 Page Data:', pData)
+        console.log('📋 Page Metadata:', pageMetadata)
+        
+        const finalPageData = {
+          url: url,
+          name: pData.title ? pData.title.split(' | ')[0] : derivePageNameFromUrl(url),
+          title: pData.title || deriveTitleFromUrl(url),
+          description: pData.meta_description || pageMetadata.meta_description || 'No meta description available',
+          statusCode: pData.status_code || pageMetadata.http_status_code || 200,
+          wordCount: pData.word_count || 0,
+          loadTime: pData.response_time ? `${Math.round(pData.response_time)}ms` : '0s',
+          issues: {
+            crit: pageIssues.filter(i => i.severity === 'critical' || i.severity === 'high').length,
+            warn: pageIssues.filter(i => i.severity === 'warning' || i.severity === 'medium').length,
+            low: pageIssues.filter(i => i.severity === 'low').length,
+            pass: pageIssues.filter(i => i.severity === 'pass' || i.severity === 'info').length,
+          },
+          issues_list: pageIssues
+        }
+        
+        console.log('🎯 Final Page Data:', finalPageData)
+        setPageData(finalPageData)
+      }
+    } catch (err) {
+      console.error('Failed to load page details:', err)
+      setPageDetailsError(err.message)
+    } finally {
+      setPageDetailsLoading(false)
+    }
+  }
+
+  const handlePageDetailBack = () => {
+    setSelectedUrl(null)
+    setPageData(null)
+  }
+
+  // Helper functions to derive values from URL when API doesn't provide them
+  const derivePageNameFromUrl = (url) => {
+    if (url === '/' || url === '') return 'Home'
+    const segments = url.split('/').filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+    return lastSegment ? lastSegment.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ') : 'Page'
+  }
+
+  const deriveTitleFromUrl = (url) => {
+    const name = derivePageNameFromUrl(url)
+    return name
   }
 
   if (!activeProject) {
@@ -72,10 +146,19 @@ export default function TechnicalPage() {
       </div>
 
       {/* Main Content */}
-      {selectedCheck ? (
+      {selectedUrl ? (
+        <PageDetailView 
+          url={selectedUrl}
+          pageData={pageData}
+          loading={pageDetailsLoading}
+          error={pageDetailsError}
+          onBack={handlePageDetailBack}
+        />
+      ) : selectedCheck ? (
         <TechCheckDetailView 
           check={selectedCheck} 
-          onBack={() => setSelectedCheck(null)} 
+          onBack={() => setSelectedCheck(null)}
+          onOpenUrl={handleUrlSelect}
         />
       ) : (
         <div className="two-col" style={{
