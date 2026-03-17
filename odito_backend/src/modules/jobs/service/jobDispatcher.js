@@ -617,6 +617,54 @@ class JobDispatcher {
   }
 
   /**
+   * Dispatch KEYWORD_RESEARCH job directly to Python worker via HTTP
+   * This is PUSH model - Node actively calls Python
+   * STANDALONE: Not part of the SEO audit pipeline
+   */
+  async dispatchKeywordResearchJob(job) {
+    try {
+      // Update job status to processing first
+      await jobService.updateJobStatus(job._id, 'PROCESSING', {
+        started_at: new Date(),
+        last_attempted_at: new Date()
+      });
+
+      // Direct HTTP call to Python worker
+      const response = await axios.post(`${this.pythonBaseURL}/api/jobs/keyword-research`, {
+        jobId: job._id.toString(),
+        projectId: job.project_id.toString(),
+        userId: job.user_id.toString(),
+        keyword: job.input_data.keyword,
+        depth: job.input_data.depth || 2
+      }, {
+        timeout: 120000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return {
+        success: true,
+        jobId: job._id
+      };
+    } catch (error) {
+      console.error(`[ERROR] KEYWORD_RESEARCH dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+
+      // Mark job as failed if dispatch fails
+      await jobService.updateJobStatus(job._id, 'FAILED', {
+        completed_at: new Date(),
+        error_message: `Dispatch failed: ${error.message}`
+      });
+
+      return {
+        success: false,
+        message: 'Failed to dispatch KEYWORD_RESEARCH job to Python worker',
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Get Python worker health status
    */
   async getWorkerHealth() {

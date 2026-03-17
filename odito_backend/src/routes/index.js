@@ -12,6 +12,7 @@ import webhookRoutes from '../modules/payments/routes/webhookRoutes.js';
 import paymentRoutes from '../modules/payments/routes/paymentRoutes.js';
 import aiVisibilityRoutes from '../modules/app_user/routes/aiVisibilityRoutes.js';
 import exportRoutes from '../modules/export/exportRoutes.js';
+import keywordResearchRoutes from '../modules/keyword_research/routes/keywordResearchRoutes.js';
 
 const router = express.Router();
 
@@ -39,5 +40,7 @@ router.use('/payments', paymentRoutes);
 router.use('/ai-visibility', aiVisibilityRoutes);
 // Export routes
 router.use('/export', exportRoutes);
+// Keyword Research routes
+router.use('/keywords', keywordResearchRoutes);
 
 export default router;

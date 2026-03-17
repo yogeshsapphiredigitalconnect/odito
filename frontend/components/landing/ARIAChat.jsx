@@ -15,14 +15,215 @@ const ARIAChat = ({ onComplete }) => {
   const [projectData, setProjectData] = useState({
     websiteUrl: '',
     keywords: [],
-    industry: ''
+    industry: '',
+    location: '',
+    country: 'US',
+    language: 'en'
   });
   
   const router = useRouter();
 
+  // Country name to ISO code mapping
+  const countryNameToISO = {
+    // Full names
+    'united states': 'US',
+    'united kingdom': 'GB', 
+    'great britain': 'GB',
+    'britain': 'GB',
+    'england': 'GB',
+    'scotland': 'GB',
+    'wales': 'GB',
+    'northern ireland': 'GB',
+    'canada': 'CA',
+    'australia': 'AU',
+    'germany': 'DE',
+    'france': 'FR',
+    'spain': 'ES',
+    'italy': 'IT',
+    'japan': 'JP',
+    'china': 'CN',
+    'india': 'IN',
+    'brazil': 'BR',
+    'mexico': 'MX',
+    'south korea': 'KR',
+    'korea': 'KR',
+    'russia': 'RU',
+    
+    // Common abbreviations
+    'usa': 'US',
+    'uk': 'GB',
+    'aus': 'AU',
+    'ger': 'DE',
+    'fra': 'FR',
+    'spa': 'ES',
+    'ita': 'IT',
+    'jpn': 'JP',
+    'chn': 'CN',
+    'ind': 'IN',
+    'bra': 'BR',
+    'mex': 'MX',
+    'kor': 'KR',
+    'rus': 'RU',
+    
+    // Alternative spellings
+    'america': 'US',
+    'british': 'GB',
+    'canadian': 'CA',
+    'australian': 'AU',
+    'german': 'DE',
+    'french': 'FR',
+    'spanish': 'ES',
+    'italian': 'IT',
+    'japanese': 'JP',
+    'chinese': 'CN',
+    'indian': 'IN',
+    'brazilian': 'BR',
+    'mexican': 'MX',
+    'korean': 'KR',
+    'russian': 'RU'
+  };
+
+  // Supported ISO country codes
+  const supportedCountries = ['US', 'GB', 'CA', 'AU', 'DE', 'FR', 'ES', 'IT', 'JP', 'CN', 'IN', 'BR', 'MX', 'KR', 'RU'];
+
+  const normalizeCountry = (input) => {
+    if (!input || typeof input !== 'string') {
+      return null;
+    }
+
+    const normalized = input.toLowerCase().trim();
+    
+    // Direct ISO code match
+    if (supportedCountries.includes(normalized.toUpperCase())) {
+      return normalized.toUpperCase();
+    }
+    
+    // Country name match
+    if (countryNameToISO[normalized]) {
+      return countryNameToISO[normalized];
+    }
+    
+    // Fuzzy matching for common variations
+    const fuzzyMatches = {
+      'states': 'US',
+      'uk': 'GB',
+      'england': 'GB',
+      'scotland': 'GB',
+      'wales': 'GB',
+      'britain': 'GB'
+    };
+    
+    if (fuzzyMatches[normalized]) {
+      return fuzzyMatches[normalized];
+    }
+    
+    return null;
+  };
+
+  // Language name to ISO code mapping
+  const languageNameToISO = {
+    // Full names
+    'english': 'en',
+    'spanish': 'es',
+    'french': 'fr',
+    'german': 'de',
+    'chinese': 'zh',
+    'japanese': 'ja',
+    'portuguese': 'pt',
+    'italian': 'it',
+    'russian': 'ru',
+    'arabic': 'ar',
+    'hindi': 'hi',
+    'korean': 'ko',
+    
+    // Alternative names and common variations
+    'inglés': 'es',    // Spanish with accent
+    'ingles': 'es',    // Spanish without accent
+    'français': 'fr',  // French with accent
+    'francais': 'fr',  // French without accent
+    'deutsch': 'de',  // German
+    'español': 'es',   // Spanish with accent
+    'espanol': 'es',   // Spanish without accent
+    'italiano': 'it',  // Italian
+    'português': 'pt', // Portuguese with accent
+    'portugues': 'pt', // Portuguese without accent
+    'русский': 'ru',   // Russian
+    'russkiy': 'ru',   // Russian transliteration
+    'العربية': 'ar',   // Arabic
+    'arabiya': 'ar',   // Arabic transliteration
+    'हिन्दी': 'hi',    // Hindi
+    'hindi': 'hi',     // Hindi transliteration
+    '한국어': 'ko',    // Korean
+    'hangugeo': 'ko',  // Korean transliteration
+    '中文': 'zh',      // Chinese
+    'zhongwen': 'zh',  // Chinese transliteration
+    '日本語': 'ja',    // Japanese
+    'nihongo': 'ja',   // Japanese transliteration
+    
+    // Common abbreviations and slang
+    'eng': 'en',
+    'spa': 'es',
+    'fre': 'fr',
+    'ger': 'de',
+    'chi': 'zh',
+    'jpn': 'ja',
+    'por': 'pt',
+    'ita': 'it',
+    'rus': 'ru',
+    'ara': 'ar',
+    'hin': 'hi',
+    'kor': 'ko'
+  };
+
+  // Supported ISO language codes
+  const supportedLanguages = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'pt', 'it', 'ru', 'ar', 'hi', 'ko'];
+
+  const normalizeLanguage = (input) => {
+    if (!input || typeof input !== 'string') {
+      return null;
+    }
+
+    const normalized = input.toLowerCase().trim();
+    
+    // Direct ISO code match
+    if (supportedLanguages.includes(normalized)) {
+      return normalized;
+    }
+    
+    // Language name match
+    if (languageNameToISO[normalized]) {
+      return languageNameToISO[normalized];
+    }
+    
+    // Fuzzy matching for common variations
+    const fuzzyMatches = {
+      'eng': 'en',
+      'esp': 'es',
+      'fra': 'fr',
+      'deu': 'de',
+      'chn': 'zh',
+      'jap': 'ja',
+      'por': 'pt',
+      'ita': 'it',
+      'rus': 'ru',
+      'ara': 'ar',
+      'hin': 'hi',
+      'kor': 'ko'
+    };
+    
+    if (fuzzyMatches[normalized]) {
+      return fuzzyMatches[normalized];
+    }
+    
+    return null;
+  };
+
   const prompts = [
     "What are your 3 main target keywords? (comma-separated)",
     "What industry / niche are you in?",
+    "What's your target location? (e.g., New York, London, or leave empty for country-level targeting)",
+    "Which country are you targeting? (Example: United States, India, UK, Canada, Australia)",
+    "Which language? (Example: English, Spanish, French, German, Chinese, Japanese)",
     "Perfect! Creating your project and starting analysis... 🔍",
   ];
 
@@ -76,7 +277,7 @@ const ARIAChat = ({ onComplete }) => {
           text: "❌ Please provide a valid website URL (e.g., https://example.com). Let's start over - what's your website URL?" 
         }]);
         setStep(0);
-        setProjectData({ websiteUrl: '', keywords: [], industry: '' });
+        setProjectData({ websiteUrl: '', keywords: [], industry: '', location: '', country: 'US', language: 'en' });
         setIsCreating(false);
         return;
       }
@@ -94,6 +295,9 @@ const ARIAChat = ({ onComplete }) => {
         main_url: projectData.websiteUrl,
         keywords: projectData.keywords.filter(k => k.trim()).slice(0, 5), // Limit to 5 keywords
         industry: projectData.industry,
+        location: projectData.location,
+        country: projectData.country,
+        language: projectData.language,
         status: 'active'
       };
 
@@ -183,8 +387,48 @@ const ARIAChat = ({ onComplete }) => {
           setProjectData(prev => ({ ...prev, industry: userResponse }));
           setMessages(m => [...m, { type: "ai", text: prompts[step] }]);
           setStep(s => s + 1);
-          // Create project after industry is provided
-          setTimeout(createProject, 1000);
+          break;
+          
+        case 3: // Location
+          setProjectData(prev => ({ ...prev, location: userResponse }));
+          setMessages(m => [...m, { type: "ai", text: prompts[step] }]);
+          setStep(s => s + 1);
+          break;
+          
+        case 4: // Country
+          const normalizedCountry = normalizeCountry(userResponse);
+          if (normalizedCountry) {
+            setProjectData(prev => ({ ...prev, country: normalizedCountry }));
+            setMessages(m => [...m, { 
+              type: "ai", 
+              text: `Great! I've set your target country to ${normalizedCountry}. ${prompts[step]}` 
+            }]);
+            setStep(s => s + 1);
+          } else {
+            setMessages(m => [...m, { 
+              type: "ai", 
+              text: `❌ I didn't recognize that country. Please try one of these: United States, United Kingdom, Canada, Australia, Germany, France, Spain, Italy, Japan, China, India, Brazil, Mexico, South Korea, or Russia. You can also use ISO codes like US, GB, CA, etc. Which country are you targeting?` 
+            }]);
+          }
+          break;
+          
+        case 5: // Language
+          const normalizedLanguage = normalizeLanguage(userResponse);
+          if (normalizedLanguage) {
+            setProjectData(prev => ({ ...prev, language: normalizedLanguage }));
+            setMessages(m => [...m, { 
+              type: "ai", 
+              text: `Perfect! I've set your language to ${normalizedLanguage}. ${prompts[step]}` 
+            }]);
+            setStep(s => s + 1);
+            // Create project after language is provided
+            setTimeout(createProject, 1000);
+          } else {
+            setMessages(m => [...m, { 
+              type: "ai", 
+              text: `❌ I didn't recognize that language. Please try one of these: English, Spanish, French, German, Chinese, Japanese, Portuguese, Italian, Russian, Arabic, Hindi, or Korean. You can also use language codes like en, es, fr, etc. Which language?` 
+            }]);
+          }
           break;
       }
     }, 600);

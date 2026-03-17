@@ -266,11 +266,20 @@ export default function NewProjectForm() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="US">United States</SelectItem>
-                <SelectItem value="UK">United Kingdom</SelectItem>
+                <SelectItem value="GB">United Kingdom</SelectItem>
                 <SelectItem value="CA">Canada</SelectItem>
                 <SelectItem value="AU">Australia</SelectItem>
                 <SelectItem value="DE">Germany</SelectItem>
                 <SelectItem value="FR">France</SelectItem>
+                <SelectItem value="ES">Spain</SelectItem>
+                <SelectItem value="IT">Italy</SelectItem>
+                <SelectItem value="JP">Japan</SelectItem>
+                <SelectItem value="CN">China</SelectItem>
+                <SelectItem value="IN">India</SelectItem>
+                <SelectItem value="BR">Brazil</SelectItem>
+                <SelectItem value="MX">Mexico</SelectItem>
+                <SelectItem value="KR">South Korea</SelectItem>
+                <SelectItem value="RU">Russia</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -289,6 +298,12 @@ export default function NewProjectForm() {
                 <SelectItem value="de">German</SelectItem>
                 <SelectItem value="zh">Chinese</SelectItem>
                 <SelectItem value="ja">Japanese</SelectItem>
+                <SelectItem value="pt">Portuguese</SelectItem>
+                <SelectItem value="it">Italian</SelectItem>
+                <SelectItem value="ru">Russian</SelectItem>
+                <SelectItem value="ar">Arabic</SelectItem>
+                <SelectItem value="hi">Hindi</SelectItem>
+                <SelectItem value="ko">Korean</SelectItem>
               </SelectContent>
             </Select>
           </div>
