@@ -101,7 +101,7 @@ export async function generatePDFFromHTML(htmlContent, options = {}) {
   let page = null;
 
   try {
-    console.log('[PDF] Starting PDF generation...');
+    console.log('[PDF] Starting PDF generation from HTML...');
     const browser = await getBrowser();
 
     page = await browser.newPage();
@@ -112,6 +112,72 @@ export async function generatePDFFromHTML(htmlContent, options = {}) {
     });
 
     console.log('[PDF] Content loaded, generating PDF...');
+
+    const pdfBuffer = await page.pdf({
+      format,
+      margin,
+      printBackground,
+      scale
+    });
+
+    const generationTime = Date.now() - startTime;
+    console.log(`[PDF] PDF generated in ${generationTime}ms | size=${pdfBuffer.length} bytes`);
+
+    return {
+      success: true,
+      buffer: pdfBuffer,
+      generationTimeMs: generationTime
+    };
+
+  } catch (error) {
+    console.error('[PDF] Generation failed:', error.message);
+    return {
+      success: false,
+      error: error.message,
+      generationTimeMs: Date.now() - startTime
+    };
+
+  } finally {
+    await closePage(page);
+  }
+}
+
+export async function generatePDFFromURL(url, options = {}) {
+  const {
+    format = 'A4',
+    margin = { top: '0', right: '0', bottom: '0', left: '0' },
+    scale = 1,
+    printBackground = true,
+    waitTime = 3000
+  } = options;
+
+  const startTime = Date.now();
+  let page = null;
+
+  try {
+    console.log('[PDF] Starting PDF generation from URL...');
+    const browser = await getBrowser();
+
+    page = await browser.newPage();
+
+    // Set viewport to match A4 dimensions at 96 DPI
+    await page.setViewport({
+      width: 794,
+      height: 1123,
+      deviceScaleFactor: 1
+    });
+
+    console.log(`[PDF] Navigating to: ${url}`);
+    await page.goto(url, {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+
+    // Wait for content to fully render
+    console.log('[PDF] Waiting for content to render...');
+    await page.waitForTimeout(waitTime);
+
+    console.log('[PDF] Generating PDF...');
 
     const pdfBuffer = await page.pdf({
       format,
@@ -187,6 +253,7 @@ export function getBrowserStats() {
 }
 
 export default {
+  generatePDFFromURL,
   generatePDFFromHTML,
   generatePDFFromTemplate,
   closeBrowser,

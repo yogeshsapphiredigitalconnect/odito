@@ -233,20 +233,6 @@ export default function KeywordDashboard() {
                 ⌕
               </span>
             </div>
-            <button style={{ 
-              background: 'linear-gradient(135deg,#7c3aed,#00e5ff)', 
-              border: 'none', 
-              borderRadius: 9, 
-              padding: '8px 16px', 
-              color: '#fff', 
-              fontSize: 12, 
-              fontWeight: 700, 
-              cursor: 'pointer', 
-              fontFamily: "'DM Sans',sans-serif", 
-              whiteSpace: 'nowrap' 
-            }}>
-              ↓ Export
-            </button>
           </div>
         </div>
       </div>
