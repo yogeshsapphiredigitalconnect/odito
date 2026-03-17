@@ -30,7 +30,11 @@ class ApiService {
 
       message: data.message,
 
-      dataKeys: data.data ? Object.keys(data.data) : 'no data'
+      dataKeys: data.data ? Object.keys(data.data) : 'no data',
+
+      hasData: !!data.data,
+
+      dataContent: data.data
 
     });
 
@@ -40,6 +44,25 @@ class ApiService {
 
       throw new Error(data.message || 'Something went wrong');
 
+    }
+
+
+
+    // Check if response has expected data structure
+    if (data.success && data.data) {
+      return data;
+    } else if (data.success && !data.data) {
+      // Return empty structure for successful responses with no data
+      return {
+        ...data,
+        data: {
+          keywords: [],
+          pagination: null,
+          summary: null,
+          intentDistribution: {},
+          total_keywords: 0
+        }
+      };
     }
 
 
@@ -861,6 +884,150 @@ class ApiService {
     } catch (error) {
 
       console.error('❌ PageSpeed data error:', error);
+
+      throw error;
+
+    }
+
+  }
+
+
+
+  // Keyword Research endpoints
+
+  async startKeywordResearch(projectId, keyword, depth = 2) {
+
+    const endpoint = '/keywords/research';
+
+    const payload = { projectId, keyword, depth };
+
+    console.log('🚀 Starting keyword research request:', { endpoint, payload });
+
+
+
+    try {
+
+      const response = await this.request(endpoint, {
+
+        method: 'POST',
+
+        body: JSON.stringify(payload)
+
+      });
+
+      console.log('✅ Keyword research start response:', response);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Keyword research start error:', error);
+
+      throw error;
+
+    }
+
+  }
+
+
+
+  async getKeywordIntelligence(projectId) {
+
+    const endpoint = `/keywords/intelligence?projectId=${projectId}`;
+
+    console.log('🔍 Getting keyword intelligence:', { endpoint, projectId });
+
+
+
+    try {
+
+      const response = await this.request(endpoint);
+
+      console.log('✅ Keyword intelligence response:', response);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Keyword intelligence error:', error);
+
+      throw error;
+
+    }
+
+  }
+
+
+
+  async getKeywords(projectId, options = {}) {
+
+    const { page = 1, limit = 50, sort = 'search_volume', order = 'desc', intent = 'all' } = options;
+
+    const params = new URLSearchParams({
+
+      projectId,
+
+      page: page.toString(),
+
+      limit: limit.toString(),
+
+      sort,
+
+      order,
+
+      intent
+
+    });
+
+    const endpoint = `/keywords?${params}`;
+
+    console.log('🔍 Getting keywords:', { endpoint, projectId, options });
+
+
+
+    try {
+
+      const response = await this.request(endpoint);
+
+      console.log('✅ Keywords response:', response);
+      console.log('FULL KEYWORD DATA:', response.data);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Keywords error:', error);
+
+      throw error;
+
+    }
+
+  }
+
+
+
+  async getKeywordDetail(projectId, keyword) {
+
+    const params = new URLSearchParams({ projectId });
+
+    const endpoint = `/keywords/${encodeURIComponent(keyword)}?${params}`;
+
+    console.log('🔍 Getting keyword detail:', { endpoint, projectId, keyword });
+
+
+
+    try {
+
+      const response = await this.request(endpoint);
+
+      console.log('✅ Keyword detail response:', response);
+      console.log('FULL KEYWORD DETAIL DATA:', response.data);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Keyword detail error:', error);
 
       throw error;
 

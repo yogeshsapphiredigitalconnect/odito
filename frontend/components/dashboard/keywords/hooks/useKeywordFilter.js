@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 
 export function useKeywordFilter({ keywords, filter, search, sort }) {
   return useMemo(() => {
-    let filtered = keywords;
+    // Ensure keywords is an array
+    const keywordsArray = Array.isArray(keywords) ? keywords : [];
+    let filtered = keywordsArray;
 
     // Apply intent filter
     if (filter !== 'all') {
@@ -12,7 +14,7 @@ export function useKeywordFilter({ keywords, filter, search, sort }) {
     // Apply search filter
     if (search) {
       filtered = filtered.filter(k => 
-        k.keyword.toLowerCase().includes(search.toLowerCase())
+        k.keyword?.toLowerCase().includes(search.toLowerCase())
       );
     }
 
@@ -23,15 +25,15 @@ export function useKeywordFilter({ keywords, filter, search, sort }) {
       const getSortValue = (keyword) => {
         switch (sort.col) {
           case 'vol':
-            return keyword.vol;
+            return keyword.vol || 0;
           case 'kd':
-            return keyword.kd;
+            return keyword.kd || 0;
           case 'cpc':
-            return keyword.cpc;
+            return keyword.cpc || 0;
           case 'trend':
-            return keyword.trend.monthly;
+            return keyword.trend?.monthly || 0;
           default:
-            return keyword.vol;
+            return keyword.vol || 0;
         }
       };
 

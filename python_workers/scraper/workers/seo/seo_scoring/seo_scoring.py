@@ -190,19 +190,38 @@ def normalize_severity(severity_value: Any) -> str:
         return "low"
 
 def calculate_page_score(high_issues: int, medium_issues: int, low_issues: int, word_count: int = 300) -> float:
-    """Calculate realistic page score using SEMrush-style algorithm"""
-    # Step 1: weighted damage (high issues hurt more)
-    damage = (high_issues * 5) + (medium_issues * 2) + (low_issues * 1)
+    """Calculate realistic page score using 3-2-1 weighted scoring with controlled penalties"""
+    import math
     
-    # Step 2: normalize by content size (larger content can handle more issues)
+    # Step 1: DAMAGE CALCULATION (STRICT 3-2-1)
+    damage = (high_issues * 3) + (medium_issues * 2) + (low_issues * 1)
+    
+    # Step 2: NORMALIZATION
     complexity = max(1, word_count / 300)
     normalized_damage = damage / complexity
     
-    # Step 3: convert to score with reasonable cap
-    score = 100 - (normalized_damage * 3)
+    # Step 3: CONTROLLED PENALTY (diminishing scaling to prevent collapse)
+    penalty = math.log1p(normalized_damage) * 15
     
-    # Step 4: clamp score (SEMrush-style - never below 10)
-    return round(max(10, min(100, score)), 2)
+    # Step 4: FINAL SCORE
+    score = 100 - penalty
+    
+    # Step 5: SAFE CLAMP
+    final_score = max(25, min(100, score))
+    
+    # Step 6: DEBUG LOGGING (MANDATORY)
+    debug_info = {
+        "high": high_issues,
+        "medium": medium_issues,
+        "low": low_issues,
+        "damage": damage,
+        "normalized_damage": normalized_damage,
+        "penalty": penalty,
+        "final_score": final_score
+    }
+    print(f"[SEO_SCORING_DEBUG] {debug_info}")
+    
+    return round(final_score, 2)
 
 def page_grade(score: float) -> str:
     """Convert score to letter grade like SEMrush"""

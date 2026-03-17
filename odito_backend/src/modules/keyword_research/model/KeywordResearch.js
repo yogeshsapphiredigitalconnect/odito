@@ -102,6 +102,9 @@ keywordOpportunitySchema.index({ project_id: 1, difficulty: -1 });
 keywordOpportunitySchema.index({ project_id: 1, cpc: -1 });
 keywordOpportunitySchema.index({ project_id: 1, intent: 1 });
 keywordOpportunitySchema.index({ job_id: 1 });
+// Additional compound indexes for intelligence queries
+keywordOpportunitySchema.index({ project_id: 1, serp_features: 1 });
+keywordOpportunitySchema.index({ project_id: 1, intent: 1, search_volume: -1 });
 
 export const KeywordResearch = mongoose.model('KeywordResearch', keywordResearchSchema);
 export const KeywordOpportunity = mongoose.model('KeywordOpportunity', keywordOpportunitySchema);

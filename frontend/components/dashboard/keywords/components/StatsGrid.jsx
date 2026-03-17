@@ -1,11 +1,15 @@
 import React from 'react';
 
-export default function StatsGrid({ keywords }) {
-  const totalVol = keywords.reduce((sum, k) => sum + k.vol, 0);
-  const avgKd = Math.round(keywords.reduce((sum, k) => sum + k.kd, 0) / keywords.length);
-  const avgCpc = (keywords.reduce((sum, k) => sum + k.cpc, 0) / keywords.length).toFixed(2);
-  const aiOverviewCount = keywords.filter(k => k.serpTypes.includes('ai_overview')).length;
-  const localPackCount = keywords.filter(k => k.serpTypes.includes('local_pack')).length;
+export default function StatsGrid({ intelligence, keywords }) {
+  // Ensure keywords is an array
+  const keywordsArray = Array.isArray(keywords) ? keywords : [];
+  
+  // Use intelligence data if available, fallback to calculating from keywords
+  const totalVol = intelligence?.summary?.total_volume || keywordsArray.reduce((sum, k) => sum + (k.vol || 0), 0);
+  const avgKd = intelligence?.summary?.avg_kd_score || (keywordsArray.length > 0 ? Math.round(keywordsArray.reduce((sum, k) => sum + (k.kd || 0), 0) / keywordsArray.length) : 0);
+  const avgCpc = intelligence?.summary?.avg_cpc || (keywordsArray.length > 0 ? (keywordsArray.reduce((sum, k) => sum + (k.cpc || 0), 0) / keywordsArray.length).toFixed(2) : '0.00');
+  const aiOverviewCount = intelligence?.summary?.ai_overview_count || keywordsArray.filter(k => k.serpTypes?.includes('ai_overview')).length;
+  const localPackCount = intelligence?.summary?.local_pack_count || keywordsArray.filter(k => k.serpTypes?.includes('local_pack')).length;
 
   const stats = [
     {

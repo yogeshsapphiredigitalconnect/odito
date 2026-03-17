@@ -55,8 +55,8 @@ def fetch_project_settings(project_id: str) -> dict:
 
 def execute_keyword_research(job):
     """
-    Execute a KEYWORD_RESEARCH job.
-
+    Execute keyword research via DataForSEO API.
+    
     Args:
         job: Pydantic model with jobId, projectId, userId, keyword, depth
 
@@ -64,7 +64,7 @@ def execute_keyword_research(job):
         dict with status and results
     """
     job_id = job.jobId
-    project_id = job.projectId
+    project_id = ObjectId(job.projectId)  # FIXED: Convert to ObjectId
     keyword = job.keyword
     depth = job.depth or 2
     node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
@@ -138,7 +138,7 @@ def execute_keyword_research(job):
         # STEP 4: Store raw API response
         print(f"[KEYWORD_RESEARCH] Storing raw response | jobId={job_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
         raw_doc = {
-            "project_id": project_id,
+            "project_id": project_id,  # FIXED: Already converted to ObjectId above
             "job_id": job_id,
             "seed_keyword": keyword,
             "depth": depth,
@@ -191,22 +191,25 @@ def execute_keyword_research(job):
                 # CRITICAL FIX: Include all required fields for frontend compatibility
                 bulk_ops.append({
                     "filter": {
-                        "project_id": project_id,
+                        "project_id": project_id,  # FIXED: Already converted to ObjectId above
                         "keyword": kw["keyword"]
                     },
                     "update": {
                         "$set": {
-                            "project_id": project_id,
+                            "project_id": project_id,  # FIXED: Already converted to ObjectId above
                             "job_id": job_id,
                             "keyword": kw["keyword"],
-                            "search_volume": kw["search_volume"],
-                            "competition": kw["competition"],
-                            "cpc": kw["cpc"],
-                            "difficulty": kw["difficulty"],
-                            "intent": kw.get("intent", "informational"),  # NEW: Intent classification
-                            "serp_features": kw.get("serp_features", []),  # NEW: Always array
-                            "source_keyword": kw["source_keyword"],
-                            "created_at": kw["created_at"]
+                            "search_volume": kw.get("search_volume", 0),
+                            "difficulty": kw.get("difficulty", 0),
+                            "cpc": kw.get("cpc", 0),
+                            "intent": kw.get("intent", "informational"),
+                            "serp_features": kw.get("serp_features", []),
+                            "keyword_info": kw.get("keyword_info", {}),
+                            "keyword_properties": kw.get("keyword_properties", {}),
+                            "keyword_difficulty": kw.get("keyword_difficulty", {}),
+                            "impressions_info": kw.get("impressions_info", {}),
+                            "created_at": datetime.now(timezone.utc),
+                            "updated_at": datetime.now(timezone.utc)
                         }
                     },
                     "upsert": True

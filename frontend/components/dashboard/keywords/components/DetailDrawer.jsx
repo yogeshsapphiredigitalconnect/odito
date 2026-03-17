@@ -1,11 +1,50 @@
 import React from 'react';
-import { MONTHS } from '../data/keywords';
 
-export default function DetailDrawer({ kw, onClose }) {
-  if (!kw) return null;
+const MONTHS = ["Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb"];
 
-  const maxVol = Math.max(...kw.monthly);
-  const minVol = Math.min(...kw.monthly);
+export default function DetailDrawer({ kw, loading = false, onClose }) {
+  if (!kw && !loading) return null;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 'min(360px, 100vw)',
+        zIndex: 400,
+        background: 'linear-gradient(180deg,#08111f,#04070f)',
+        borderLeft: '1px solid rgba(255,255,255,0.09)',
+        boxShadow: '-20px 0 60px rgba(0,0,0,0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24
+      }}>
+        <div style={{ 
+          textAlign: 'center', 
+          color: '#5a6a82', 
+          fontSize: '14px' 
+        }}>
+          <div style={{ marginBottom: '10px' }}>Loading keyword details...</div>
+          <div style={{ 
+            width: '32px', 
+            height: '32px', 
+            border: '3px solid rgba(255,255,255,0.1)', 
+            borderTop: '3px solid #00e5ff', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto'
+          }} />
+        </div>
+      </div>
+    );
+  }
+
+  const maxVol = kw.monthly && kw.monthly.length > 0 ? Math.max(...kw.monthly) : 1;
+  const minVol = kw.monthly && kw.monthly.length > 0 ? Math.min(...kw.monthly) : 0;
 
   const metricCards = [
     { label: 'Volume', value: kw.vol >= 1000 ? `${(kw.vol / 1000).toFixed(0)}K` : kw.vol, color: '#00e5ff' },
@@ -189,9 +228,9 @@ export default function DetailDrawer({ kw, onClose }) {
           gap: 2, 
           height: 60 
         }}>
-          {kw.monthly.map((volume, index) => {
+          {(kw.monthly || []).map((volume, index) => {
             const percentage = (volume - minVol) / (maxVol - minVol || 1);
-            const isLastMonth = index === kw.monthly.length - 1;
+            const isLastMonth = index === (kw.monthly || []).length - 1;
             
             return (
               <div key={index} style={{ 
@@ -236,7 +275,7 @@ export default function DetailDrawer({ kw, onClose }) {
           flexWrap: 'wrap', 
           gap: 5 
         }}>
-          {kw.serpTypes.map((type, index) => (
+          {(kw.serpTypes || []).map((type, index) => (
             <span key={index} style={{
               fontSize: 10,
               padding: '3px 8px',
