@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 class DataForSEOClient:
     """Client for the DataForSEO Related Keywords API."""
 
-    API_URL = "https://sandbox.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live"
+    API_URL = "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live"
     MAX_RETRIES = 3
     RETRY_BACKOFF_BASE = 2  # seconds
 
@@ -31,7 +31,7 @@ class DataForSEOClient:
         encoded = base64.b64encode(credentials.encode()).decode()
         return f"Basic {encoded}"
 
-    def get_related_keywords(self, keyword, depth=2, limit=50, location_name="United States", language_name="English"):
+    def get_related_keywords(self, keyword, depth=2, limit=50, location_code=2840, language_code="en"):
         """
         Fetch related keywords from DataForSEO API.
 
@@ -39,8 +39,8 @@ class DataForSEOClient:
             keyword: Seed keyword to find related keywords for
             depth: Depth of related keywords tree (1-4)
             limit: Maximum number of results
-            location_name: Target location
-            language_name: Target language
+            location_code: DataForSEO location code (default: 2840 = United States)
+            language_code: DataForSEO language code (default: "en")
 
         Returns:
             dict: Raw API response data
@@ -50,8 +50,8 @@ class DataForSEOClient:
         """
         payload = [{
             "keyword": keyword,
-            "location_name": location_name,
-            "language_name": language_name,
+            "location_code": location_code,
+            "language_code": language_code,
             "depth": depth,
             "limit": limit
         }]
@@ -65,7 +65,7 @@ class DataForSEOClient:
 
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
-                print(f"[DATAFORSEO] API request attempt {attempt}/{self.MAX_RETRIES} | keyword=\"{keyword}\" | depth={depth} | location=\"{location_name}\" | language=\"{language_name}\" | timestamp={datetime.now(timezone.utc).isoformat()}")
+                print(f"[DATAFORSEO] API request attempt {attempt}/{self.MAX_RETRIES} | keyword=\"{keyword}\" | depth={depth} | location_code={location_code} | language_code={language_code} | timestamp={datetime.now(timezone.utc).isoformat()}")
 
                 response = requests.post(
                     self.API_URL,
@@ -90,7 +90,7 @@ class DataForSEOClient:
                     error_msg = data.get("status_message", "Unknown API error")
                     raise Exception(f"DataForSEO API error: {error_msg} (code: {data.get('status_code')})")
 
-                print(f"[DATAFORSEO] API request successful | keyword=\"{keyword}\" | location=\"{location_name}\" | language=\"{language_name}\" | timestamp={datetime.now(timezone.utc).isoformat()}")
+                print(f"[DATAFORSEO] API request successful | keyword=\"{keyword}\" | location_code={location_code} | language_code={language_code} | timestamp={datetime.now(timezone.utc).isoformat()}")
                 return data
 
             except requests.exceptions.Timeout:

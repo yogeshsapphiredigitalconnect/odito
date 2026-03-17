@@ -63,15 +63,24 @@ const keywordOpportunitySchema = new mongoose.Schema({
   },
   competition: {
     type: Number,
-    default: null
+    default: 0
   },
   cpc: {
     type: Number,
-    default: null
+    default: 0
   },
   difficulty: {
     type: Number,
-    default: null
+    default: 0
+  },
+  intent: {
+    type: String,
+    enum: ['informational', 'commercial', 'navigational'],
+    default: 'informational'
+  },
+  serp_features: {
+    type: [String],
+    default: []
   },
   source_keyword: {
     type: String,
@@ -88,6 +97,11 @@ const keywordOpportunitySchema = new mongoose.Schema({
 
 keywordOpportunitySchema.index({ project_id: 1 });
 keywordOpportunitySchema.index({ project_id: 1, keyword: 1 }, { unique: true });
+keywordOpportunitySchema.index({ project_id: 1, search_volume: -1 });
+keywordOpportunitySchema.index({ project_id: 1, difficulty: -1 });
+keywordOpportunitySchema.index({ project_id: 1, cpc: -1 });
+keywordOpportunitySchema.index({ project_id: 1, intent: 1 });
+keywordOpportunitySchema.index({ job_id: 1 });
 
 export const KeywordResearch = mongoose.model('KeywordResearch', keywordResearchSchema);
 export const KeywordOpportunity = mongoose.model('KeywordOpportunity', keywordOpportunitySchema);

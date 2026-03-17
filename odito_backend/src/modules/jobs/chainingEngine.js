@@ -8,7 +8,7 @@
 
 import { JobService } from './service/jobService.js';
 import auditProgressService from './service/auditProgressService.js';
-import { JOB_TYPES } from './constants/jobTypes.js';
+import { JOB_TYPES, JOB_TYPE_CONFIG } from './constants/jobTypes.js';
 import JobDispatcher from './service/jobDispatcher.js';
 import jobDataService from './service/jobDataService.js';
 import { PIPELINE_CONFIG } from './pipelineConfig.js';
@@ -25,6 +25,16 @@ const jobDispatcher = new JobDispatcher();
 // ---------------------------------------------------------------------------
 
 const JOB_CREATION_MAP = {
+  [JOB_TYPES.KEYWORD_RESEARCH]: (src) => jobService.createJob({
+    user_id: src.user_id,
+    seo_project_id: src.project_id,
+    jobType: JOB_TYPES.KEYWORD_RESEARCH,
+    input_data: {
+      keyword: src.input_data?.keyword || 'default seo keyword',
+      depth: src.input_data?.depth || 3
+    },
+    priority: JOB_TYPE_CONFIG[JOB_TYPES.KEYWORD_RESEARCH].priority
+  }),
   [JOB_TYPES.TECHNICAL_DOMAIN]: (src) => jobService.createAndDispatchTechnicalDomainJob(src),
   [JOB_TYPES.PAGE_SCRAPING]: (src) => jobService.createAndDispatchPageScrapingJob(src),
   [JOB_TYPES.PAGE_ANALYSIS]: (src) => jobService.createAndDispatchPageAnalysisJob(src),
@@ -38,6 +48,7 @@ const JOB_CREATION_MAP = {
 };
 
 const JOB_DISPATCH_MAP = {
+  [JOB_TYPES.KEYWORD_RESEARCH]: (job) => jobDispatcher.dispatchKeywordResearchJob(job),
   [JOB_TYPES.TECHNICAL_DOMAIN]: (job) => jobDispatcher.dispatchTechnicalDomainJob(job),
   [JOB_TYPES.PAGE_SCRAPING]: (job) => jobDispatcher.dispatchPageScrapingJob(job),
   [JOB_TYPES.PERFORMANCE_MOBILE]: (job) => jobDispatcher.dispatchPerformanceMobileJob(job),

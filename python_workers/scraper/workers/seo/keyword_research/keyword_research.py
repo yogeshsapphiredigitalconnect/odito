@@ -28,7 +28,7 @@ def fetch_project_settings(project_id: str) -> dict:
         project_id: MongoDB project ID
         
     Returns:
-        dict: Project settings with location, country, language
+        dict: Project settings with country, language, keywords
     """
     try:
         print(f"[KEYWORD_RESEARCH] Fetching project settings | projectId={project_id}")
@@ -40,110 +40,17 @@ def fetch_project_settings(project_id: str) -> dict:
             return {}
             
         settings = {
-            "location": project.get("location"),
             "country": project.get("country", "US"),
-            "language": project.get("language", "en")
+            "language": project.get("language", "en"),
+            "keywords": project.get("keywords", [])
         }
         
-        print(f"[KEYWORD_RESEARCH] Project settings retrieved | location={settings['location']} | country={settings['country']} | language={settings['language']}")
+        print(f"[KEYWORD_RESEARCH] Project settings retrieved | country={settings['country']} | language={settings['language']} | keywords={settings['keywords']}")
         return settings
         
     except Exception as e:
         print(f"[KEYWORD_RESEARCH] Failed to fetch project settings | projectId={project_id} | error={str(e)}")
         return {}
-
-
-def map_language_code_to_name(language_code: str) -> str:
-    """
-    Map ISO language codes to DataForSEO language names.
-    
-    Args:
-        language_code: ISO language code (e.g., 'en', 'es')
-        
-    Returns:
-        str: DataForSEO language name
-    """
-    mapping = {
-        'en': 'English',
-        'es': 'Spanish',
-        'fr': 'French',
-        'de': 'German',
-        'zh': 'Chinese',
-        'ja': 'Japanese',
-        'pt': 'Portuguese',
-        'it': 'Italian',
-        'ru': 'Russian',
-        'ar': 'Arabic',
-        'hi': 'Hindi',
-        'ko': 'Korean'
-    }
-    return mapping.get(language_code.lower(), 'English')
-
-
-def map_country_code_to_dataforseo_code(country_code: str) -> int:
-    """
-    Map ISO country codes to DataForSEO location codes.
-    
-    Args:
-        country_code: ISO country code (e.g., 'US', 'GB')
-        
-    Returns:
-        int: DataForSEO location code
-    """
-    mapping = {
-        'US': 2840,  # United States
-        'GB': 2826,  # United Kingdom
-        'CA': 2124,  # Canada
-        'AU': 2243,  # Australia
-        'DE': 2365,  # Germany
-        'FR': 2250,  # France
-        'ES': 2153,  # Spain
-        'IT': 2382,  # Italy
-        'JP': 2320,  # Japan
-        'CN': 2358,  # China
-        'IN': 2249,  # India
-        'BR': 2073,  # Brazil
-        'MX': 2135,  # Mexico
-        'KR': 2314,  # South Korea
-        'RU': 2464   # Russia
-    }
-    return mapping.get(country_code.upper(), 2840)  # Default to United States
-
-
-def get_location_name_for_api(location: str, country_code: str) -> str:
-    """
-    Get the best location name for DataForSEO API.
-    
-    Args:
-        location: User-provided location string
-        country_code: ISO country code
-        
-    Returns:
-        str: Location name for API
-    """
-    if location and location.strip():
-        return location.strip()
-    
-    # Fallback to country name if no specific location
-    country_names = {
-        'US': 'United States',
-        'GB': 'United Kingdom',
-        'CA': 'Canada',
-        'AU': 'Australia',
-        'DE': 'Germany',
-        'FR': 'France',
-        'ES': 'Spain',
-        'IT': 'Italy',
-        'JP': 'Japan',
-        'CN': 'China',
-        'IN': 'India',
-        'BR': 'Brazil',
-        'MX': 'Mexico',
-        'KR': 'South Korea',
-        'RU': 'Russia'
-    }
-    
-    return country_names.get(country_code.upper(), 'United States')
 
 
 def execute_keyword_research(job):
@@ -165,31 +72,70 @@ def execute_keyword_research(job):
     print(f"[KEYWORD_RESEARCH] Starting | jobId={job_id} | keyword=\"{keyword}\" | depth={depth} | timestamp={datetime.now(timezone.utc).isoformat()}")
 
     try:
-        # STEP 0: Fetch project settings for location and language
+        # STEP 0: Validate keyword input
+        print(f"[KEYWORD_RESEARCH] Validating keyword input | jobId={job_id}")
+        if not keyword or keyword.strip() == "":
+            print(f"[KEYWORD_RESEARCH] Empty keyword provided, using fallback | jobId={job_id}")
+            keyword = "default seo keyword"
+        elif keyword.startswith("http"):
+            print(f"[KEYWORD_RESEARCH] URL detected as keyword, using fallback | jobId={job_id} | invalid_keyword=\"{keyword}\"")
+            keyword = "default seo keyword"
+        else:
+            keyword = keyword.strip()
+        
+        print(f"[KEYWORD_RESEARCH] Using keyword: \"{keyword}\" | jobId={job_id}")
+
+        # STEP 1: Fetch project settings for location and language
         print(f"[KEYWORD_RESEARCH] Fetching project settings | jobId={job_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
         project_settings = fetch_project_settings(project_id)
         
-        # Extract location and language settings with fallbacks
-        location_name = get_location_name_for_api(
-            project_settings.get('location'), 
-            project_settings.get('country', 'US')
-        )
-        language_name = map_language_code_to_name(project_settings.get('language', 'en'))
-        location_code = map_country_code_to_dataforseo_code(project_settings.get('country', 'US'))
+        # Debug: Show keyword source comparison
+        project_keywords = project_settings.get('keywords', [])
+        print(f"[KEYWORD_RESEARCH] Keyword source analysis | jobId={job_id} | job_keyword=\"{keyword}\" | project_keywords={project_keywords}")
         
-        print(f"[KEYWORD_RESEARCH] Using location settings | location_name=\"{location_name}\" | language_name=\"{language_name}\" | location_code={location_code}")
+        # STEP 2: Map country to DataForSEO location code
+        COUNTRY_TO_LOCATION_CODE = {
+            "US": 2840,  # United States
+            "IN": 2356,  # India
+            "UK": 2826,  # United Kingdom
+            "GB": 2826,  # Great Britain (alternative)
+            "CA": 2124,  # Canada
+            "AU": 2036,  # Australia
+            "DE": 2315,  # Germany
+            "FR": 2250,  # France
+            "ES": 2246,  # Spain
+            "IT": 2240,  # Italy
+            "JP": 2132,  # Japan
+            "BR": 2075,  # Brazil
+            "MX": 2239,  # Mexico
+            "KR": 2131,  # South Korea
+            "RU": 2306,  # Russia
+        }
+        
+        country = project_settings.get('country', 'US').upper()
+        language_code = project_settings.get('language', 'en').lower()
+        location_code = COUNTRY_TO_LOCATION_CODE.get(country, 2840)  # Default to US
+        
+        print(f"[KEYWORD_RESEARCH] Final API parameters | jobId={job_id} | keyword=\"{keyword}\" | country=\"{country}\" | location_code={location_code} | language_code=\"{language_code}\"")
 
-        # STEP 1: Call DataForSEO API with project-specific settings
+        # STEP 3: Call DataForSEO API with simplified parameters
         print(f"[KEYWORD_RESEARCH] Calling DataForSEO API | jobId={job_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
         client = DataForSEOClient()
         raw_response = client.get_related_keywords(
             keyword=keyword, 
             depth=depth,
-            location_name=location_name,
-            language_name=language_name
+            location_code=location_code,
+            language_code=language_code
         )
 
-        # STEP 2: Store raw API response
+        # DEBUG: Log full API response structure (first 2000 chars)
+        import json
+        print(f"[KEYWORD_RESEARCH] DEBUG - Full API Response Structure | jobId={job_id}")
+        print(json.dumps(raw_response, indent=2)[:2000])
+        if len(json.dumps(raw_response)) > 2000:
+            print("... (truncated for brevity)")
+
+        # STEP 4: Store raw API response
         print(f"[KEYWORD_RESEARCH] Storing raw response | jobId={job_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
         raw_doc = {
             "project_id": project_id,
@@ -198,19 +144,43 @@ def execute_keyword_research(job):
             "depth": depth,
             "raw_api_response": raw_response,
             "created_at": datetime.now(timezone.utc),
-            "location_used": location_name,
-            "language_used": language_name,
-            "location_code": location_code
+            "country_used": country,
+            "location_code_used": location_code,
+            "language_code_used": language_code
         }
         seo_keyword_research.insert_one(raw_doc)
         print(f"[KEYWORD_RESEARCH] Raw response stored | jobId={job_id}")
 
-        # STEP 3: Process and normalize keywords
+        # STEP 4: Process and normalize keywords
         print(f"[KEYWORD_RESEARCH] Processing keywords | jobId={job_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
         processor = KeywordProcessor()
         processed_keywords = processor.process_results(raw_response, keyword)
 
-        # STEP 4: Store processed keywords
+        # FAIL-SAFE: Check if processing failed
+        if not processed_keywords:
+            print(f"[KEYWORD_RESEARCH] WARNING: No keywords processed from API response | jobId={job_id}")
+            print(f"[KEYWORD_RESEARCH] This indicates a parsing issue - check above DEBUG logs for API structure")
+            
+            # Try to provide additional debugging info
+            tasks_count = len(raw_response.get("tasks", []))
+            print(f"[KEYWORD_RESEARCH] Response summary: {tasks_count} tasks found")
+            
+            if tasks_count > 0:
+                first_task = raw_response["tasks"][0]
+                results_count = len(first_task.get("result", []))
+                print(f"[KEYWORD_RESEARCH] First task has {results_count} results")
+                
+                if results_count > 0:
+                    first_result = first_task["result"][0]
+                    items_count = len(first_result.get("items", []))
+                    print(f"[KEYWORD_RESEARCH] First result has {items_count} items")
+                    print(f"[KEYWORD_RESEARCH] First result keys: {list(first_result.keys())}")
+                else:
+                    print(f"[KEYWORD_RESEARCH] First result keys (no items): {list(first_result.keys())}")
+            else:
+                print(f"[KEYWORD_RESEARCH] Response keys (no tasks): {list(raw_response.keys())}")
+
+        # STEP 5: Store processed keywords
         keywords_stored = 0
         if processed_keywords:
             print(f"[KEYWORD_RESEARCH] Storing {len(processed_keywords)} keywords | jobId={job_id}")
@@ -218,6 +188,7 @@ def execute_keyword_research(job):
             # Prepare bulk operations with upsert to handle duplicates
             bulk_ops = []
             for kw in processed_keywords:
+                # CRITICAL FIX: Include all required fields for frontend compatibility
                 bulk_ops.append({
                     "filter": {
                         "project_id": project_id,
@@ -232,6 +203,8 @@ def execute_keyword_research(job):
                             "competition": kw["competition"],
                             "cpc": kw["cpc"],
                             "difficulty": kw["difficulty"],
+                            "intent": kw.get("intent", "informational"),  # NEW: Intent classification
+                            "serp_features": kw.get("serp_features", []),  # NEW: Always array
                             "source_keyword": kw["source_keyword"],
                             "created_at": kw["created_at"]
                         }

@@ -97,7 +97,7 @@ export const startScraping = async (req, res) => {
 
     // Check if there's already a LINK_DISCOVERY or PAGE_SCRAPING job running for this project
     const existingJobs = await jobService.getJobsByProject(project_id, {
-      jobType: { $in: ['LINK_DISCOVERY', 'PAGE_SCRAPING', 'DOMAIN_PERFORMANCE'] },
+      jobType: { $in: ['LINK_DISCOVERY', 'PAGE_SCRAPING', 'DOMAIN_PERFORMANCE', 'KEYWORD_RESEARCH'] },
       status: { $in: ['pending', 'processing'] }
     });
 
@@ -151,7 +151,19 @@ export const startScraping = async (req, res) => {
       priority: 2
     });
 
-    // Dispatch both jobs asynchronously
+    // Create KEYWORD_RESEARCH job
+    const keywordResearchJob = await jobService.createJob({
+      user_id: req.user._id,
+      seo_project_id: project_id,
+      jobType: 'KEYWORD_RESEARCH',
+      input_data: {
+        keyword: project.keywords && project.keywords.length > 0 ? project.keywords[0] : 'default seo keyword',
+        depth: 3
+      },
+      priority: 3
+    });
+
+    // Dispatch all three jobs asynchronously
     // Don't wait for dispatch to respond to user immediately
     jobDispatcher.queueLinkDiscoveryJob(linkDiscoveryJob).catch(error => {
       console.error(`Failed to queue job ${linkDiscoveryJob._id}:`, error);
@@ -159,6 +171,10 @@ export const startScraping = async (req, res) => {
 
     jobDispatcher.queueDomainPerformanceJob(domainPerformanceJob).catch(error => {
       console.error(`Failed to queue job ${domainPerformanceJob._id}:`, error);
+    });
+
+    jobDispatcher.dispatchKeywordResearchJob(keywordResearchJob).catch(error => {
+      console.error(`Failed to queue job ${keywordResearchJob._id}:`, error);
     });
 
     // Update project status to active when scraping starts
@@ -185,6 +201,14 @@ export const startScraping = async (req, res) => {
       user_id: req.user._id
     });
 
+    auditProgressService.emitStarted(keywordResearchJob._id.toString(), {
+      job_id: keywordResearchJob._id,
+      job_type: keywordResearchJob.jobType,
+      project_id: project_id,
+      main_url: project.main_url,
+      user_id: req.user._id
+    });
+
     res.status(201).json({
       success: true,
       message: 'Your crawling has started',
@@ -201,6 +225,12 @@ export const startScraping = async (req, res) => {
             job_type: domainPerformanceJob.jobType,
             status: domainPerformanceJob.status,
             priority: domainPerformanceJob.priority
+          },
+          {
+            job_id: keywordResearchJob._id,
+            job_type: keywordResearchJob.jobType,
+            status: keywordResearchJob.status,
+            priority: keywordResearchJob.priority
           }
         ],
         project_id: project_id,
@@ -361,6 +391,7 @@ export const getScrapingStatus = async (req, res) => {
     const PIPELINE_JOB_TYPES = [
       'link_discovery',
       'domain_performance',
+      'keyword_research',
       'technical_domain',
       'page_scraping',
       'headless_accessibility',
