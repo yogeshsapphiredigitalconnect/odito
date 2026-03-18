@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+:root {
+  --bg-dark: #070B1A;
+  --bg-card: #0F1428;
+  --bg-card2: #111830;
+  --bg-section: #0D1235;
+  --accent-blue: #4F6EF7;
+  --accent-cyan: #00D4FF;
+  --accent-purple: #7B5CF0;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8892C4;
+  --text-muted: #4A5280;
+  --border: rgba(79,110,247,0.2);
+  --border-light: rgba(255,255,255,0.07);
+  --red: #FF5A5A;
+  --orange: #FF9C41;
+  --yellow: #FFD166;
+  --green: #2DD4A0;
+  --blue-light: #60A5FA;
+
+  /* Light page vars */
+  --page-bg: #FFFFFF;
+  --page-text: #111827;
+  --page-muted: #6B7280;
+  --page-border: #E5E7EB;
+  --page-card: #F9FAFB;
+  --page-header-bg: #111827;
+  
+  /* Font families */
+  --font-display: 'Syne', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0;
+  font-family: var(--font-body) !important;
+}
+
+html, body {
+  font-family: var(--font-body);
+  background: #fff;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* Ensure all text elements use the correct fonts */
+p, span, div, a, button, label, input, textarea, select {
+  font-family: var(--font-body);
+}
+
+button, input, textarea, select {
+  font-family: var(--font-body);
+}
