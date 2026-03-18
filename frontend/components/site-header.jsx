@@ -43,7 +43,7 @@ export function SiteHeader({ user, onLogout }) {
     }
   };
 
-  
+
   return (
     <header
       className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -55,39 +55,39 @@ export function SiteHeader({ user, onLogout }) {
         </div>
         
         {getPageTitle() !== 'Keywords' && (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            disabled={loading || !activeProjectId}
-            style={{
-              background: loading ? '#94a3b8' : 'linear-gradient(135deg,#7c3aed,#00e5ff)',
-              border: 'none',
-              borderRadius: 9,
-              padding: '8px 16px',
-              color: '#fff',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: loading || !activeProjectId ? 'not-allowed' : 'pointer',
-              fontFamily: "'DM Sans',sans-serif",
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              opacity: loading || !activeProjectId ? 0.7 : 1
-            }}
-          >
-            <IconDownload size={16} />
-            <span className="hidden sm:inline">
-              {loading ? 'Exporting...' : 'Export'}
-            </span>
-          </button>
-          {error && (
-            <span className="text-red-500 text-xs hidden sm:inline">
-              {error}
-            </span>
-          )}
-        </div>
-      )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              disabled={loading || !activeProjectId}
+              style={{
+                background: loading ? '#94a3b8' : 'linear-gradient(135deg,#7c3aed,#00e5ff)',
+                border: 'none',
+                borderRadius: 9,
+                padding: '8px 16px',
+                color: '#fff',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: loading || !activeProjectId ? 'not-allowed' : 'pointer',
+                fontFamily: "'DM Sans',sans-serif",
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: loading || !activeProjectId ? 0.7 : 1
+              }}
+            >
+              <IconDownload size={16} />
+              <span className="hidden sm:inline">
+                {loading ? 'Exporting...' : 'Export'}
+              </span>
+            </button>
+            {error && (
+              <span className="text-red-500 text-xs hidden sm:inline">
+                {error}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );
