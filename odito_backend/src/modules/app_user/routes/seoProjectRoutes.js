@@ -1,5 +1,6 @@
 import express from 'express';
 import auth from '../../user/middleware/auth.js';
+import { validateProjectAccess } from '../../../middleware/auth.middleware.js';
 import {
   createSeoProject,
   getAllSeoProjects,
@@ -26,7 +27,6 @@ import {
   getAIVisibilityPages,
   getAIVisibilityWorstPages,
   getAIVisibilityEntityGraph,
-  getOnPageIssues,
   getIssueUrls,
   getTechnicalChecks,
   getTechnicalCheckDetail
@@ -40,39 +40,39 @@ router.use(auth);
 // Project routes
 router.post('/projects', createSeoProject);
 router.get('/projects', getAllSeoProjects);
-router.get('/projects/:id', getSeoProjectById);
-router.put('/projects/:id', updateSeoProject);
-router.patch('/projects/:id/status', updateSeoProjectStatus);
-router.delete('/projects/:id', deleteSeoProject);
+router.get('/projects/:id', validateProjectAccess(), getSeoProjectById);
+router.put('/projects/:id', validateProjectAccess(), updateSeoProject);
+router.patch('/projects/:id/status', validateProjectAccess(), updateSeoProjectStatus);
+router.delete('/projects/:id', validateProjectAccess(), deleteSeoProject);
 
 // Scraping-related routes
-router.get('/projects/:id/scraping-summary', getProjectScrapingSummary);
+router.get('/projects/:id/scraping-summary', validateProjectAccess(), getProjectScrapingSummary);
 router.get('/projects-needing-scrape', getProjectsNeedingScrape);
 
 // Project data display routes
-router.get('/projects/:id/links', getProjectLinks);
-router.get('/projects/:id/pages', getProjectPages);
-router.get('/projects/:id/performance', getProjectPerformance);
-router.get('/projects/:id/summary', getProjectSummary);
-router.get('/projects/:id/dashboard', getProjectDashboard);
-router.get('/projects/:id/issues', getProjectIssues);
-router.get('/projects/:id/issues-by-page', getProjectIssuesByPage);
-router.get('/projects/:id/page-issues', getPageIssues);
-router.get('/projects/:id/onpage-issues', getOnPageIssues);
-router.get('/projects/:id/onpage-issues/:issueCode', getIssueUrls);
-router.get('/projects/:id/technical-checks', getTechnicalChecks);
-router.get('/projects/:id/technical-checks/:checkId', getTechnicalCheckDetail);
+router.get('/projects/:id/links', validateProjectAccess(), getProjectLinks);
+router.get('/projects/:id/pages', validateProjectAccess(), getProjectPages);
+router.get('/projects/:id/performance', validateProjectAccess(), getProjectPerformance);
+router.get('/projects/:id/summary', validateProjectAccess(), getProjectSummary);
+router.get('/projects/:id/dashboard', validateProjectAccess(), getProjectDashboard);
+router.get('/projects/:id/issues', validateProjectAccess(), getProjectIssues);
+router.get('/projects/:id/issues-by-page', validateProjectAccess(), getProjectIssuesByPage);
+router.get('/projects/:id/page-issues', validateProjectAccess(), getPageIssues);
+router.get('/projects/:id/onpage-issues', validateProjectAccess(), getProjectIssues);
+router.get('/projects/:id/onpage-issues/:issueCode', validateProjectAccess(), getIssueUrls);
+router.get('/projects/:id/technical-checks', validateProjectAccess(), getTechnicalChecks);
+router.get('/projects/:id/technical-checks/:checkId', validateProjectAccess(), getTechnicalCheckDetail);
 
 // Google Visibility routes
-router.get('/projects/:id/google-visibility/status', getGoogleVisibilityStatus);
-router.get('/projects/:id/google-visibility/connect', connectGoogleVisibility);
-router.delete('/projects/:id/google-visibility/disconnect', disconnectGoogleVisibility);
+router.get('/projects/:id/google-visibility/status', validateProjectAccess(), getGoogleVisibilityStatus);
+router.get('/projects/:id/google-visibility/connect', validateProjectAccess(), connectGoogleVisibility);
+router.delete('/projects/:id/google-visibility/disconnect', validateProjectAccess(), disconnectGoogleVisibility);
 
 // AI Visibility routes
-router.get('/projects/:id/ai-visibility/page', getAIVisibilityPage);
-router.get('/projects/:id/ai-visibility/pages', getAIVisibilityPages);
-router.get('/projects/:id/ai-visibility/worst-pages', getAIVisibilityWorstPages);
-router.get('/projects/:id/ai-visibility/entity-graph', getAIVisibilityEntityGraph);
+router.get('/projects/:id/ai-visibility/page', validateProjectAccess(), getAIVisibilityPage);
+router.get('/projects/:id/ai-visibility/pages', validateProjectAccess(), getAIVisibilityPages);
+router.get('/projects/:id/ai-visibility/worst-pages', validateProjectAccess(), getAIVisibilityWorstPages);
+router.get('/projects/:id/ai-visibility/entity-graph', validateProjectAccess(), getAIVisibilityEntityGraph);
 
 // Test endpoint to verify routes are working
 router.get('/test-routes', (req, res) => {

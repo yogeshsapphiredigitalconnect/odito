@@ -78,6 +78,58 @@ export async function getOnPageIssues(projectId) {
           sample_pages: { $slice: ['$sample_pages', 5] },
         },
       },
+      {
+        $project: {
+          _id: 0,
+          issue_code: '$_id.issue_code',
+          issue_message: 1,
+          severity: 1,
+          category: 1,
+          ai_confidence: 1,
+          pages_affected: 1,
+          total_occurrences: 1,
+          sample_pages: { $slice: ['$sample_pages', 5] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          issue_code: '$_id.issue_code',
+          issue_message: 1,
+          severity: 1,
+          category: 1,
+          ai_confidence: 1,
+          pages_affected: 1,
+          total_occurrences: 1,
+          sample_pages: { $slice: ['$sample_pages', 5] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          issue_code: '$_id.issue_code',
+          issue_message: 1,
+          severity: 1,
+          category: 1,
+          ai_confidence: 1,
+          pages_affected: 1,
+          total_occurrences: 1,
+          sample_pages: { $slice: ['$sample_pages', 5] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          issue_code: '$_id.issue_code',
+          issue_message: 1,
+          severity: 1,
+          category: 1,
+          ai_confidence: 1,
+          pages_affected: 1,
+          total_occurrences: 1,
+          sample_pages: { $slice: ['$sample_pages', 5] },
+        },
+      },
 
       { $sort: { pages_affected: -1 } },
     ])

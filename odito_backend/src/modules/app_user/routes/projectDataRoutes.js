@@ -1,5 +1,6 @@
 import express from 'express';
 import auth from '../../user/middleware/auth.js';
+import { validateProjectAccess } from '../../../middleware/auth.middleware.js';
 import {
   getProjectLinks,
   getProjectPages,
@@ -21,23 +22,23 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(auth);
 
-// Project data routes
-router.get('/projects/:projectId/links', getProjectLinks);
-router.get('/projects/:projectId/pages', getProjectPages);
-router.get('/projects/:projectId/performance', getProjectPerformance);
-router.get('/projects/:projectId/summary', getProjectSummary);
-router.get('/projects/:projectId/issues', getProjectIssues);
-router.get('/projects/:projectId/issues-by-page', getProjectIssuesByPage);
-router.get('/projects/:projectId/page-issues', getPageIssues);
-router.get('/projects/:projectId/technical-checks', getTechnicalChecks);
-router.get('/projects/:projectId/technical-checks/:checkId', getTechnicalCheckDetail);
+// Project data routes - all require project access validation
+router.get('/projects/:projectId/links', validateProjectAccess(), getProjectLinks);
+router.get('/projects/:projectId/pages', validateProjectAccess(), getProjectPages);
+router.get('/projects/:projectId/performance', validateProjectAccess(), getProjectPerformance);
+router.get('/projects/:projectId/summary', validateProjectAccess(), getProjectSummary);
+router.get('/projects/:projectId/issues', validateProjectAccess(), getProjectIssues);
+router.get('/projects/:projectId/issues-by-page', validateProjectAccess(), getProjectIssuesByPage);
+router.get('/projects/:projectId/page-issues', validateProjectAccess(), getPageIssues);
+router.get('/projects/:projectId/technical-checks', validateProjectAccess(), getTechnicalChecks);
+router.get('/projects/:projectId/technical-checks/:checkId', validateProjectAccess(), getTechnicalCheckDetail);
 
 // AI Visibility routes
-router.get('/projects/:projectId/ai-visibility/worst-pages', getAIVisibilityWorstPages);
+router.get('/projects/:projectId/ai-visibility/worst-pages', validateProjectAccess(), getAIVisibilityWorstPages);
 
 // Google Visibility routes
-router.get('/projects/:projectId/google-visibility/status', getGoogleVisibilityStatus);
-router.get('/projects/:projectId/google-visibility/connect', connectGoogleVisibility);
-router.delete('/projects/:projectId/google-visibility/disconnect', disconnectGoogleVisibility);
+router.get('/projects/:projectId/google-visibility/status', validateProjectAccess(), getGoogleVisibilityStatus);
+router.get('/projects/:projectId/google-visibility/connect', validateProjectAccess(), connectGoogleVisibility);
+router.delete('/projects/:projectId/google-visibility/disconnect', validateProjectAccess(), disconnectGoogleVisibility);
 
 export default router;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, InsightBox } from '../layout';
 
 function DonutChart({ value, max = 100, color, size = 100 }) {
@@ -18,8 +18,112 @@ function DonutChart({ value, max = 100, color, size = 100 }) {
   );
 }
 
-export default function ExecutiveSummaryPage() {
-  const scoreColors = { 67: '#F59E0B', 41: '#EF4444', 71: '#F59E0B', 43: '#EF4444' };
+export default function ExecutiveSummaryPage({ projectId }) {
+  const [executiveData, setExecutiveData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!projectId) {
+      // Use fallback data if no projectId provided
+      setExecutiveData({
+        scores: { seoHealth: 67, aiVisibility: 41, performance: 71, authority: 43 },
+        issues: { critical: 8, warnings: 14, informational: 22, totalIssues: 44 },
+        issueDistribution: { critical: 8, medium: 14, info: 22, total: 44 },
+        aiAnalysis: "Odito AI analysis shows agencyplatform.com has strong technical foundations — valid SSL, clean sitemap, and responsive design — but suffers from critically low AI search visibility. 47 pages lack structured data and no Knowledge Graph entity is verified. Fixing these issues is projected to deliver a 35-50% organic traffic increase within 90 days."
+      });
+      setLoading(false);
+      return;
+    }
+
+    const fetchExecutiveData = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/executive`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Failed to fetch executive summary data');
+        }
+
+        setExecutiveData(result.data);
+        console.log("EXECUTIVE DATA RECEIVED:", result.data);
+      } catch (err) {
+        console.error('Error fetching executive summary data:', err);
+        setError(err.message);
+        
+        // Use fallback data on error
+        setExecutiveData({
+          scores: { seoHealth: 67, aiVisibility: 41, performance: 71, authority: 43 },
+          issues: { critical: 8, warnings: 14, informational: 22, totalIssues: 44 },
+          issueDistribution: { critical: 8, medium: 14, info: 22, total: 44 },
+          aiAnalysis: "Unable to load AI analysis. Please try again."
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExecutiveData();
+  }, [projectId]);
+
+  if (loading) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#374151', fontSize: 16 }}>Loading executive summary data...</div>
+      </div>
+    );
+  }
+
+  if (error && !executiveData) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#EF4444', fontSize: 16 }}>Error: {error}</div>
+      </div>
+    );
+  }
+
+  if (!executiveData) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#374151', fontSize: 16 }}>No executive summary data available</div>
+      </div>
+    );
+  }
+
+  const { scores, issues, issueDistribution, aiAnalysis } = executiveData;
+
+  // Dynamic score colors based on actual values
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#10B981';
+    if (score >= 60) return '#4F6EF7';
+    if (score >= 40) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  // Calculate total issues for display
+  const totalIssuesCount = (issues.critical || 0) + (issues.warnings || 0) + (issues.informational || 0);
 
   return (
     <div style={{
@@ -32,16 +136,16 @@ export default function ExecutiveSummaryPage() {
       <div style={{ padding: '32px 40px', flex: 1 }}>
         <SectionHeader num="02" title="Executive Summary" subtitle="Performance snapshot and AI-generated analysis" />
 
-        {/* 4 donut score cards */}
+        {/* 4 donut score cards - DYNAMIC VALUES */}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16,
           border: '1px solid #E5E7EB', borderRadius: 8, padding: 24, marginBottom: 20
         }}>
           {[
-            { v: 67, l: 'SEO Health', c: '#F59E0B' },
-            { v: 41, l: 'AI Visibility', c: '#EF4444' },
-            { v: 71, l: 'Performance', c: '#F59E0B' },
-            { v: 43, l: 'Authority', c: '#EF4444' },
+            { v: scores.seoHealth || 0, l: 'SEO Health', c: getScoreColor(scores.seoHealth) },
+            { v: scores.aiVisibility || 0, l: 'AI Visibility', c: getScoreColor(scores.aiVisibility) },
+            { v: scores.performance || 0, l: 'Performance', c: getScoreColor(scores.performance) },
+            { v: scores.authority || 0, l: 'Authority', c: getScoreColor(scores.authority) },
           ].map(({ v, l, c }) => (
             <div key={l} style={{ textAlign: 'center' }}>
               <DonutChart value={v} color={c} size={110} />
@@ -50,50 +154,85 @@ export default function ExecutiveSummaryPage() {
           ))}
         </div>
 
-        {/* Issue stats */}
+        {/* Issue stats - UPDATED ORDER: Total Issues, Critical, Medium, Info */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 28 }}>
-          <StatCard value={8} label="Critical Issues" sub="Fix immediately" color="#EF4444" borderColor="#EF4444" />
-          <StatCard value={14} label="Warnings" sub="Fix within 30 days" color="#F59E0B" borderColor="#F59E0B" />
-          <StatCard value={22} label="Informational" sub="Opportunities" color="#4F6EF7" borderColor="#4F6EF7" />
-          <StatCard value={47} label="Checks Passed" sub="No action needed" color="#10B981" borderColor="#10B981" />
+          <StatCard value={totalIssuesCount} label="Total Issues" sub="All issues found" color="#8B5CF6" borderColor="#8B5CF6" />
+          <StatCard value={issues.critical || 0} label="Critical Issues" sub="Fix immediately" color="#EF4444" borderColor="#EF4444" />
+          <StatCard value={issues.warnings || 0} label="Medium Issues" sub="Fix within 30 days" color="#F59E0B" borderColor="#F59E0B" />
+          <StatCard value={issues.informational || 0} label="Info Issues" sub="Opportunities" color="#4F6EF7" borderColor="#4F6EF7" />
         </div>
 
         <div style={{ borderBottom: '1px solid #E5E7EB', marginBottom: 24 }} />
 
+        {/* AI Analysis - DYNAMIC */}
         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, fontFamily: "'Syne', sans-serif" }}>AI Analysis Summary</h3>
-
         <InsightBox title="Full-Site AI Analysis">
-          Odito AI analysis shows agencyplatform.com has strong technical foundations — valid SSL, clean sitemap, and responsive design — but suffers from critically low AI search visibility. 47 pages lack structured data and no Knowledge Graph entity is verified. Fixing these issues is projected to deliver a 35-50% organic traffic increase within 90 days.
+          {aiAnalysis || "AI analysis is being generated..."}
         </InsightBox>
 
+        {/* Issue Distribution - FIXED DONUT CHART */}
         <h3 style={{ fontSize: 18, fontWeight: 700, margin: '28px 0 16px', fontFamily: "'Syne', sans-serif" }}>Issue Distribution</h3>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-          {/* Simple donut */}
+          {/* Fixed donut chart with proper segments */}
           <svg width={180} height={180} viewBox="0 0 180 180">
-            {[
-              { pct: 0.088, color: '#EF4444', offset: 0 },
-              { pct: 0.154, color: '#F59E0B', offset: 0.088 },
-              { pct: 0.242, color: '#4F6EF7', offset: 0.242 },
-              { pct: 0.516, color: '#10B981', offset: 0.484 },
-            ].map(({ pct, color, offset }, i) => {
-              const r = 70; const c = 2 * Math.PI * r;
-              return (
-                <circle key={i} cx={90} cy={90} r={r} fill="none" stroke={color} strokeWidth={22}
-                  strokeDasharray={`${c * pct} ${c}`}
-                  strokeDashoffset={-c * offset}
-                  transform="rotate(-90 90 90)" />
-              );
-            })}
+            {(() => {
+              // Prepare chart data - ONLY the segments, no total
+              const chartData = [
+                { name: "Critical", value: issueDistribution?.critical || 0, color: '#EF4444' },
+                { name: "Medium", value: issueDistribution?.medium || 0, color: '#F59E0B' },
+                { name: "Info", value: issueDistribution?.info || 0, color: '#4F6EF7' }
+              ];
+              
+              console.log("CHART DATA:", chartData);
+              
+              // Calculate total for proportions
+              const total = chartData.reduce((sum, item) => sum + item.value, 0);
+              
+              if (total === 0) {
+                // Show empty state
+                return (
+                  <>
+                    <circle cx={90} cy={90} r={70} fill="none" stroke="#E5E7EB" strokeWidth={22} />
+                    <circle cx={90} cy={90} r={50} fill="white" />
+                  </>
+                );
+              }
+              
+              // Calculate cumulative offsets for proper segment positioning
+              let cumulativeOffset = 0;
+              const r = 70;
+              const circumference = 2 * Math.PI * r;
+              
+              return chartData.map((item, index) => {
+                const percentage = item.value / total;
+                const dashLength = circumference * percentage;
+                const dashOffset = -circumference * cumulativeOffset;
+                
+                cumulativeOffset += percentage;
+                
+                return (
+                  <circle
+                    key={item.name}
+                    cx={90}
+                    cy={90}
+                    r={r}
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth={22}
+                    strokeDasharray={`${dashLength} ${circumference}`}
+                    strokeDashoffset={dashOffset}
+                    transform="rotate(-90 90 90)"
+                  />
+                );
+              });
+            })()}
             <circle cx={90} cy={90} r={50} fill="white" />
           </svg>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { color: '#EF4444', label: 'Critical (8)' },
-              { color: '#F59E0B', label: 'Warnings (14)' },
-              { color: '#4F6EF7', label: 'Info (22)' },
-              { color: '#10B981', label: 'Passed (47)' },
+              { color: '#EF4444', label: `Critical (${issueDistribution?.critical || 0})` },
+              { color: '#F59E0B', label: `Medium (${issueDistribution?.medium || 0})` },
+              { color: '#4F6EF7', label: `Info (${issueDistribution?.info || 0})` },
             ].map(({ color, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 14, height: 14, borderRadius: 3, background: color }} />

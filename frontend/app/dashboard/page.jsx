@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [issueCounts, setIssueCounts] = useState(null)
 
   useEffect(() => {
     if (user) {
@@ -45,6 +46,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeProject) return
     
+    // Fetch project data
     apiService
       .getProjectById(activeProject._id)
       .then(res => {
@@ -55,7 +57,31 @@ export default function Dashboard() {
       .catch(err => {
         console.error('Error fetching project data:', err)
       })
+
+    // Fetch real issue counts from our aggregation
+    fetchIssueCounts(activeProject._id)
   }, [activeProject])
+
+  const fetchIssueCounts = async (projectId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/executive`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data?.issues) {
+          setIssueCounts(result.data.issues)
+          console.log("Dashboard issue counts:", result.data.issues)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching issue counts:', error)
+    }
+  }
 
   const fetchProjects = async () => {
     try {
@@ -139,15 +165,17 @@ export default function Dashboard() {
   const performance = 0 // Not implemented yet
   const authority = 0 // Not implemented yet
 
-  // SEO summary data
+  // SEO summary data - USE REAL AGGREGATION DATA
   const pagesCrawled = project ? (project.pages_crawled || 0) : 0
-  const totalIssues = project ? (project.total_issues || 0) : 0
-  const criticalIssues = totalIssues > 0 ? Math.round(totalIssues * 0.25) : 0
+  const totalIssues = issueCounts ? 
+    (issueCounts.critical || 0) + (issueCounts.warnings || 0) + (issueCounts.informational || 0) : 
+    (project ? (project.total_issues || 0) : 0)
+  const criticalIssues = issueCounts ? (issueCounts.critical || 0) : 0
 
   // AI visibility summary data
-  const aiReadiness = aiVisibility
-  const schemaData = 0 // Temporary value
-  const aiSnippetProbability = 0 // Temporary value
+  const aiReadiness = project ? Math.round(project.ai_visibility?.categories?.llm_readiness || 0) : 0
+  const aiCitation = project ? Math.round(project.ai_visibility?.categories?.citation_probability || 0) : 0
+  const topicalAuthority = project ? Math.round(project.ai_visibility?.categories?.topical_authority || 0) : 0
 
   
   const renderProjectCards = () => (
@@ -359,11 +387,13 @@ export default function Dashboard() {
               pagesCrawled={pagesCrawled}
               totalIssues={totalIssues}
               criticalIssues={criticalIssues}
+              mediumIssues={issueCounts?.warnings || 0}
+              infoIssues={issueCounts?.informational || 0}
             />
             <AIVisibilityPanel 
               aiReadiness={aiReadiness}
-              schemaData={schemaData}
-              aiSnippetProbability={aiSnippetProbability}
+              aiCitation={aiCitation}
+              topicalAuthority={topicalAuthority}
             />
           </div>
         </div>

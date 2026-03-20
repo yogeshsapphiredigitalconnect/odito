@@ -12,7 +12,7 @@ export default function SEOSummaryPanel({ pagesCrawled = 0, totalIssues = 0, cri
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         {[
           { l: "Pages Crawled", v: pagesCrawled, c: "var(--cyan)" },
-          { l: "Total Issues", v: totalIssues, c: "var(--amber)" },
+          { l: "Total Issues", v: totalIssues, c: "var(--purple)" },
           { l: "Critical", v: criticalIssues, c: "var(--red)" },
         ].map((s, i) => (
           <div key={i} className="stat-tile">

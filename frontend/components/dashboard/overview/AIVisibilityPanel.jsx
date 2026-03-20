@@ -2,7 +2,7 @@
 
 import ProgressBar from "@/components/ui/ProgressBar";
 
-export default function AIVisibilityPanel({ aiReadiness = 0, schemaData = 0, aiSnippetProbability = 0 }) {
+export default function AIVisibilityPanel({ aiReadiness = 0, aiCitation = 0, topicalAuthority = 0 }) {
   return (
     <div>
       <div className="section-head">
@@ -12,8 +12,8 @@ export default function AIVisibilityPanel({ aiReadiness = 0, schemaData = 0, aiS
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         {[
           { l: "AI Readiness", v: `${aiReadiness}%`, c: "var(--purple)" },
-          { l: "Schema Data", v: `${schemaData}%`, c: "var(--cyan)" },
-          { l: "AI Snippet Prob.", v: `${aiSnippetProbability}%`, c: "var(--amber)" },
+          { l: "AI Citation", v: `${aiCitation}%`, c: "var(--cyan)" },
+          { l: "Topical Authority", v: `${topicalAuthority}%`, c: "var(--amber)" },
         ].map((s, i) => (
           <div key={i} className="stat-tile">
             <div className="stat-tile-label">{s.l}</div>
@@ -23,15 +23,15 @@ export default function AIVisibilityPanel({ aiReadiness = 0, schemaData = 0, aiS
       </div>
       <div className="glass-card" style={{ padding: 16 }}>
         {[
-          { l: "Entity Coverage", v: 31 },
-          { l: "FAQ Optimization", v: 8 },
-          { l: "Conversational Query Score", v: 48 },
+          { l: "AI Readiness", v: aiReadiness, c: "var(--purple)" },
+          { l: "AI Citation", v: aiCitation, c: "var(--cyan)" },
+          { l: "Topical Authority", v: topicalAuthority, c: "var(--amber)" },
         ].map((item, i) => (
           <div key={i} style={{ marginBottom: i < 2 ? 14 : 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 12, color: "var(--text2)" }}>
               <span>{item.l}</span><span style={{ fontWeight: 600 }}>{item.v}%</span>
             </div>
-            <ProgressBar val={item.v} color="var(--purple)" />
+            <ProgressBar val={item.v} color={item.c} />
           </div>
         ))}
       </div>

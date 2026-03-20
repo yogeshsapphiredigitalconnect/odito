@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './styles/pdf.css';
 
 import CoverPage from './components/sections/Page01Cover';
@@ -20,8 +20,32 @@ import ActionPlanPage from './components/sections/Page28ActionPlan';
 import AuditMethodologyPage from './components/sections/Page29Methodology';
 import AboutOditoPage from './components/sections/Page30About';
 
-const pages = [
-  { id: 'p01', label: 'p.1 — Cover', component: <CoverPage /> },
+export default function App() {
+  const [current, setCurrent] = useState(0);
+  const [projectId, setProjectId] = useState(null);
+
+  // Extract projectId from URL or use default
+  useEffect(() => {
+    // Try to get projectId from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlProjectId = urlParams.get('projectId');
+    
+    // Try to get from filename (fallback)
+    const filename = window.location.pathname.split('/').pop();
+    const filenameMatch = filename.match(/([a-f0-9]{24})/);
+    
+    const extractedProjectId = urlProjectId || (filenameMatch ? filenameMatch[1] : null);
+    
+    if (extractedProjectId) {
+      setProjectId(extractedProjectId);
+    } else {
+      // Default project ID for testing
+      setProjectId('69bd09a878159772d6a2e4de');
+    }
+  }, []);
+
+  const pages = [
+    { id: 'p01', label: 'p.1 — Cover', component: <CoverPage projectId={projectId} /> },
   { id: 'p02', label: 'p.2 — Section 01: Executive Summary', component: <SectionDivider pageNum={2} sectionNum={1} title="Executive Summary" subtitle="Scores, issue overview and AI-generated analysis" /> },
   { id: 'p03', label: 'p.3 — Executive Summary', component: <ExecutiveSummaryPage /> },
   { id: 'p04', label: 'p.4 — Key Strengths vs Issues', component: <KeyStrengthsPage /> },
@@ -51,10 +75,7 @@ const pages = [
   { id: 'p28', label: 'p.28 — 30-Day Action Plan', component: <ActionPlanPage /> },
   { id: 'p29', label: 'p.29 — Audit Methodology', component: <AuditMethodologyPage /> },
   { id: 'p30', label: 'p.30 — About Odito AI', component: <AboutOditoPage /> },
-];
-
-export default function App() {
-  const [current, setCurrent] = useState(0);
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: '#F1F5F9' }}>

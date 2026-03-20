@@ -1,3 +1,5 @@
+import { ResponseUtil } from '../../../utils/ResponseUtil.js';
+import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import GoogleConnection from '../model/GoogleConnection.js';
 import SearchConsoleData from '../model/SearchConsoleData.js';
 import SeoProject from '../model/SeoProject.js';
@@ -32,57 +34,45 @@ export const syncSearchConsoleData = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[SEARCH_CONSOLE_SYNC] Starting sync', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Search Console sync starting', { projectId, userId: userId.toString() });
 
   try {
     // Step 1: Validate project ownership
-    console.log('[SEARCH_CONSOLE_SYNC] Step 1: Validating project ownership...');
+    LoggerUtil.debug('Step 1: Validating project ownership...');
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      console.log('[SEARCH_CONSOLE_SYNC] Project not found:', projectId);
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      LoggerUtil.warn('Project not found', { projectId });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      console.log('[SEARCH_CONSOLE_SYNC] Access denied - user does not own project');
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      LoggerUtil.security('Access denied - user does not own project', { projectId, userId });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
-    console.log('[SEARCH_CONSOLE_SYNC] Project ownership validated:', {
+    LoggerUtil.debug('Project ownership validated', {
       projectName: project.project_name,
       projectUrl: project.main_url
     });
 
     // Step 2: Validate Google connection
-    console.log('[SEARCH_CONSOLE_SYNC] Step 2: Validating Google connection...');
+    LoggerUtil.debug('Step 2: Validating Google connection...');
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      console.log('[SEARCH_CONSOLE_SYNC] No active Google connection found');
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected. Please connect your Google account first.'
-      });
+      LoggerUtil.warn('No active Google connection found', { projectId });
+      return res.status(400).json(ResponseUtil.error('Google account not connected. Please connect your Google account first.', 400));
     }
 
-    console.log('[SEARCH_CONSOLE_SYNC] Google connection validated:', {
+    LoggerUtil.debug('Google connection validated', {
       googleEmail: googleConnection.google_email,
       serviceTypes: googleConnection.service_type,
       lastSync: googleConnection.last_sync_at
     });
 
     // Step 3: Fetch Search Console data
-    console.log('[SEARCH_CONSOLE_SYNC] Step 3: Fetching Search Console data...');
+    LoggerUtil.debug('Step 3: Fetching Search Console data...');
     let performanceData;
     let dateRange;
 
@@ -90,16 +80,14 @@ export const syncSearchConsoleData = async (req, res) => {
       performanceData = await getProjectSearchConsoleData(googleConnection, project.main_url);
       
       if (!performanceData || !performanceData.data || performanceData.data.length === 0) {
-        console.log('[SEARCH_CONSOLE_SYNC] No Search Console data available');
-        return res.status(200).json({
-          success: true,
-          message: 'No Search Console data available for this project',
+        LoggerUtil.info('No Search Console data available', { projectId });
+        return res.status(200).json(ResponseUtil.success({
           synced_pages: 0,
           skipped_pages: 0,
           data_points: 0,
           date_range: null,
           last_sync_at: googleConnection.last_sync_at
-        });
+        }, 'No Search Console data available for this project'));
       }
 
       // Calculate date range from data (28 days from API)
@@ -112,33 +100,21 @@ export const syncSearchConsoleData = async (req, res) => {
         end: endDate.toISOString().split('T')[0]
       };
 
-      console.log('[SEARCH_CONSOLE_SYNC] Search Console data fetched:', {
+      LoggerUtil.info('Search Console data fetched', {
         dataPoints: performanceData.dataPoints || performanceData.data?.length || 0,
         syncedPages: performanceData.syncedPages || 0,
         skippedPages: performanceData.skippedPages || 0,
-        dateRange,
-        sampleData: (performanceData.rows || performanceData.data || []).slice(0, 2).map(item => ({
-          page_url: item.page_url,
-          clicks: item.clicks,
-          impressions: item.impressions
-        }))
+        dateRange
       });
 
     } catch (apiError) {
-      console.error('[SEARCH_CONSOLE_SYNC] Google API fetch failed:', {
-        error: apiError.message,
-        stack: apiError.stack
-      });
+      LoggerUtil.error('Google API fetch failed', apiError, { projectId });
       
       // Don't update sync state on API failure
-      return res.status(400).json({
-        success: false,
-        message: `Failed to fetch Search Console data: ${apiError.message}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Failed to fetch Search Console data: ${apiError.message}`, 400));
     }
 
-    // Step 4: Store data in database
-    console.log('[SEARCH_CONSOLE_SYNC] Step 4: Storing data in database...');
+    LoggerUtil.debug('Step 4: Storing data in database...');
     let dbResult;
 
     try {
@@ -153,27 +129,20 @@ export const syncSearchConsoleData = async (req, res) => {
         endDate
       );
 
-      console.log('[SEARCH_CONSOLE_SYNC] Data stored successfully:', {
+      LoggerUtil.info('Data stored successfully', {
         upserted: dbResult.upserted,
         modified: dbResult.modified,
         total: dbResult.total
       });
 
     } catch (dbError) {
-      console.error('[SEARCH_CONSOLE_SYNC] Database operation failed:', {
-        error: dbError.message,
-        stack: dbError.stack
-      });
+      LoggerUtil.error('Database operation failed', dbError, { projectId });
       
       // Don't update sync state on DB failure
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to store Search Console data. Please try again.'
-      });
+      return res.status(500).json(ResponseUtil.error('Failed to store Search Console data. Please try again.', 500));
     }
 
-    // Step 5: Update Google connection sync metadata and enable Search Console service
-    console.log('[SEARCH_CONSOLE_SYNC] Step 5: Updating sync metadata and enabling Search Console service...');
+    LoggerUtil.debug('Step 5: Updating sync metadata and enabling Search Console service...');
     try {
       // Update last_sync_at and automatically enable Search Console service
       await GoogleConnection.findByIdAndUpdate(
@@ -187,49 +156,34 @@ export const syncSearchConsoleData = async (req, res) => {
         { new: true }
       );
 
-      console.log('[SEARCH_CONSOLE_SYNC] Sync metadata updated');
+      LoggerUtil.info('Sync metadata updated');
 
     } catch (metadataError) {
-      console.error('[SEARCH_CONSOLE_SYNC] Failed to update sync metadata:', {
-        error: metadataError.message
-      });
+      LoggerUtil.error('Failed to update sync metadata', metadataError);
       
       // Data was stored successfully, but metadata update failed
       // This is not critical, so we can still return success
-      console.log('[SEARCH_CONSOLE_SYNC] Continuing despite metadata update failure');
+      LoggerUtil.warn('Continuing despite metadata update failure');
     }
 
-    // Step 6: Return success response
-    const syncResponse = {
-      success: true,
-      message: 'Search Console data synced successfully',
+    LoggerUtil.info('Sync completed successfully', {
+      projectId,
+      syncedPages: dbResult.total,
+      dateRange
+    });
+
+    return res.status(200).json(ResponseUtil.success({
       synced_pages: dbResult.total,
       skipped_pages: performanceData.skipped_pages || 0,
       data_points: performanceData.dataPoints || performanceData.data?.length || 0,
       date_range: dateRange,
       last_sync_at: new Date().toISOString()
-    };
-
-    console.log('[SEARCH_CONSOLE_SYNC] Sync completed successfully:', {
-      projectId,
-      syncedPages: syncResponse.synced_pages,
-      dateRange: syncResponse.date_range
-    });
-
-    return res.status(200).json(syncResponse);
+    }, 'Search Console data synced successfully'));
 
   } catch (error) {
-    console.error('[SEARCH_CONSOLE_SYNC] Unexpected error:', {
-      error: error.message,
-      stack: error.stack,
-      projectId,
-      userId
-    });
+    LoggerUtil.error('Unexpected error during sync', error, { projectId, userId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'An unexpected error occurred during sync. Please try again.'
-    });
+    return res.status(500).json(ResponseUtil.error('An unexpected error occurred during sync. Please try again.', 500));
   }
 };
 
@@ -243,10 +197,7 @@ export const getSearchConsoleSyncStatus = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[SEARCH_CONSOLE_STATUS] Getting sync status', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Getting Search Console sync status', { projectId, userId: userId.toString() });
 
   try {
     // Validate project ownership
@@ -270,13 +221,12 @@ export const getSearchConsoleSyncStatus = async (req, res) => {
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.json({
-        success: true,
+      return res.json(ResponseUtil.success({
         connected: false,
         service_enabled: false,
         last_sync_at: null,
         message: 'Google account not connected'
-      });
+      }));
     }
 
     const isServiceEnabled = googleConnection.service_type.includes('search_console');
@@ -298,7 +248,7 @@ export const getSearchConsoleSyncStatus = async (req, res) => {
           latestDataDate = aggregates.lastFetched;
         }
       } catch (countError) {
-        console.warn('[SEARCH_CONSOLE_STATUS] Failed to get data count:', countError.message);
+        LoggerUtil.warn('Failed to get data count', { message: countError.message });
       }
     }
 
@@ -312,20 +262,14 @@ export const getSearchConsoleSyncStatus = async (req, res) => {
       google_email: googleConnection.google_email
     };
 
-    console.log('[SEARCH_CONSOLE_STATUS] Status retrieved:', statusResponse);
+    LoggerUtil.debug('Status retrieved', statusResponse);
 
-    return res.json(statusResponse);
+    return res.json(ResponseUtil.success(statusResponse));
 
   } catch (error) {
-    console.error('[SEARCH_CONSOLE_STATUS] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error getting sync status', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get sync status'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to get sync status', 500));
   }
 };
 
@@ -349,7 +293,7 @@ export const getSearchConsoleData = async (req, res) => {
     end_date
   } = req.query;
 
-  console.log('[SEARCH_CONSOLE_DATA] Fetching performance data', {
+  LoggerUtil.info('Fetching Search Console performance data', {
     projectId,
     userId: userId.toString(),
     queryParams: { page, limit, sort, order, start_date, end_date }
@@ -377,10 +321,7 @@ export const getSearchConsoleData = async (req, res) => {
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection || !googleConnection.service_type.includes('search_console')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search Console not connected for this project'
-      });
+      return res.status(400).json(ResponseUtil.error('Search Console not connected for this project', 400));
     }
 
     // Parse and validate parameters
@@ -391,10 +332,7 @@ export const getSearchConsoleData = async (req, res) => {
     // Validate sort field
     const validSortFields = ['clicks', 'impressions', 'ctr', 'position', 'page_url'];
     if (!validSortFields.includes(sort)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid sort field. Must be one of: ${validSortFields.join(', ')}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Invalid sort field. Must be one of: ${validSortFields.join(', ')}`, 400));
     }
 
     // Build sort object
@@ -408,20 +346,14 @@ export const getSearchConsoleData = async (req, res) => {
     if (start_date) {
       startDateFilter = new Date(start_date);
       if (isNaN(startDateFilter.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid start_date format'
-        });
+        return res.status(400).json(ResponseUtil.error('Invalid start_date format', 400));
       }
     }
 
     if (end_date) {
       endDateFilter = new Date(end_date);
       if (isNaN(endDateFilter.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid end_date format'
-        });
+        return res.status(400).json(ResponseUtil.error('Invalid end_date format', 400));
       }
     }
 
@@ -466,25 +398,23 @@ export const getSearchConsoleData = async (req, res) => {
       }
     };
 
-    console.log('[SEARCH_CONSOLE_DATA] Data retrieved successfully:', {
+    LoggerUtil.info('Data retrieved successfully', {
       projectId,
       dataPoints: performanceData.length,
       totalPages: response.pagination.pages
     });
 
-    return res.json(response);
+    return res.json(ResponseUtil.success(response.data, 'Data retrieved successfully', {
+      page: pageNum,
+      limit: limitNum,
+      total: aggregates.page_count || 0,
+      pages: response.pagination.pages
+    }));
 
   } catch (error) {
-    console.error('[SEARCH_CONSOLE_DATA] Error:', {
-      error: error.message,
-      stack: error.stack,
-      projectId
-    });
+    LoggerUtil.error('Error fetching Search Console data', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch Search Console data'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to fetch Search Console data', 500));
   }
 };
 

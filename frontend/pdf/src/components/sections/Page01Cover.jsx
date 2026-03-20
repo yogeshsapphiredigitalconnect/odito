@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageFooter } from '../layout';
 
 function ScoreCard({ value, label }) {
@@ -17,7 +17,107 @@ function ScoreCard({ value, label }) {
   );
 }
 
-export default function CoverPage() {
+export default function CoverPage({ projectId }) {
+  const [coverData, setCoverData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log('[COVER PAGE] useEffect triggered with projectId:', projectId);
+    
+    if (!projectId) {
+      console.error('[COVER PAGE] Project ID is missing or undefined');
+      setError('Project ID is required');
+      setLoading(false);
+      return;
+    }
+
+    const fetchCoverData = async () => {
+      try {
+        console.log('[COVER PAGE] Fetching cover data for projectId:', projectId);
+        
+        const token = localStorage.getItem('token');
+        console.log('[COVER PAGE] Token from localStorage:', token ? 'Present' : 'Missing');
+        
+        if (!token) {
+          console.error('[COVER PAGE] No authentication token found');
+          setError('Authentication required - please login again');
+          setLoading(false);
+          return;
+        }
+        
+        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/cover`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('[COVER PAGE] Response status:', response.status);
+        console.log('[COVER PAGE] Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[COVER PAGE] API Error:', errorData);
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        console.log('[COVER PAGE] API response:', result);
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Failed to fetch cover data');
+        }
+
+        console.log('[COVER PAGE] Cover data loaded successfully:', result.data);
+        setCoverData(result.data);
+      } catch (err) {
+        console.error('[COVER PAGE] Error fetching cover page data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCoverData();
+  }, [projectId]);
+
+  if (loading) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: 'var(--bg-dark, #070B1A)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#8892C4', fontSize: 16 }}>Loading cover page data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: 'var(--bg-dark, #070B1A)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#FF5A5A', fontSize: 16 }}>Error: {error}</div>
+      </div>
+    );
+  }
+
+  if (!coverData) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: 'var(--bg-dark, #070B1A)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#8892C4', fontSize: 16 }}>No cover data available</div>
+      </div>
+    );
+  }
   return (
     <div style={{
       width: 960, minHeight: 1280, background: 'var(--bg-dark, #070B1A)',
@@ -74,8 +174,8 @@ export default function CoverPage() {
         <h1 style={{
           fontSize: 52, fontWeight: 800, color: '#fff',
           fontFamily: "'Syne', sans-serif", lineHeight: 1.1
-        }} className="letter-spacing-neg1">agencyplatform.com</h1>
-        <p style={{ color: '#8892C4', fontSize: 15, marginTop: 8, marginBottom: 24 }}>Agency Platform Inc.</p>
+        }} className="letter-spacing-neg1">{coverData.domain}</h1>
+        <p style={{ color: '#8892C4', fontSize: 15, marginTop: 8, marginBottom: 24 }}>{coverData.companyName}</p>
 
         {/* Metadata row */}
         <div style={{
@@ -84,10 +184,10 @@ export default function CoverPage() {
           borderRadius: 8, overflow: 'hidden', marginBottom: 40
         }}>
           {[
-            { label: 'Audit Date', value: 'March 13, 2025' },
-            { label: 'Engine', value: 'Odito AI Engine v2' },
-            { label: 'Pages Crawled', value: '312 pages' },
-            { label: 'Prepared for', value: 'Agency Platform Inc.' },
+            { label: 'Audit Date', value: coverData.auditDate },
+            { label: 'Engine', value: `${coverData.engine} Engine v2` },
+            { label: 'Pages Crawled', value: `${coverData.pagesCrawled} pages` },
+            { label: 'Prepared for', value: coverData.preparedFor },
           ].map((item, i) => (
             <div key={i} style={{
               padding: '14px 18px',
@@ -114,12 +214,14 @@ export default function CoverPage() {
               <div style={{
                 flex: 1, background: '#fff', borderRadius: 4, padding: '3px 10px',
                 fontSize: 11, color: '#6B7280', marginLeft: 8
-              }}>https:// agencyplatform.com</div>
+              }}>https://{coverData.domain}</div>
             </div>
             {/* Site preview */}
             <div style={{ padding: '16px', background: '#fff' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#4F6EF7', fontFamily: "'Syne', sans-serif" }}>Agencyplatform</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#4F6EF7', fontFamily: "'Syne', sans-serif" }}>
+                  {coverData.domain.split('.')[0]}
+                </span>
                 <div style={{ display: 'flex', gap: 12 }}>
                   {['Home', 'Services', 'Blog', 'Contact'].map(n => (
                     <span key={n} style={{ fontSize: 10, color: '#6B7280' }}>{n}</span>
@@ -137,14 +239,22 @@ export default function CoverPage() {
               {/* Score bars */}
               <div style={{ background: '#F9FAFB', borderRadius: 8, padding: 12, marginTop: 8 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
-                  {[['67', 'SEO Audit'], ['41', 'AI Visibility'], ['71', 'Performance']].map(([v, l]) => (
+                  {[
+                    [coverData.scores.seoHealth, 'SEO Audit'], 
+                    [coverData.scores.aiVisibility, 'AI Visibility'], 
+                    [coverData.scores.performance, 'Performance']
+                  ].map(([v, l]) => (
                     <div key={l} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: 20, fontWeight: 800, color: '#4F6EF7', fontFamily: "'Syne', sans-serif" }}>{v}</div>
                       <div style={{ fontSize: 9, color: '#6B7280' }}>{l}</div>
                     </div>
                   ))}
                 </div>
-                {[['SEO Health', 67, '#4F6EF7'], ['AI Visibility', 41, '#00D4FF'], ['Performance', 71, '#7B5CF0']].map(([label, pct, color]) => (
+                {[
+                  ['SEO Health', coverData.scores.seoHealth, '#4F6EF7'], 
+                  ['AI Visibility', coverData.scores.aiVisibility, '#00D4FF'], 
+                  ['Performance', coverData.scores.performance, '#7B5CF0']
+                ].map(([label, pct, color]) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontSize: 10, color: '#6B7280', width: 80 }}>{label}</span>
                     <div style={{ flex: 1, height: 4, background: '#E5E7EB', borderRadius: 2 }}>
@@ -166,7 +276,7 @@ export default function CoverPage() {
                 <svg width={160} height={160} viewBox="0 0 160 160">
                   <circle cx={80} cy={80} r={68} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={14} />
                   <circle cx={80} cy={80} r={68} fill="none" stroke="#4F6EF7" strokeWidth={14}
-                    strokeDasharray={`${2 * Math.PI * 68 * 0.58} ${2 * Math.PI * 68}`}
+                    strokeDasharray={`${2 * Math.PI * 68 * (coverData.overallScore/100)} ${2 * Math.PI * 68}`}
                     strokeLinecap="round" strokeDashoffset={2 * Math.PI * 68 * 0.25}
                     transform="rotate(-90 80 80)" />
                 </svg>
@@ -174,24 +284,24 @@ export default function CoverPage() {
                   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -55%)',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: 40, fontWeight: 800, color: '#fff', fontFamily: "'Syne', sans-serif", lineHeight: 1 }}>58</div>
+                  <div style={{ fontSize: 40, fontWeight: 800, color: '#fff', fontFamily: "'Syne', sans-serif", lineHeight: 1 }}>{coverData.overallScore}</div>
                   <div style={{ fontSize: 12, color: '#8892C4' }}>/100</div>
                 </div>
                 <div style={{
                   position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
                   background: '#4F6EF7', color: '#fff', fontSize: 12, fontWeight: 700,
                   padding: '3px 14px', borderRadius: 20
-                }}>C+</div>
+                }}>{coverData.overallGrade}</div>
               </div>
             </div>
 
             {/* 4 score cards */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { v: 71, l: 'Performance', c: '#4F6EF7' },
-                { v: 43, l: 'Authority', c: '#4F6EF7' },
-                { v: 67, l: 'SEO Health', c: '#4F6EF7' },
-                { v: 41, l: 'AI Visibility', c: '#00D4FF' },
+                { v: coverData.scores.performance, l: 'Performance', c: '#4F6EF7' },
+                { v: coverData.scores.authority, l: 'Authority', c: '#4F6EF7' },
+                { v: coverData.scores.seoHealth, l: 'SEO Health', c: '#4F6EF7' },
+                { v: coverData.scores.aiVisibility, l: 'AI Visibility', c: '#00D4FF' },
               ].map(({ v, l, c }) => (
                 <div key={l} style={{
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(79,110,247,0.3)',
@@ -217,11 +327,11 @@ export default function CoverPage() {
         borderRadius: 8, margin: '32px 40px', overflow: 'hidden'
       }}>
         {[
-          { v: 8, l: 'Critical Issues', c: '#FF5A5A' },
-          { v: 14, l: 'Warnings', c: '#FF9C41' },
-          { v: 22, l: 'Informational', c: '#4F6EF7' },
-          { v: 47, l: 'Checks Passed', c: '#2DD4A0' },
-          { v: 312, l: 'Pages Crawled', c: '#fff' },
+          { v: coverData.issues.critical, l: 'Critical Issues', c: '#FF5A5A' },
+          { v: coverData.issues.warnings, l: 'Warnings', c: '#FF9C41' },
+          { v: coverData.issues.informational, l: 'Informational', c: '#4F6EF7' },
+          { v: coverData.issues.passed, l: 'Checks Passed', c: '#2DD4A0' },
+          { v: coverData.pagesCrawled, l: 'Pages Crawled', c: '#fff' },
         ].map(({ v, l, c }, i) => (
           <div key={l} style={{
             padding: '16px', textAlign: 'center',
@@ -239,8 +349,8 @@ export default function CoverPage() {
         display: 'flex', justifyContent: 'space-between', padding: '12px 40px',
         background: 'rgba(255,255,255,0.02)'
       }}>
-        <span style={{ color: '#4A5280', fontSize: 11 }}>Odito AI Audit Report | March 13, 2025</span>
-        <span style={{ color: '#4A5280', fontSize: 11 }}>agencyplatform.com</span>
+        <span style={{ color: '#4A5280', fontSize: 11 }}>Odito AI Audit Report | {coverData.auditDate}</span>
+        <span style={{ color: '#4A5280', fontSize: 11 }}>{coverData.domain}</span>
       </div>
     </div>
   );

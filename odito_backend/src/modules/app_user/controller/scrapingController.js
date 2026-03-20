@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { ResponseUtil } from '../../../utils/ResponseUtil.js';
+import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import { JobService } from '../../jobs/service/jobService.js';
 import JobDispatcher from '../../jobs/service/jobDispatcher.js';
 import SeoProject from '../model/SeoProject.js';
@@ -15,7 +17,7 @@ const jobService = new JobService();
 const jobDispatcher = new JobDispatcher();
 
 // Debug: Verify Job model is imported
-console.log('🔍 Job model loaded:', typeof Job);
+LoggerUtil.debug('Job model loaded', { type: typeof Job });
 
 /**
  * Reset all crawl-related data for a project before starting a new crawl
@@ -27,7 +29,7 @@ const resetProjectCrawlData = async (projectId) => {
     const { ObjectId } = mongoose.Types;
     const projectIdObj = new ObjectId(projectId);
 
-    console.log(`[API] Resetting crawl data for project | projectId=${projectId}`);
+    LoggerUtil.info(`Resetting crawl data for project | projectId=${projectId}`);
 
     // Clear all crawl-related collections for this project
     const collectionsToClear = [
@@ -46,7 +48,7 @@ const resetProjectCrawlData = async (projectId) => {
         projectId: projectIdObj
       });
       totalDeleted += result.deletedCount;
-      console.log(`[API] Cleared ${collectionName} | deleted=${result.deletedCount}`);
+      LoggerUtil.debug(`Cleared ${collectionName}`, { deleted: result.deletedCount });
     }
 
     // Reset project crawl summary fields
@@ -62,11 +64,11 @@ const resetProjectCrawlData = async (projectId) => {
       last_analysis_at: null
     });
 
-    console.log(`[API] Project crawl data reset complete | projectId=${projectId} | totalDeleted=${totalDeleted}`);
+    LoggerUtil.info(`Project crawl data reset complete`, { projectId, totalDeleted });
     return totalDeleted;
 
   } catch (error) {
-    console.error(`[ERROR] Failed to reset crawl data | projectId=${projectId} | error="${error.message}"`);
+    LoggerUtil.error(`Failed to reset crawl data`, error, { projectId });
     throw error;
   }
 };
@@ -166,15 +168,15 @@ export const startScraping = async (req, res) => {
     // Dispatch all three jobs asynchronously
     // Don't wait for dispatch to respond to user immediately
     jobDispatcher.queueLinkDiscoveryJob(linkDiscoveryJob).catch(error => {
-      console.error(`Failed to queue job ${linkDiscoveryJob._id}:`, error);
+      LoggerUtil.error(`Failed to queue job ${linkDiscoveryJob._id}`, error);
     });
 
     jobDispatcher.queueDomainPerformanceJob(domainPerformanceJob).catch(error => {
-      console.error(`Failed to queue job ${domainPerformanceJob._id}:`, error);
+      LoggerUtil.error(`Failed to queue job ${domainPerformanceJob._id}`, error);
     });
 
     jobDispatcher.dispatchKeywordResearchJob(keywordResearchJob).catch(error => {
-      console.error(`Failed to queue job ${keywordResearchJob._id}:`, error);
+      LoggerUtil.error(`Failed to queue job ${keywordResearchJob._id}`, error);
     });
 
     // Update project status to active when scraping starts
@@ -239,12 +241,8 @@ export const startScraping = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error starting scraping pipeline:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start scraping pipeline',
-      error: error.message
-    });
+    LoggerUtil.error('Error starting scraping pipeline', error, { project_id: req.body.project_id });
+    return res.status(500).json(ResponseUtil.error('Failed to start scraping pipeline', 500));
   }
 };
 
@@ -252,35 +250,32 @@ export const startScraping = async (req, res) => {
  * Cancel running audit for a project
  */
 export const cancelAudit = async (req, res) => {
-  console.log('🔥 Cancel audit API HIT', req.body);
+  LoggerUtil.info('Cancel audit API called', { body: req.body });
 
   try {
     const { project_id, job_id } = req.body; // Accept both project_id and job_id
 
     if (!project_id && !job_id) {
-      console.log('❌ Missing project_id or job_id');
-      return res.status(400).json({
-        success: false,
-        message: 'project_id or job_id is required'
-      });
+      LoggerUtil.warn('Missing project_id or job_id');
+      return res.status(400).json(ResponseUtil.error('project_id or job_id is required', 400));
     }
 
     let runningJobs = [];
 
     if (job_id) {
       // Cancel specific job by job_id (preferred)
-      console.log(`🔍 Looking for specific job: ${job_id}`);
+      LoggerUtil.debug(`Looking for specific job: ${job_id}`);
       const job = await Job.findById(job_id);
       if (job && ['PROCESSING', 'QUEUED', 'CLAIMED'].includes(job.status)) {
         runningJobs = [job];
       }
     } else {
       // Legacy: find all running jobs for project
-      console.log(`🔍 Looking for running jobs in project: ${project_id}`);
+      LoggerUtil.debug(`Looking for running jobs in project: ${project_id}`);
 
       // First, let's see ALL jobs for this project for debugging
       const allJobs = await jobService.getJobsByProject(project_id, {});
-      console.log(`📋 ALL jobs for project ${project_id}:`, allJobs.map(j => ({
+      LoggerUtil.debug(`ALL jobs for project ${project_id}`, allJobs.map(j => ({
         id: j._id,
         status: j.status,
         jobType: j.jobType,
@@ -293,19 +288,16 @@ export const cancelAudit = async (req, res) => {
       );
     }
 
-    console.log(`📊 Found ${runningJobs.length} running jobs:`, runningJobs.map(j => ({ id: j._id, status: j.status })));
+    LoggerUtil.debug(`Found ${runningJobs.length} running jobs`, runningJobs.map(j => ({ id: j._id, status: j.status })));
 
     if (runningJobs.length === 0) {
-      console.log('❌ No running jobs found');
-      return res.status(404).json({
-        success: false,
-        message: 'No running jobs found for this project'
-      });
+      LoggerUtil.warn('No running jobs found');
+      return res.status(404).json(ResponseUtil.error('No running jobs found for this project', 404));
     }
 
     // Mark jobs as cancelled in database
     const jobIds = runningJobs.map(job => job._id);
-    console.log(`🔄 Marking jobs as cancelled: ${jobIds.join(', ')}`);
+    LoggerUtil.debug(`Marking jobs as cancelled`, { jobIds });
 
     for (const jobId of jobIds) {
       await jobService.updateJobStatus(jobId, 'failed', {
@@ -314,15 +306,15 @@ export const cancelAudit = async (req, res) => {
       });
     }
 
-    console.log('✅ Jobs marked as cancelled in database');
+    LoggerUtil.info('Jobs marked as cancelled in database');
 
     // Notify Python workers to stop processing these jobs
     const pythonWorkerUrl = process.env.PYTHON_WORKER_URL || 'http://localhost:8000';
-    console.log(`📡 Notifying Python worker at: ${pythonWorkerUrl}`);
+    LoggerUtil.debug(`Notifying Python worker at: ${pythonWorkerUrl}`);
 
     for (const jobId of jobIds) {
       try {
-        console.log(`📢 Sending cancel request for job: ${jobId}`);
+        LoggerUtil.debug(`Sending cancel request for job: ${jobId}`);
         const response = await fetch(`${pythonWorkerUrl}/jobs/cancel`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -330,12 +322,12 @@ export const cancelAudit = async (req, res) => {
         });
 
         if (response.ok) {
-          console.log(`✅ Notified Python worker to cancel job: ${jobId}`);
+          LoggerUtil.debug(`Notified Python worker to cancel job: ${jobId}`);
         } else {
-          console.error(`❌ Failed to notify Python worker for job ${jobId}:`, response.statusText);
+          LoggerUtil.error(`Failed to notify Python worker for job ${jobId}`, { status: response.statusText });
         }
       } catch (workerError) {
-        console.error(`❌ Error notifying Python worker for job ${jobId}:`, workerError.message);
+        LoggerUtil.error(`Error notifying Python worker for job ${jobId}`, { message: workerError.message });
       }
     }
 
@@ -357,24 +349,16 @@ export const cancelAudit = async (req, res) => {
       });
     }
 
-    console.log(`🛑 User cancelled audit, jobs: ${jobIds.join(', ')}`);
+    LoggerUtil.info(`User cancelled audit`, { jobIds });
 
-    res.json({
-      success: true,
-      message: 'Audit cancelled successfully',
-      data: {
-        cancelledJobs: jobIds,
-        project_id
-      }
-    });
+    return res.json(ResponseUtil.success({
+      cancelledJobs: jobIds,
+      project_id
+    }, 'Audit cancelled successfully'));
 
   } catch (error) {
-    console.error('❌ Error cancelling audit:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to cancel audit',
-      error: error.message
-    });
+    LoggerUtil.error('Error cancelling audit', error);
+    return res.status(500).json(ResponseUtil.error('Failed to cancel audit', 500));
   }
 };
 
@@ -432,12 +416,8 @@ export const getScrapingStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting scraping status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get scraping status',
-      error: error.message
-    });
+    LoggerUtil.error('Error getting scraping status', error, { project_id: req.params.project_id });
+    return res.status(500).json(ResponseUtil.error('Failed to get scraping status', 500));
   }
 };
 
@@ -455,7 +435,7 @@ export const getPageRawHtml = async (req, res) => {
       });
     }
 
-    console.log(`🔍 Fetching raw HTML from stored data for URL: ${url}`);
+    LoggerUtil.debug(`Fetching raw HTML from stored data for URL: ${url}`);
 
     // Get the page data from seo_page_data collection
     const db = getDb();
@@ -478,7 +458,7 @@ export const getPageRawHtml = async (req, res) => {
       });
     }
 
-    console.log(`✅ Found HTML for ${url} | length: ${pageData.raw_html.length} characters`);
+    LoggerUtil.debug(`Found HTML for ${url}`, { length: pageData.raw_html.length });
 
     res.json({
       success: true,
@@ -490,12 +470,7 @@ export const getPageRawHtml = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`❌ Error getting raw HTML for ${req.query.url}:`, error.message);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get HTML from stored data',
-      error: error.message
-    });
+    LoggerUtil.error(`Error getting raw HTML for ${req.query.url}`, error);
+    return res.status(500).json(ResponseUtil.error('Failed to get HTML from stored data', 500));
   }
 };

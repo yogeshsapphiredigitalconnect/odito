@@ -97,27 +97,61 @@ export function useExportPDF() {
       // Initialize renderer
       renderer.initialize();
 
+      // Create pages with projectId passed to Executive Summary
+      const pagesWithProjectId = [
+        { id: 'p01', component: <CoverPage projectId={projectId} /> },
+        { id: 'p02', component: <SectionDivider pageNum={2} sectionNum={1} title="Executive Summary" subtitle="Scores, issue overview and AI-generated analysis" /> },
+        { id: 'p03', component: <ExecutiveSummaryPage projectId={projectId} /> },
+        { id: 'p04', component: <KeyStrengthsPage /> },
+        { id: 'p05', component: <PriorityRoadmapPage /> },
+        { id: 'p06', component: <SEOHealthOverviewPage /> },
+        { id: 'p07', component: <SectionDivider pageNum={7} sectionNum={2} title="SEO Audit" subtitle="On-page, schema, technical and crawlability" /> },
+        { id: 'p08', component: <OnPageSEOPage /> },
+        { id: 'p09', component: <StructuredDataPage /> },
+        { id: 'p10', component: <TechnicalSEOPage /> },
+        { id: 'p11', component: <CrawlabilityPage /> },
+        { id: 'p12', component: <SectionDivider pageNum={12} sectionNum={3} title="Performance Analysis" subtitle="Core Web Vitals, Lighthouse and optimisation roadmap" /> },
+        { id: 'p13', component: <CoreWebVitalsPage /> },
+        { id: 'p14', component: <PerformanceOpportunitiesPage /> },
+        { id: 'p15', component: <SectionDivider pageNum={15} sectionNum={4} title="Keyword Analysis" subtitle="Rankings, positions and near-page-1 opportunities" /> },
+        { id: 'p16', component: <KeywordRankingPage /> },
+        { id: 'p17', component: <KeywordOpportunityPage /> },
+        { id: 'p18', component: <SectionDivider pageNum={18} sectionNum={5} title="AI Visibility" subtitle="GEO, AEO, AISEO — visibility across AI search platforms" /> },
+        { id: 'p19', component: <AIVisibilityOverviewPage /> },
+        { id: 'p20', component: <LLMVisibilityPage /> },
+        { id: 'p21', component: <LLMCitationForecastPage /> },
+        { id: 'p22', component: <AIContentReadinessPage /> },
+        { id: 'p23', component: <AIContentStrategyPage /> },
+        { id: 'p24', component: <KnowledgeGraphPage /> },
+        { id: 'p25', component: <SectionDivider pageNum={25} sectionNum={6} title="Action Plan & Forecast" subtitle="30-day roadmap, growth projection and methodology" /> },
+        { id: 'p26', component: <AIOptimisationPage /> },
+        { id: 'p27', component: <AIGrowthForecastPage /> },
+        { id: 'p28', component: <ActionPlanPage /> },
+        { id: 'p29', component: <AuditMethodologyPage /> },
+        { id: 'p30', component: <AboutOditoPage /> },
+      ];
+
       // Render each page
-      for (let i = 0; i < pages.length; i++) {
+      for (let i = 0; i < pagesWithProjectId.length; i++) {
         // Check if export was aborted
         if (abortControllerRef.current?.signal.aborted) {
           throw new Error('Export aborted');
         }
 
-        const page = pages[i];
+        const page = pagesWithProjectId[i];
         
         // Update progress
-        setProgress(Math.round(((i + 1) / pages.length) * 100));
+        setProgress(Math.round(((i + 1) / pagesWithProjectId.length) * 100));
 
-        console.log(`[PDF EXPORT] Rendering page ${i + 1}/${pages.length}`);
+        console.log(`[PDF EXPORT] Rendering page ${i + 1}/${pagesWithProjectId.length}`);
 
         // Render component to canvas
-        const canvas = await renderer.renderComponent(page.component, i, pages.length);
+        const canvas = await renderer.renderComponent(page.component, i, pagesWithProjectId.length);
 
         // Add to PDF
         renderer.addCanvasToPDF(canvas, i === 0);
 
-        console.log(`[PDF EXPORT] Page ${i + 1}/${pages.length} completed`);
+        console.log(`[PDF EXPORT] Page ${i + 1}/${pagesWithProjectId.length} completed`);
       }
 
       // Generate filename
@@ -132,7 +166,7 @@ export function useExportPDF() {
       return {
         success: true,
         filename,
-        pages: pages.length
+        pages: pagesWithProjectId.length
       };
 
     } catch (err) {

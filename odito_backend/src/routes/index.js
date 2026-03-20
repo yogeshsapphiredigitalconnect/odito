@@ -13,6 +13,7 @@ import paymentRoutes from '../modules/payments/routes/paymentRoutes.js';
 import aiVisibilityRoutes from '../modules/app_user/routes/aiVisibilityRoutes.js';
 import exportRoutes from '../modules/export/exportRoutes.js';
 import keywordResearchRoutes from '../modules/keyword_research/routes/keywordResearchRoutes.js';
+import pdfRoutes from '../modules/pdf/routes/pdfRoutes.js';
 
 const router = express.Router();
 
@@ -42,5 +43,7 @@ router.use('/ai-visibility', aiVisibilityRoutes);
 router.use('/export', exportRoutes);
 // Keyword Research routes
 router.use('/keywords', keywordResearchRoutes);
+// PDF data routes
+router.use('/pdf', pdfRoutes);
 
 export default router;

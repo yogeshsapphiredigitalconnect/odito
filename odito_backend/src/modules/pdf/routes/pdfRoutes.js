@@ -1,0 +1,85 @@
+/**
+ * PDF Routes
+ * API endpoints for PDF data generation
+ */
+
+import { Router } from 'express';
+import { PDFDataController } from '../controller/pdfDataController.js';
+import auth from '../../../modules/user/middleware/auth.js';
+
+const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(auth);
+
+/**
+ * @route GET /api/pdf/:projectId
+ * @desc Generate complete PDF data for a project
+ * @access Private
+ */
+router.get('/:projectId', PDFDataController.generatePDFData);
+
+/**
+ * @route GET /api/pdf/:projectId/section/:section
+ * @desc Generate specific PDF section data
+ * @access Private
+ */
+router.get('/:projectId/section/:section', PDFDataController.generateSectionData);
+
+/**
+ * @route GET /api/pdf/:projectId/cover
+ * @desc Generate cover page data
+ * @access Private
+ */
+router.get('/:projectId/cover', PDFDataController.generateCoverPageData);
+
+/**
+ * @route GET /api/pdf/:projectId/executive
+ * @desc Generate executive summary data
+ * @access Private
+ */
+router.get('/:projectId/executive', PDFDataController.generateExecutiveSummaryData);
+
+/**
+ * @route GET /api/pdf/:projectId/summary
+ * @desc Get PDF data summary (metadata only)
+ * @access Private
+ */
+router.get('/:projectId/summary', PDFDataController.getPDFDataSummary);
+
+/**
+ * @route GET /api/pdf/:projectId/validate
+ * @desc Validate project for PDF generation
+ * @access Private
+ */
+router.get('/:projectId/validate', PDFDataController.validateProject);
+
+/**
+ * @route GET /api/pdf/:projectId/status
+ * @desc Get PDF generation status
+ * @access Private
+ */
+router.get('/:projectId/status', PDFDataController.getGenerationStatus);
+
+/**
+ * @route GET /api/pdf/:projectId/metrics
+ * @desc Get PDF generation metrics
+ * @access Private
+ */
+router.get('/:projectId/metrics', PDFDataController.getGenerationMetrics);
+
+/**
+ * @route GET /api/pdf/health
+ * @desc Health check endpoint
+ * @access Public
+ */
+router.get('/health', PDFDataController.healthCheck);
+
+/**
+ * @route GET /api/pdf/sections
+ * @desc Get available PDF sections
+ * @access Public
+ */
+router.get('/sections', PDFDataController.getAvailableSections);
+
+export default router;

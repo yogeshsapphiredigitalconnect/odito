@@ -51,12 +51,12 @@ async function getWebsiteOptimizationAggregation(projectId) {
           avg_score: { $avg: "$rule_breakdown.score" },
           weak_pages: {
             $sum: {
-              $cond: [{ $lt: ["$rule_breakdown.score", 40] }, 1, 0]
+              $if: [{ $lt: ["$rule_breakdown.score", 40] }, 1, 0]
             }
           },
           error_pages: {
             $sum: {
-              $cond: [{ $eq: ["$rule_breakdown.status", "error"] }, 1, 0]
+              $if: [{ $eq: ["$rule_breakdown.status", "error"] }, 1, 0]
             }
           },
           total_pages_affected: { $sum: 1 }

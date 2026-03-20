@@ -1,3 +1,5 @@
+import { ResponseUtil } from '../../../utils/ResponseUtil.js';
+import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import GoogleConnection from '../model/GoogleConnection.js';
 import AnalyticsData from '../model/AnalyticsData.js';
 import SeoProject from '../model/SeoProject.js';
@@ -37,79 +39,58 @@ export const syncAnalyticsData = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[ANALYTICS_SYNC] Starting sync', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Analytics sync starting', { projectId, userId: userId.toString() });
 
   try {
     // Step 1: Validate project ownership
-    console.log('[ANALYTICS_SYNC] Step 1: Validating project ownership...');
+    LoggerUtil.debug('Step 1: Validating project ownership...');
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      console.log('[ANALYTICS_SYNC] Project not found:', projectId);
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      LoggerUtil.warn('Project not found', { projectId });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      console.log('[ANALYTICS_SYNC] Access denied - user does not own project');
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      LoggerUtil.security('Access denied - user does not own project', { projectId, userId });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
-    console.log('[ANALYTICS_SYNC] Project ownership validated:', {
+    LoggerUtil.debug('Project ownership validated', {
       projectName: project.project_name,
       projectUrl: project.main_url
     });
 
-    // Step 2: Validate Google connection
-    console.log('[ANALYTICS_SYNC] Step 2: Validating Google connection...');
+    LoggerUtil.debug('Step 2: Validating Google connection...');
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      console.log('[ANALYTICS_SYNC] No active Google connection found');
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected. Please connect your Google account first.'
-      });
+      LoggerUtil.warn('No active Google connection found', { projectId });
+      return res.status(400).json(ResponseUtil.error('Google account not connected. Please connect your Google account first.', 400));
     }
 
-    console.log('[ANALYTICS_SYNC] Google connection validated:', {
+    LoggerUtil.debug('Google connection validated', {
       googleEmail: googleConnection.google_email,
       serviceTypes: googleConnection.service_type,
       lastSync: googleConnection.last_sync_at
     });
 
-    // Step 3: Validate stored analytics_property_id
-    console.log('[ANALYTICS_SYNC] Step 3: Validating analytics property ID...');
+    LoggerUtil.debug('Step 3: Validating analytics property ID...');
     if (!googleConnection.service_type.includes('analytics')) {
-      console.log('[ANALYTICS_SYNC] Analytics service not enabled');
-      return res.status(400).json({
-        success: false,
-        message: 'Analytics service not enabled. Please select an Analytics property first.'
-      });
+      LoggerUtil.warn('Analytics service not enabled', { projectId });
+      return res.status(400).json(ResponseUtil.error('Analytics service not enabled. Please select an Analytics property first.', 400));
     }
 
     if (!googleConnection.analytics_property_id) {
-      console.log('[ANALYTICS_SYNC] No analytics property ID stored');
-      return res.status(400).json({
-        success: false,
-        message: 'Analytics property not selected. Please select an Analytics property first.'
-      });
+      LoggerUtil.warn('No analytics property ID stored', { projectId });
+      return res.status(400).json(ResponseUtil.error('Analytics property not selected. Please select an Analytics property first.', 400));
     }
 
-    console.log('[ANALYTICS_SYNC] Analytics property ID validated:', {
+    LoggerUtil.debug('Analytics property ID validated', {
       propertyId: googleConnection.analytics_property_id
     });
 
-    // Step 4: Fetch Analytics data
-    console.log('[ANALYTICS_SYNC] Step 4: Fetching Analytics data...');
+    LoggerUtil.debug('Step 4: Fetching Analytics data...');
     let performanceData;
     let dateRange;
 
@@ -120,16 +101,14 @@ export const syncAnalyticsData = async (req, res) => {
       );
       
       if (!performanceData || !performanceData.data || performanceData.data.length === 0) {
-        console.log('[ANALYTICS_SYNC] No Analytics data available');
-        return res.status(200).json({
-          success: true,
-          message: 'No Analytics data available for this property',
+        LoggerUtil.info('No Analytics data available', { projectId });
+        return res.status(200).json(ResponseUtil.success({
           syncedPages: 0,
           skippedPages: 0,
           dataPoints: 0,
           dateRange: null,
           lastSyncAt: googleConnection.last_sync_at
-        });
+        }, 'No Analytics data available for this property'));
       }
 
       // Calculate date range from data (28 days from API)
@@ -142,33 +121,21 @@ export const syncAnalyticsData = async (req, res) => {
         end: endDate.toISOString().split('T')[0]
       };
 
-      console.log('[ANALYTICS_SYNC] Analytics data fetched:', {
+      LoggerUtil.info('Analytics data fetched', {
         dataPoints: performanceData.dataPoints || performanceData.data?.length || 0,
         syncedPages: performanceData.syncedPages || 0,
         skippedPages: performanceData.skippedPages || 0,
-        dateRange,
-        sampleData: (performanceData.data || []).slice(0, 2).map(item => ({
-          pagePath: item.page_path,
-          sessions: item.sessions,
-          pageViews: item.page_views
-        }))
+        dateRange
       });
 
     } catch (apiError) {
-      console.error('[ANALYTICS_SYNC] Google API fetch failed:', {
-        error: apiError.message,
-        stack: apiError.stack
-      });
+      LoggerUtil.error('Google API fetch failed', apiError, { projectId });
       
       // Don't update sync state on API failure
-      return res.status(400).json({
-        success: false,
-        message: `Failed to fetch Analytics data: ${apiError.message}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Failed to fetch Analytics data: ${apiError.message}`, 400));
     }
 
-    // Step 5: Store data in database
-    console.log('[ANALYTICS_SYNC] Step 5: Storing data in database...');
+    LoggerUtil.debug('Step 5: Storing data in database...');
     let dbResult;
 
     try {
@@ -183,27 +150,20 @@ export const syncAnalyticsData = async (req, res) => {
         endDate
       );
 
-      console.log('[ANALYTICS_SYNC] Data stored successfully:', {
+      LoggerUtil.info('Data stored successfully', {
         upserted: dbResult.upserted,
         modified: dbResult.modified,
         total: dbResult.total
       });
 
     } catch (dbError) {
-      console.error('[ANALYTICS_SYNC] Database operation failed:', {
-        error: dbError.message,
-        stack: dbError.stack
-      });
+      LoggerUtil.error('Database operation failed', dbError, { projectId });
       
       // Don't update sync state on DB failure
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to store Analytics data. Please try again.'
-      });
+      return res.status(500).json(ResponseUtil.error('Failed to store Analytics data. Please try again.', 500));
     }
 
-    // Step 6: Update Google connection sync metadata
-    console.log('[ANALYTICS_SYNC] Step 6: Updating sync metadata...');
+    LoggerUtil.debug('Step 6: Updating sync metadata...');
     try {
       await GoogleConnection.findByIdAndUpdate(
         googleConnection._id,
@@ -214,48 +174,33 @@ export const syncAnalyticsData = async (req, res) => {
         { new: true }
       );
 
-      console.log('[ANALYTICS_SYNC] Sync metadata updated');
+      LoggerUtil.info('Sync metadata updated');
 
     } catch (metadataError) {
-      console.error('[ANALYTICS_SYNC] Failed to update sync metadata:', {
-        error: metadataError.message
-      });
+      LoggerUtil.error('Failed to update sync metadata', metadataError);
       
       // Data was stored successfully, but metadata update failed
-      console.log('[ANALYTICS_SYNC] Continuing despite metadata update failure');
+      LoggerUtil.warn('Continuing despite metadata update failure');
     }
 
-    // Step 7: Return success response
-    const syncResponse = {
-      success: true,
-      message: 'Analytics data synced successfully',
+    LoggerUtil.info('Sync completed successfully', {
+      projectId,
+      syncedPages: dbResult.total,
+      dateRange
+    });
+
+    return res.status(200).json(ResponseUtil.success({
       syncedPages: dbResult.total,
       skippedPages: performanceData.skipped_pages || 0,
       dataPoints: performanceData.dataPoints || performanceData.data?.length || 0,
       dateRange: dateRange,
       lastSyncAt: new Date().toISOString()
-    };
-
-    console.log('[ANALYTICS_SYNC] Sync completed successfully:', {
-      projectId,
-      syncedPages: syncResponse.syncedPages,
-      dateRange: syncResponse.dateRange
-    });
-
-    return res.status(200).json(syncResponse);
+    }, 'Analytics data synced successfully'));
 
   } catch (error) {
-    console.error('[ANALYTICS_SYNC] Unexpected error:', {
-      error: error.message,
-      stack: error.stack,
-      projectId,
-      userId
-    });
+    LoggerUtil.error('Unexpected error during sync', error, { projectId, userId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'An unexpected error occurred during sync. Please try again.'
-    });
+    return res.status(500).json(ResponseUtil.error('An unexpected error occurred during sync. Please try again.', 500));
   }
 };
 
@@ -269,10 +214,7 @@ export const getAnalyticsSyncStatus = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[ANALYTICS_STATUS] Getting sync status', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Getting Analytics sync status', { projectId, userId: userId.toString() });
 
   try {
     // Validate project ownership
@@ -296,13 +238,12 @@ export const getAnalyticsSyncStatus = async (req, res) => {
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.json({
-        success: true,
+      return res.json(ResponseUtil.success({
         connected: false,
         serviceEnabled: false,
         lastSyncAt: null,
         message: 'Google account not connected'
-      });
+      }));
     }
 
     const isServiceEnabled = googleConnection.service_type.includes('analytics');
@@ -324,7 +265,7 @@ export const getAnalyticsSyncStatus = async (req, res) => {
           latestDataDate = aggregates.lastFetched;
         }
       } catch (countError) {
-        console.warn('[ANALYTICS_STATUS] Failed to get data count:', countError.message);
+        LoggerUtil.warn('Failed to get data count', { message: countError.message });
       }
     }
 
@@ -339,20 +280,14 @@ export const getAnalyticsSyncStatus = async (req, res) => {
       googleEmail: googleConnection.google_email
     };
 
-    console.log('[ANALYTICS_STATUS] Status retrieved:', statusResponse);
+    LoggerUtil.debug('Status retrieved', statusResponse);
 
-    return res.json(statusResponse);
+    return res.json(ResponseUtil.success(statusResponse));
 
   } catch (error) {
-    console.error('[ANALYTICS_STATUS] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error getting sync status', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get sync status'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to get sync status', 500));
   }
 };
 
@@ -376,7 +311,7 @@ export const getAnalyticsData = async (req, res) => {
     end_date
   } = req.query;
 
-  console.log('[ANALYTICS_DATA] Fetching performance data', {
+  LoggerUtil.info('Fetching Analytics performance data', {
     projectId,
     userId: userId.toString(),
     queryParams: { page, limit, sort, order, start_date, end_date }
@@ -387,27 +322,18 @@ export const getAnalyticsData = async (req, res) => {
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
     // Validate Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection || !googleConnection.service_type.includes('analytics')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Analytics not connected for this project'
-      });
+      return res.status(400).json(ResponseUtil.error('Analytics not connected for this project', 400));
     }
 
     // Parse and validate parameters
@@ -418,10 +344,7 @@ export const getAnalyticsData = async (req, res) => {
     // Validate sort field
     const validSortFields = ['sessions', 'activeUsers', 'pageViews', 'engagementRate', 'pagePath'];
     if (!validSortFields.includes(sort)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid sort field. Must be one of: ${validSortFields.join(', ')}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Invalid sort field. Must be one of: ${validSortFields.join(', ')}`, 400));
     }
 
     // Build sort object
@@ -435,20 +358,14 @@ export const getAnalyticsData = async (req, res) => {
     if (start_date) {
       startDateFilter = new Date(start_date);
       if (isNaN(startDateFilter.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid start_date format'
-        });
+        return res.status(400).json(ResponseUtil.error('Invalid start_date format', 400));
       }
     }
 
     if (end_date) {
       endDateFilter = new Date(end_date);
       if (isNaN(endDateFilter.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid end_date format'
-        });
+        return res.status(400).json(ResponseUtil.error('Invalid end_date format', 400));
       }
     }
 
@@ -499,25 +416,18 @@ export const getAnalyticsData = async (req, res) => {
       }
     };
 
-    console.log('[ANALYTICS_DATA] Data retrieved successfully:', {
+    LoggerUtil.info('Data retrieved successfully', {
       projectId,
       dataPoints: performanceData.length,
       totalPages: response.pagination.pages
     });
 
-    return res.json(response);
+    return res.json(ResponseUtil.success(response.data, 'Data retrieved successfully', response.pagination));
 
   } catch (error) {
-    console.error('[ANALYTICS_DATA] Error:', {
-      error: error.message,
-      stack: error.stack,
-      projectId
-    });
+    LoggerUtil.error('Error fetching Analytics data', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch Analytics data'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to fetch Analytics data', 500));
   }
 };
 
@@ -531,64 +441,38 @@ export const getAnalyticsPropertiesList = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[ANALYTICS_PROPERTIES] Getting properties', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Getting Analytics properties', { projectId, userId: userId.toString() });
 
   try {
     // Validate project ownership
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
     // Check Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected'
-      });
+      return res.status(400).json(ResponseUtil.error('Google account not connected', 400));
     }
 
     // Get Analytics properties
     const properties = await getAnalyticsProperties(googleConnection);
 
-    const response = {
-      success: true,
-      properties: properties
-    };
+    LoggerUtil.info('Properties retrieved', { projectId, propertyCount: properties.length });
 
-    console.log('[ANALYTICS_PROPERTIES] Properties retrieved:', {
-      projectId,
-      propertyCount: properties.length
-    });
-
-    return res.json(response);
+    return res.json(ResponseUtil.success(properties, 'Properties retrieved successfully'));
 
   } catch (error) {
-    console.error('[ANALYTICS_PROPERTIES] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error fetching Analytics properties', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch Analytics properties'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to fetch Analytics properties', 500));
   }
 };
 
@@ -603,55 +487,36 @@ export const selectAnalyticsProperty = async (req, res) => {
   const { propertyId } = req.body;
   const userId = req.user._id;
 
-  console.log('[ANALYTICS_SELECT_PROPERTY] Selecting property', {
-    projectId,
-    userId: userId.toString(),
-    propertyId
-  });
+  LoggerUtil.info('Selecting Analytics property', { projectId, userId: userId.toString(), propertyId });
 
   try {
     // Validate project ownership
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
     if (!propertyId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Property ID is required'
-      });
+      return res.status(400).json(ResponseUtil.error('Property ID is required', 400));
     }
 
     // Check Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected'
-      });
+      return res.status(400).json(ResponseUtil.error('Google account not connected', 400));
     }
 
     // Validate property access
     try {
       await validateAnalyticsPropertyAccess(googleConnection, propertyId);
     } catch (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: `Access denied for property: ${validationError.message}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Access denied for property: ${validationError.message}`, 400));
     }
 
     // Update connection with property ID and enable analytics service
@@ -665,28 +530,14 @@ export const selectAnalyticsProperty = async (req, res) => {
       { new: true }
     );
 
-    const response = {
-      success: true,
-      analyticsPropertyId: propertyId
-    };
+    LoggerUtil.info('Property selected successfully', { projectId, propertyId });
 
-    console.log('[ANALYTICS_SELECT_PROPERTY] Property selected successfully:', {
-      projectId,
-      propertyId
-    });
-
-    return res.json(response);
+    return res.json(ResponseUtil.success({ analyticsPropertyId: propertyId }, 'Property selected successfully'));
 
   } catch (error) {
-    console.error('[ANALYTICS_SELECT_PROPERTY] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error selecting Analytics property', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to select Analytics property'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to select Analytics property', 500));
   }
 };
 

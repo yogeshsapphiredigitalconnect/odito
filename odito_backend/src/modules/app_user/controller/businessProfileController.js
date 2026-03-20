@@ -1,3 +1,5 @@
+import { ResponseUtil } from '../../../utils/ResponseUtil.js';
+import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import GoogleConnection from '../model/GoogleConnection.js';
 import BusinessProfileData from '../model/BusinessProfileData.js';
 import SeoProject from '../model/SeoProject.js';
@@ -32,80 +34,58 @@ export const syncBusinessProfileData = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[BUSINESS_PROFILE_SYNC] Starting sync', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Business Profile sync starting', { projectId, userId: userId.toString() });
 
   try {
-    // Step 1: Validate project ownership
-    console.log('[BUSINESS_PROFILE_SYNC] Step 1: Validating project ownership...');
+    LoggerUtil.debug('Step 1: Validating project ownership...');
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      console.log('[BUSINESS_PROFILE_SYNC] Project not found:', projectId);
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      LoggerUtil.warn('Project not found', { projectId });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      console.log('[BUSINESS_PROFILE_SYNC] Access denied - user does not own project');
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      LoggerUtil.security('Access denied - user does not own project', { projectId, userId });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
-    console.log('[BUSINESS_PROFILE_SYNC] Project ownership validated:', {
+    LoggerUtil.debug('Project ownership validated', {
       projectName: project.project_name,
       projectUrl: project.main_url
     });
 
-    // Step 2: Validate Google connection
-    console.log('[BUSINESS_PROFILE_SYNC] Step 2: Validating Google connection...');
+    LoggerUtil.debug('Step 2: Validating Google connection...');
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      console.log('[BUSINESS_PROFILE_SYNC] No active Google connection found');
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected. Please connect your Google account first.'
-      });
+      LoggerUtil.warn('No active Google connection found', { projectId });
+      return res.status(400).json(ResponseUtil.error('Google account not connected. Please connect your Google account first.', 400));
     }
 
-    console.log('[BUSINESS_PROFILE_SYNC] Google connection validated:', {
+    LoggerUtil.debug('Google connection validated', {
       googleEmail: googleConnection.google_email,
       serviceTypes: googleConnection.service_type,
       lastSync: googleConnection.last_sync_at
     });
 
-    // Step 3: Validate selected businessAccountId + businessLocationId
-    console.log('[BUSINESS_PROFILE_SYNC] Step 3: Validating Business Profile selection...');
+    LoggerUtil.debug('Step 3: Validating Business Profile selection...');
     if (!googleConnection.service_type.includes('business_profile')) {
-      console.log('[BUSINESS_PROFILE_SYNC] Business Profile service not enabled');
-      return res.status(400).json({
-        success: false,
-        message: 'Business Profile service not enabled. Please select a Business Profile account first.'
-      });
+      LoggerUtil.warn('Business Profile service not enabled', { projectId });
+      return res.status(400).json(ResponseUtil.error('Business Profile service not enabled. Please select a Business Profile account first.', 400));
     }
 
     if (!googleConnection.business_account_id || !googleConnection.business_location_id) {
-      console.log('[BUSINESS_PROFILE_SYNC] Business Profile IDs not stored');
-      return res.status(400).json({
-        success: false,
-        message: 'Business Profile account/location not selected. Please select an account and location first.'
-      });
+      LoggerUtil.warn('Business Profile IDs not stored', { projectId });
+      return res.status(400).json(ResponseUtil.error('Business Profile account/location not selected. Please select an account and location first.', 400));
     }
 
-    console.log('[BUSINESS_PROFILE_SYNC] Business Profile selection validated:', {
+    LoggerUtil.debug('Business Profile selection validated', {
       accountId: googleConnection.business_account_id,
       locationId: googleConnection.business_location_id
     });
 
-    // Step 4: Fetch Business Profile data
-    console.log('[BUSINESS_PROFILE_SYNC] Step 4: Fetching Business Profile data...');
+    LoggerUtil.debug('Step 4: Fetching Business Profile data...');
     let performanceData;
     let dateRange;
 
@@ -117,14 +97,12 @@ export const syncBusinessProfileData = async (req, res) => {
       );
       
       if (!performanceData || !performanceData.data || performanceData.data.length === 0) {
-        console.log('[BUSINESS_PROFILE_SYNC] No Business Profile data available');
-        return res.status(200).json({
-          success: true,
-          message: 'No Business Profile data available for this location',
+        LoggerUtil.info('No Business Profile data available', { projectId });
+        return res.status(200).json(ResponseUtil.success({
           dataPoints: 0,
           dateRange: null,
           lastSyncAt: googleConnection.last_sync_at
-        });
+        }, 'No Business Profile data available for this location'));
       }
 
       // Calculate date range from data (last 30 days for GBP)
@@ -137,30 +115,18 @@ export const syncBusinessProfileData = async (req, res) => {
         end: endDate.toISOString().split('T')[0]
       };
 
-      console.log('[BUSINESS_PROFILE_SYNC] Business Profile data fetched:', {
+      LoggerUtil.info('Business Profile data fetched', {
         dataPoints: performanceData.data?.length || 0,
-        dateRange,
-        sampleData: (performanceData.data || []).slice(0, 2).map(item => ({
-          views: item.views,
-          searches: item.searches,
-          actions: item.actions
-        }))
+        dateRange
       });
 
     } catch (apiError) {
-      console.error('[BUSINESS_PROFILE_SYNC] Google API fetch failed:', {
-        error: apiError.message,
-        stack: apiError.stack
-      });
+      LoggerUtil.error('Google API fetch failed', apiError, { projectId });
       
-      return res.status(400).json({
-        success: false,
-        message: `Failed to fetch Business Profile data: ${apiError.message}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Failed to fetch Business Profile data: ${apiError.message}`, 400));
     }
 
-    // Step 5: Store data in database
-    console.log('[BUSINESS_PROFILE_SYNC] Step 5: Storing data in database...');
+    LoggerUtil.debug('Step 5: Storing data in database...');
     let dbResult;
 
     try {
@@ -175,26 +141,19 @@ export const syncBusinessProfileData = async (req, res) => {
         endDate
       );
 
-      console.log('[BUSINESS_PROFILE_SYNC] Data stored successfully:', {
+      LoggerUtil.info('Data stored successfully', {
         upserted: dbResult.upserted,
         modified: dbResult.modified,
         total: dbResult.total
       });
 
     } catch (dbError) {
-      console.error('[BUSINESS_PROFILE_SYNC] Database operation failed:', {
-        error: dbError.message,
-        stack: dbError.stack
-      });
+      LoggerUtil.error('Database operation failed', dbError, { projectId });
       
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to store Business Profile data. Please try again.'
-      });
+      return res.status(500).json(ResponseUtil.error('Failed to store Business Profile data. Please try again.', 500));
     }
 
-    // Step 6: Update Google connection sync metadata & enable service
-    console.log('[BUSINESS_PROFILE_SYNC] Step 6: Updating sync metadata...');
+    LoggerUtil.debug('Step 6: Updating sync metadata...');
     try {
       await GoogleConnection.findByIdAndUpdate(
         googleConnection._id,
@@ -206,45 +165,30 @@ export const syncBusinessProfileData = async (req, res) => {
         { new: true }
       );
 
-      console.log('[BUSINESS_PROFILE_SYNC] Sync metadata updated');
+      LoggerUtil.info('Sync metadata updated');
 
     } catch (metadataError) {
-      console.error('[BUSINESS_PROFILE_SYNC] Failed to update sync metadata:', {
-        error: metadataError.message
-      });
+      LoggerUtil.error('Failed to update sync metadata', metadataError);
       
-      console.log('[BUSINESS_PROFILE_SYNC] Continuing despite metadata update failure');
+      LoggerUtil.warn('Continuing despite metadata update failure');
     }
 
-    // Return success response
-    const syncResponse = {
-      success: true,
-      message: 'Business Profile data synced successfully',
+    LoggerUtil.info('Sync completed successfully', {
+      projectId,
+      dataPoints: dbResult.total,
+      dateRange
+    });
+
+    return res.status(200).json(ResponseUtil.success({
       dataPoints: dbResult.total,
       dateRange: dateRange,
       lastSyncAt: new Date().toISOString()
-    };
-
-    console.log('[BUSINESS_PROFILE_SYNC] Sync completed successfully:', {
-      projectId,
-      dataPoints: syncResponse.dataPoints,
-      dateRange: syncResponse.dateRange
-    });
-
-    return res.status(200).json(syncResponse);
+    }, 'Business Profile data synced successfully'));
 
   } catch (error) {
-    console.error('[BUSINESS_PROFILE_SYNC] Unexpected error:', {
-      error: error.message,
-      stack: error.stack,
-      projectId,
-      userId
-    });
+    LoggerUtil.error('Unexpected error during sync', error, { projectId, userId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'An unexpected error occurred during sync. Please try again.'
-    });
+    return res.status(500).json(ResponseUtil.error('An unexpected error occurred during sync. Please try again.', 500));
   }
 };
 
@@ -258,40 +202,30 @@ export const getBusinessProfileSyncStatus = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[BUSINESS_PROFILE_STATUS] Getting sync status', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Getting Business Profile sync status', { projectId, userId: userId.toString() });
 
   try {
     // Validate project ownership
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
     // Check Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.json({
-        success: true,
+      return res.json(ResponseUtil.success({
         connected: false,
         serviceEnabled: false,
         lastSyncAt: null,
         message: 'Google account not connected'
-      });
+      }));
     }
 
     const isServiceEnabled = googleConnection.service_type.includes('business_profile');
@@ -313,7 +247,7 @@ export const getBusinessProfileSyncStatus = async (req, res) => {
           latestDataDate = aggregates.lastFetched;
         }
       } catch (countError) {
-        console.warn('[BUSINESS_PROFILE_STATUS] Failed to get data count:', countError.message);
+        LoggerUtil.warn('Failed to get data count', { message: countError.message });
       }
     }
 
@@ -329,20 +263,14 @@ export const getBusinessProfileSyncStatus = async (req, res) => {
       googleEmail: googleConnection.google_email
     };
 
-    console.log('[BUSINESS_PROFILE_STATUS] Status retrieved:', statusResponse);
+    LoggerUtil.debug('Status retrieved', statusResponse);
 
-    return res.json(statusResponse);
+    return res.json(ResponseUtil.success(statusResponse));
 
   } catch (error) {
-    console.error('[BUSINESS_PROFILE_STATUS] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error getting sync status', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get sync status'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to get sync status', 500));
   }
 };
 
@@ -366,7 +294,7 @@ export const getBusinessProfileData = async (req, res) => {
     end_date
   } = req.query;
 
-  console.log('[BUSINESS_PROFILE_DATA] Fetching performance data', {
+  LoggerUtil.info('Fetching Business Profile performance data', {
     projectId,
     userId: userId.toString(),
     queryParams: { page, limit, sort, order, start_date, end_date }
@@ -377,27 +305,18 @@ export const getBusinessProfileData = async (req, res) => {
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
     // Validate Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection || !googleConnection.service_type.includes('business_profile')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Business Profile not connected for this project'
-      });
+      return res.status(400).json(ResponseUtil.error('Business Profile not connected for this project', 400));
     }
 
     // Parse and validate parameters
@@ -408,10 +327,7 @@ export const getBusinessProfileData = async (req, res) => {
     // Validate sort field
     const validSortFields = ['views', 'searches', 'actions', 'calls', 'websiteClicks', 'directionRequests'];
     if (!validSortFields.includes(sort)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid sort field. Must be one of: ${validSortFields.join(', ')}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Invalid sort field. Must be one of: ${validSortFields.join(', ')}`, 400));
     }
 
     // Build sort object
@@ -425,20 +341,14 @@ export const getBusinessProfileData = async (req, res) => {
     if (start_date) {
       startDateFilter = new Date(start_date);
       if (isNaN(startDateFilter.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid start_date format'
-        });
+        return res.status(400).json(ResponseUtil.error('Invalid start_date format', 400));
       }
     }
 
     if (end_date) {
       endDateFilter = new Date(end_date);
       if (isNaN(endDateFilter.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid end_date format'
-        });
+        return res.status(400).json(ResponseUtil.error('Invalid end_date format', 400));
       }
     }
 
@@ -491,25 +401,18 @@ export const getBusinessProfileData = async (req, res) => {
       }
     };
 
-    console.log('[BUSINESS_PROFILE_DATA] Data retrieved successfully:', {
+    LoggerUtil.info('Data retrieved successfully', {
       projectId,
       dataPoints: performanceData.length,
       totalPages: response.pagination.pages
     });
 
-    return res.json(response);
+    return res.json(ResponseUtil.success(response.data, 'Data retrieved successfully', response.pagination));
 
   } catch (error) {
-    console.error('[BUSINESS_PROFILE_DATA] Error:', {
-      error: error.message,
-      stack: error.stack,
-      projectId
-    });
+    LoggerUtil.error('Error fetching Business Profile data', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch Business Profile data'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to fetch Business Profile data', 500));
   }
 };
 
@@ -523,89 +426,51 @@ export const getBusinessProfileAccountsController = async (req, res) => {
   const { projectId } = req.params;
   const userId = req.user._id;
 
-  console.log('[BUSINESS_PROFILE_ACCOUNTS] Getting accounts', {
-    projectId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Getting Business Profile accounts', { projectId, userId: userId.toString() });
 
   try {
     // Validate project ownership
     const project = await SeoProject.findById(projectId);
     
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
+      return res.status(404).json(ResponseUtil.error('Project not found', 404));
     }
 
     if (project.user_id.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied'));
     }
 
     // Check Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected'
-      });
+      return res.status(400).json(ResponseUtil.error('Google account not connected', 400));
     }
 
     // Get Business Profile accounts
     const accounts = await getBusinessProfileAccounts(googleConnection);
 
-    const response = {
-      success: true,
-      accounts: accounts
-    };
+    LoggerUtil.info('Accounts retrieved', { projectId, accountCount: accounts.length });
 
-    console.log('[BUSINESS_PROFILE_ACCOUNTS] Accounts retrieved:', {
-      projectId,
-      accountCount: accounts.length
-    });
-
-    return res.json(response);
+    return res.json(ResponseUtil.success(accounts, 'Accounts retrieved successfully'));
 
   } catch (error) {
-    console.error('[BUSINESS_PROFILE_ACCOUNTS] Error:', {
-      error: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      projectId
-    });
+    LoggerUtil.error('Error fetching Business Profile accounts', error, { projectId });
     
-    // ✅ Preserve Google error codes - don't hide behind 500
+    // Preserve Google error codes - don't hide behind 500
     if (error.response?.status === 429) {
-      return res.status(429).json({
-        success: false,
-        message: 'Google Business Profile rate limit exceeded. Please wait and retry.',
-        retryAfter: 60
-      });
+      return res.status(429).json(ResponseUtil.error('Google Business Profile rate limit exceeded. Please wait and retry.', 429, { retryAfter: 60 }));
     }
     
     if (error.response?.status === 403) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied: Missing Business Profile permissions'
-      });
+      return res.status(403).json(ResponseUtil.accessDenied('Access denied: Missing Business Profile permissions'));
     }
     
     if (error.response?.status === 401) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication failed: Invalid or expired credentials'
-      });
+      return res.status(401).json(ResponseUtil.error('Authentication failed: Invalid or expired credentials', 401));
     }
     
-    return res.status(500).json({
-      success: false,
-      message: 'Unexpected Business Profile error'
-    });
+    return res.status(500).json(ResponseUtil.error('Unexpected Business Profile error', 500));
   }
 };
 
@@ -620,11 +485,7 @@ export const getBusinessProfileLocationsController = async (req, res) => {
   const { accountId } = req.query;
   const userId = req.user._id;
 
-  console.log('[BUSINESS_PROFILE_LOCATIONS] Getting locations', {
-    projectId,
-    accountId,
-    userId: userId.toString()
-  });
+  LoggerUtil.info('Getting Business Profile locations', { projectId, accountId, userId: userId.toString() });
 
   try {
     // Validate project ownership
@@ -645,48 +506,27 @@ export const getBusinessProfileLocationsController = async (req, res) => {
     }
 
     if (!accountId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Account ID is required'
-      });
+      return res.status(400).json(ResponseUtil.error('Account ID is required', 400));
     }
 
     // Check Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected'
-      });
+      return res.status(400).json(ResponseUtil.error('Google account not connected', 400));
     }
 
     // Get locations for the account
     const locations = await getBusinessProfileLocations(googleConnection, accountId);
 
-    const response = {
-      success: true,
-      locations: locations
-    };
+    LoggerUtil.info('Locations retrieved', { projectId, accountId, locationCount: locations.length });
 
-    console.log('[BUSINESS_PROFILE_LOCATIONS] Locations retrieved:', {
-      projectId,
-      accountId,
-      locationCount: locations.length
-    });
-
-    return res.json(response);
+    return res.json(ResponseUtil.success(locations, 'Locations retrieved successfully'));
 
   } catch (error) {
-    console.error('[BUSINESS_PROFILE_LOCATIONS] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error fetching Business Profile locations', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch Business Profile locations'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to fetch Business Profile locations', 500));
   }
 };
 
@@ -701,12 +541,7 @@ export const selectBusinessProfile = async (req, res) => {
   const { accountId, locationId } = req.body;
   const userId = req.user._id;
 
-  console.log('[BUSINESS_PROFILE_SELECT] Selecting account/location', {
-    projectId,
-    userId: userId.toString(),
-    accountId,
-    locationId
-  });
+  LoggerUtil.info('Selecting Business Profile account/location', { projectId, userId: userId.toString(), accountId, locationId });
 
   try {
     // Validate project ownership
@@ -727,30 +562,21 @@ export const selectBusinessProfile = async (req, res) => {
     }
 
     if (!accountId || !locationId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Account ID and Location ID are required'
-      });
+      return res.status(400).json(ResponseUtil.error('Account ID and Location ID are required', 400));
     }
 
     // Check Google connection
     const googleConnection = await GoogleConnection.findActiveConnection(userId, projectId);
     
     if (!googleConnection) {
-      return res.status(400).json({
-        success: false,
-        message: 'Google account not connected'
-      });
+      return res.status(400).json(ResponseUtil.error('Google account not connected', 400));
     }
 
     // Validate account access
     try {
       await validateBusinessProfileAccess(googleConnection, accountId, locationId);
     } catch (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: `Access denied for account/location: ${validationError.message}`
-      });
+      return res.status(400).json(ResponseUtil.error(`Access denied for account/location: ${validationError.message}`, 400));
     }
 
     // Update connection with account/location IDs and enable business profile service
@@ -765,30 +591,14 @@ export const selectBusinessProfile = async (req, res) => {
       { new: true }
     );
 
-    const response = {
-      success: true,
-      businessAccountId: accountId,
-      businessLocationId: locationId
-    };
+    LoggerUtil.info('Account/location selected successfully', { projectId, accountId, locationId });
 
-    console.log('[BUSINESS_PROFILE_SELECT] Account/location selected successfully:', {
-      projectId,
-      accountId,
-      locationId
-    });
-
-    return res.json(response);
+    return res.json(ResponseUtil.success({ businessAccountId: accountId, businessLocationId: locationId }, 'Account/location selected successfully'));
 
   } catch (error) {
-    console.error('[BUSINESS_PROFILE_SELECT] Error:', {
-      error: error.message,
-      projectId
-    });
+    LoggerUtil.error('Error selecting Business Profile account', error, { projectId });
     
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to select Business Profile account'
-    });
+    return res.status(500).json(ResponseUtil.error('Failed to select Business Profile account', 500));
   }
 };
 

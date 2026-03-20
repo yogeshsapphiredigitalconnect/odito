@@ -37,7 +37,7 @@ export default function IssueTable({ issues = [], selected, onSelect }) {
       <tbody>
         {issues.map((iss, i) => (
           <tr
-            key={iss.issue_code || i}
+            key={`${iss.issue_code || 'issue'}-${i}`}
             onClick={() => onSelect?.(selected === i ? null : i)}
             style={{
               cursor: "pointer",

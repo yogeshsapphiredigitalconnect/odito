@@ -1,3 +1,5 @@
+import { ResponseUtil } from '../../../utils/ResponseUtil.js';
+import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import SeoProject from '../model/SeoProject.js';
 import { JobService } from '../../jobs/service/jobService.js';
 import { JOB_TYPES } from '../../jobs/constants/jobTypes.js';
@@ -20,9 +22,8 @@ const createSeoProject = async (req, res) => {
     status = 'draft'
   } = req.body;
 
-  console.log('📥 Received create project request');
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('User:', req.user?._id);
+  LoggerUtil.info('Create project request received', { userId: req.user?._id });
+  LoggerUtil.debug('Request body', req.body);
 
   try {
 
@@ -89,37 +90,20 @@ const createSeoProject = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating SEO project:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      errors: error.errors
-    });
+    LoggerUtil.error('Error creating SEO project', error, { userId: req.user?._id });
     
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors
-      });
+      return res.status(400).json(ResponseUtil.validationError(errors, 'Validation failed'));
     }
 
     // Handle duplicate key error
     if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Duplicate entry detected'
-      });
+      return res.status(400).json(ResponseUtil.error('Duplicate entry detected', 400));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
+    return res.status(500).json(ResponseUtil.error('Internal server error', 500));
   }
 };
 
@@ -314,12 +298,8 @@ const getAllSeoProjects = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting projects:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get projects',
-      error: error.message
-    });
+    LoggerUtil.error('Error getting projects', error, { userId: req.user._id });
+    return res.status(500).json(ResponseUtil.error('Failed to get projects', 500));
   }
 };
 
@@ -363,10 +343,10 @@ const getSeoProjectById = async (req, res) => {
         // Convert relative path to public URL
         const screenshotPath = latestScreenshot[0].screenshot_path;
         screenshotUrl = `http://localhost:5000/${screenshotPath}`;
-        console.log('✅ Found screenshot for project:', id, 'URL:', screenshotUrl);
+        LoggerUtil.debug('Screenshot found', { projectId: id, screenshotUrl });
       }
     } catch (screenshotError) {
-      console.error('Error fetching screenshot:', screenshotError);
+      LoggerUtil.error('Error fetching screenshot', screenshotError, { projectId: id });
       // Continue without screenshot if fetch fails
     }
 
@@ -375,10 +355,9 @@ const getSeoProjectById = async (req, res) => {
       screenshot_url: screenshotUrl
     };
 
-    console.log('📤 Project data response:', { 
+    LoggerUtil.debug('Project data response', { 
       projectId: id, 
-      hasScreenshot: !!screenshotUrl,
-      screenshotUrl: screenshotUrl 
+      hasScreenshot: !!screenshotUrl
     });
 
     res.status(200).json({
@@ -387,11 +366,8 @@ const getSeoProjectById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching SEO project:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    LoggerUtil.error('Error fetching SEO project', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Internal server error', 500));
   }
 };
 
@@ -471,21 +447,14 @@ const updateSeoProject = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating SEO project:', error);
+    LoggerUtil.error('Error updating SEO project', error, { projectId: req.params.id });
     
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors
-      });
+      return res.status(400).json(ResponseUtil.validationError(errors, 'Validation failed'));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return res.status(500).json(ResponseUtil.error('Internal server error', 500));
   }
 };
 
@@ -532,11 +501,8 @@ const updateSeoProjectStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating SEO project status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    LoggerUtil.error('Error updating SEO project status', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Internal server error', 500));
   }
 };
 
@@ -576,11 +542,8 @@ const deleteSeoProject = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting SEO project:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    LoggerUtil.error('Error deleting SEO project', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Internal server error', 500));
   }
 };
 
@@ -619,12 +582,8 @@ const getProjectScrapingSummary = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting scraping summary:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get scraping summary',
-      error: error.message
-    });
+    LoggerUtil.error('Error getting scraping summary', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Failed to get scraping summary', 500));
   }
 };
 
@@ -641,12 +600,8 @@ const getProjectsNeedingScrape = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting projects needing scrape:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get projects needing scrape',
-      error: error.message
-    });
+    LoggerUtil.error('Error getting projects needing scrape', error);
+    return res.status(500).json(ResponseUtil.error('Failed to get projects needing scrape', 500));
   }
 };
 
@@ -692,7 +647,7 @@ const getProjectDashboard = async (req, res) => {
       };
     }
     
-    console.log('🔍 Latest completed job:', latestJob._id);
+    LoggerUtil.debug('Latest completed job', { jobId: latestJob._id });
     
     // Query links using the job's _id as seo_jobId
     const internalLinksCount = await db.collection('seo_internal_links').countDocuments({
@@ -713,7 +668,7 @@ const getProjectDashboard = async (req, res) => {
       jobType: JOB_TYPES.LINK_DISCOVERY
     }).sort({ created_at: -1 });
 
-    console.log('🔍 Dashboard Debug:', {
+    LoggerUtil.debug('Dashboard data loaded', {
       projectId,
       latestJobId: latestJob._id,
       linkDiscoveryJob: linkDiscoveryJob?.status,
@@ -746,12 +701,8 @@ const getProjectDashboard = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting project dashboard:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get project dashboard',
-      error: error.message
-    });
+    LoggerUtil.error('Error getting project dashboard', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Failed to get project dashboard', 500));
   }
 };
 
@@ -760,18 +711,16 @@ const getProjectScreenshot = async (req, res) => {
   try {
     const { id: projectId } = req.params;
     
-    console.log('🖼️ Screenshot API called with projectId:', projectId);
+    LoggerUtil.info('Screenshot API called', { projectId });
     
     // Get database connection
     const db = mongoose.connection.db;
     const { ObjectId } = mongoose.Types;
     
-    console.log('🖼️ Database connection obtained');
-    
     // Validate project exists
     const project = await SeoProject.findById(projectId);
     
-    console.log('🖼️ Project lookup result:', project ? 'Found' : 'Not found');
+    LoggerUtil.debug('Project lookup result', { found: !!project });
     
     if (!project) {
       return res.status(404).json({
@@ -781,21 +730,17 @@ const getProjectScreenshot = async (req, res) => {
     }
 
     // Get the most recent screenshot data for this project from mainurl_snapshot collection
-    console.log('🖼️ Querying seo_mainurl_snapshot collection...');
+    LoggerUtil.debug('Querying seo_mainurl_snapshot collection', { projectId });
     const screenshotData = await db.collection('seo_mainurl_snapshot')
       .find({ project_id: new ObjectId(projectId) })
       .sort({ captured_at: -1 })
       .limit(1)
       .toArray();
 
-    console.log('🖼️ Screenshot Debug:', {
+    LoggerUtil.debug('Screenshot data loaded', {
       projectId,
       found: screenshotData.length,
-      data: screenshotData[0] ? {
-        screenshot_path: screenshotData[0].screenshot_path,
-        status: screenshotData[0].status,
-        captured_at: screenshotData[0].captured_at
-      } : null
+      hasPath: !!screenshotData[0]?.screenshot_path
     });
 
     if (screenshotData.length === 0) {
@@ -813,7 +758,7 @@ const getProjectScreenshot = async (req, res) => {
       ? screenshot.screenshot_path.replace('./', `${baseUrl}/`)
       : `${baseUrl}/${screenshot.screenshot_path}`;
     
-    console.log('🖼️ Full screenshot URL:', fullScreenshotPath);
+    LoggerUtil.debug('Full screenshot URL constructed', { fullScreenshotPath });
     
     // Calculate screenshot sections for processing
     const scrollHeight = screenshot.scroll_height || 17248; // Default height
@@ -886,12 +831,8 @@ const getProjectScreenshot = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting project screenshot:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get project screenshot',
-      error: error.message
-    });
+    LoggerUtil.error('Error getting project screenshot', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Failed to get project screenshot', 500));
   }
 };
 
