@@ -327,10 +327,10 @@ export default function CoverPage({ projectId }) {
         borderRadius: 8, margin: '32px 40px', overflow: 'hidden'
       }}>
         {[
-          { v: coverData.issues.critical, l: 'Critical Issues', c: '#FF5A5A' },
-          { v: coverData.issues.warnings, l: 'Warnings', c: '#FF9C41' },
-          { v: coverData.issues.informational, l: 'Informational', c: '#4F6EF7' },
-          { v: coverData.issues.passed, l: 'Checks Passed', c: '#2DD4A0' },
+          { v: coverData.issues.critical, l: 'Total Issues', c: '#8B5CF6' },
+          { v: coverData.issues.warnings, l: 'Critical Issues', c: '#FF5A5A' },
+          { v: coverData.issues.informational, l: 'Medium Issues', c: '#4F6EF7' },
+          { v: coverData.issues.passed, l: 'Info Issues', c: '#4F6EF7' },
           { v: coverData.pagesCrawled, l: 'Pages Crawled', c: '#fff' },
         ].map(({ v, l, c }, i) => (
           <div key={l} style={{

@@ -1,13 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, InsightBox } from '../layout';
 
-export default function SEOHealthOverviewPage() {
+export default function SEOHealthOverviewPage({ projectId }) {
+  const [coverData, setCoverData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log('[SEO HEALTH PAGE] useEffect triggered with projectId:', projectId);
+    
+    if (!projectId) {
+      console.error('[SEO HEALTH PAGE] Project ID is missing or undefined');
+      setError('Project ID is required');
+      setLoading(false);
+      return;
+    }
+
+    const fetchCoverData = async () => {
+      try {
+        console.log('[SEO HEALTH PAGE] Fetching cover data for projectId:', projectId);
+        
+        const token = localStorage.getItem('token');
+        console.log('[SEO HEALTH PAGE] Token from localStorage:', token ? 'Present' : 'Missing');
+        
+        if (!token) {
+          console.error('[SEO HEALTH PAGE] No authentication token found');
+          setError('Authentication required - please login again');
+          setLoading(false);
+          return;
+        }
+        
+        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/cover`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('[SEO HEALTH PAGE] Response status:', response.status);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[SEO HEALTH PAGE] API Error:', errorData);
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        console.log('[SEO HEALTH PAGE] API response:', result);
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Failed to fetch cover data');
+        }
+
+        console.log('[SEO HEALTH PAGE] Cover data loaded successfully:', result.data);
+        setCoverData(result.data);
+      } catch (err) {
+        console.error('[SEO HEALTH PAGE] Error fetching cover page data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCoverData();
+  }, [projectId]);
+
+  // Extract scores from coverData, with fallbacks
+  const seoHealth = coverData?.scores?.seoHealth || 0;
+  const aiVisibility = coverData?.scores?.aiVisibility || 0;
+  const performance = coverData?.scores?.performance || 0;
+  const authority = coverData?.scores?.authority || 0;
+  const overallScore = coverData?.overallScore || 0;
+
   const bars = [
-    { label: 'SEO Health', value: 67, color: '#4F6EF7', legend: 'SEO Health (67/100)' },
-    { label: 'AI Visibility', value: 41, color: '#00D4FF', legend: 'AI Visibility (41/100)' },
-    { label: 'Performance', value: 71, color: '#F59E0B', legend: 'Performance (71/100)' },
-    { label: 'Authority', value: 43, color: '#60A5FA', legend: 'Authority (43/100)' },
-    { label: 'Overall Score', value: 58, color: '#111827', legend: 'Overall (58/100)' },
+    { label: 'SEO Health', value: seoHealth, color: '#4F6EF7', legend: `SEO Health (${seoHealth}/100)` },
+    { label: 'AI Visibility', value: aiVisibility, color: '#00D4FF', legend: `AI Visibility (${aiVisibility}/100)` },
+    { label: 'Performance', value: performance, color: '#F59E0B', legend: `Performance (${performance}/100)` },
+    { label: 'Authority', value: authority, color: '#60A5FA', legend: `Authority (${authority}/100)` },
+    { label: 'Overall Score', value: overallScore, color: '#111827', legend: `Overall (${overallScore}/100)` },
   ];
 
   const grades = [
@@ -19,6 +90,30 @@ export default function SEOHealthOverviewPage() {
     { range: '0-49', grade: 'D', status: 'Poor', meaning: 'Significant issues across multiple dimensions', color: '#EF4444' },
   ];
 
+  if (loading) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#6B7280', fontSize: 16 }}>Loading SEO Health data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ color: '#EF4444', fontSize: 16 }}>Error: {error}</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width: 960, minHeight: 1280, background: '#fff', display: 'flex',
@@ -27,7 +122,7 @@ export default function SEOHealthOverviewPage() {
     }}>
       <PageHeader page={6} />
       <div style={{ padding: '32px 40px', flex: 1 }}>
-        <SectionHeader num="05" title="SEO Health Overview" subtitle="Score breakdown by category" score={58} />
+        <SectionHeader num="05" title="SEO Health Overview" subtitle="Score breakdown by category" score={overallScore} />
 
         <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, fontFamily: "'Syne', sans-serif" }}>Score Breakdown by Category</h3>
         <div style={{ borderBottom: '2px solid #4F6EF7', marginBottom: 24 }} />
@@ -80,7 +175,7 @@ export default function SEOHealthOverviewPage() {
         </div>
 
         <InsightBox title="Score Interpretation">
-          agencyplatform.com scores C+ (58/100). SEO Health at 67 reflects good foundations but structured data gaps are limiting rankings. AI Visibility at 41 is the most critical gap — and the fastest to fix.
+          {coverData?.domain || 'your website'} scores {overallScore >= 70 ? 'B' : overallScore >= 60 ? 'C+' : overallScore >= 50 ? 'C' : 'D'} ({overallScore}/100). SEO Health at {seoHealth} {seoHealth >= 70 ? 'reflects good foundations' : seoHealth >= 50 ? 'shows room for improvement' : 'needs significant work'}. AI Visibility at {aiVisibility} is {aiVisibility >= 70 ? 'performing well' : aiVisibility >= 50 ? 'the most critical gap' : 'critically low'} — and the fastest to fix.
         </InsightBox>
       </div>
       <PageFooter page={6} />

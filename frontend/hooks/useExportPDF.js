@@ -94,6 +94,9 @@ export function useExportPDF() {
     try {
       console.log('[PDF EXPORT] Starting PDF export for project:', projectId);
 
+      // Verify projectId is available
+      console.log("PDF projectId in useExportPDF:", projectId);
+
       // Initialize renderer
       renderer.initialize();
 
@@ -104,7 +107,7 @@ export function useExportPDF() {
         { id: 'p03', component: <ExecutiveSummaryPage projectId={projectId} /> },
         { id: 'p04', component: <KeyStrengthsPage /> },
         { id: 'p05', component: <PriorityRoadmapPage /> },
-        { id: 'p06', component: <SEOHealthOverviewPage /> },
+        { id: 'p06', component: <SEOHealthOverviewPage projectId={projectId} /> },
         { id: 'p07', component: <SectionDivider pageNum={7} sectionNum={2} title="SEO Audit" subtitle="On-page, schema, technical and crawlability" /> },
         { id: 'p08', component: <OnPageSEOPage /> },
         { id: 'p09', component: <StructuredDataPage /> },

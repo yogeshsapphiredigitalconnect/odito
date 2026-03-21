@@ -50,7 +50,7 @@ export default function App() {
   { id: 'p03', label: 'p.3 — Executive Summary', component: <ExecutiveSummaryPage /> },
   { id: 'p04', label: 'p.4 — Key Strengths vs Issues', component: <KeyStrengthsPage /> },
   { id: 'p05', label: 'p.5 — Priority Fix Roadmap', component: <PriorityRoadmapPage /> },
-  { id: 'p06', label: 'p.6 — SEO Health Overview', component: <SEOHealthOverviewPage /> },
+  { id: 'p06', label: 'p.6 — SEO Health Overview', component: <SEOHealthOverviewPage projectId={projectId} /> },
   { id: 'p07', label: 'p.7 — Section 02: SEO Audit', component: <SectionDivider pageNum={7} sectionNum={2} title="SEO Audit" subtitle="On-page, schema, technical and crawlability" /> },
   { id: 'p08', label: 'p.8 — On-Page SEO Audit', component: <OnPageSEOPage /> },
   { id: 'p09', label: 'p.9 — Structured Data Analysis', component: <StructuredDataPage /> },

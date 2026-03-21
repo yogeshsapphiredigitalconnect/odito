@@ -68,11 +68,12 @@ export class CoverPageService {
           aiVisibility: Math.round(project.ai_visibility?.score || 0)
         },
         issues: {
-          critical: issueStats.critical,
-          warnings: issueStats.warnings,
-          informational: issueStats.informational,
-          passed: calculatedData.passedChecks
-        }
+          critical: issueStats.totalIssues,       // Total Issues → totalIssues
+          warnings: issueStats.critical,           // Critical Issues → high severity
+          informational: issueStats.warnings,      // Medium Issues → medium severity
+          passed: issueStats.informational         // Info Issues → low + info
+        },
+        pagesCrawled: project.pages_crawled || 0
       };
       
       // Validate no undefined values
@@ -113,46 +114,97 @@ export class CoverPageService {
   
   /**
    * Get issue statistics from seo_page_issues collection
+   * Updated with new business logic mapping
    */
   static async getIssueStatistics(db, projectIdObj) {
     try {
-      const issueStats = await db.collection('seo_page_issues')
+      console.log("COVER COUNTS: Fetching issue statistics for projectId:", projectIdObj);
+      
+      // Use correct aggregation pipeline matching executive summary
+      const issueCounts = await db.collection('seo_page_issues')
         .aggregate([
           { $match: { projectId: projectIdObj } },
           {
             $group: {
-              _id: '$severity',
-              count: { $sum: 1 }
+              _id: null,
+              totalIssues: { $sum: 1 },
+              critical: {
+                $sum: {
+                  $cond: [{ $eq: ['$severity', 'high'] }, 1, 0]
+                }
+              },
+              warnings: {
+                $sum: {
+                  $cond: [{ $eq: ['$severity', 'medium'] }, 1, 0]
+                }
+              },
+              informational: {
+                $sum: {
+                  $cond: [
+                    { $in: ['$severity', ['low', 'info']] },
+                    1,
+                    0
+                  ]
+                }
+              },
+              low: {
+                $sum: {
+                  $cond: [{ $eq: ['$severity', 'low'] }, 1, 0]
+                }
+              },
+              info: {
+                $sum: {
+                  $cond: [{ $eq: ['$severity', 'info'] }, 1, 0]
+                }
+              }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              totalIssues: 1,
+              critical: 1,
+              warnings: 1,
+              informational: 1,
+              low: 1,
+              info: 1
             }
           }
-        ])
-        .toArray();
-      
-      const stats = {
+        ]).toArray();
+
+      const counts = issueCounts[0] || {
+        totalIssues: 0,
         critical: 0,
         warnings: 0,
         informational: 0,
-        total: 0
+        low: 0,
+        info: 0
       };
       
-      issueStats.forEach(stat => {
-        const severity = stat._id || 'info';
-        if (severity === 'critical') {
-          stats.critical = stat.count;
-        } else if (severity === 'warning') {
-          stats.warnings = stat.count;
-        } else {
-          stats.informational += stat.count;
-        }
-        stats.total += stat.count;
-      });
+      console.log("COVER COUNTS:", counts);
       
+      // Apply new business logic mapping
+      const stats = {
+        totalIssues: counts.totalIssues,        // For total issues display
+        critical: counts.critical,              // Critical Issues → high severity
+        warnings: counts.warnings,              // Medium Issues → medium severity
+        informational: counts.low + counts.info, // Info Issues → low + info
+        passed: counts.low + counts.info        // Keep passed for validation compatibility
+      };
+      
+      console.log("COVER MAPPED STATS:", stats);
       LoggerUtil.debug('Issue statistics calculated', stats);
       return stats;
       
     } catch (error) {
       LoggerUtil.error('Failed to get issue statistics', error);
-      return { critical: 0, warnings: 0, informational: 0, total: 0 };
+      return { 
+        totalIssues: 0,
+        critical: 0, 
+        warnings: 0, 
+        informational: 0,
+        passed: 0
+      };
     }
   }
   
