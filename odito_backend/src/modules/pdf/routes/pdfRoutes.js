@@ -34,6 +34,34 @@ router.get('/:projectId/section/:section', PDFDataController.generateSectionData
 router.get('/:projectId/cover', PDFDataController.generateCoverPageData);
 
 /**
+ * @route GET /api/pdf/:projectId/page08
+ * @desc Generate Page 08 - On-Page SEO Audit data
+ * @access Private
+ */
+router.get('/:projectId/page08', PDFDataController.getPage08Data);
+
+/**
+ * @route GET /api/pdf/:projectId/page09
+ * @desc Generate Page 09 - Structured Data Analysis data
+ * @access Private
+ */
+router.get('/:projectId/page09', PDFDataController.getPage09Data);
+
+/**
+ * @route GET /api/pdf/:projectId/page10
+ * @desc Generate Page 10 - Technical SEO Health data
+ * @access Private
+ */
+router.get('/:projectId/page10', PDFDataController.getPage10Data);
+
+/**
+ * @route GET /api/pdf/:projectId/page11
+ * @desc Generate Page 11 - Crawlability Analysis data
+ * @access Private
+ */
+router.get('/:projectId/page11', PDFDataController.getPage11Data);
+
+/**
  * @route GET /api/pdf/:projectId/executive
  * @desc Generate executive summary data
  * @access Private

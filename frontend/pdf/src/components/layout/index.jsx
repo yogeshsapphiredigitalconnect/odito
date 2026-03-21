@@ -119,14 +119,14 @@ export function DataTable({ headers, rows }) {
 
 export function Badge({ label, type = 'info' }) {
   const colors = {
-    critical: { bg: '#FEE2E2', color: '#DC2626' },
-    high: { bg: '#FEF3C7', color: '#D97706' },
-    medium: { bg: '#FEF9C3', color: '#CA8A04' },
-    low: { bg: '#DBEAFE', color: '#2563EB' },
+    critical: { bg: '#F3E8FF', color: '#9333EA' }, // Purple
+    high: { bg: '#FEE2E2', color: '#EF4444' },     // Red
+    medium: { bg: '#FEF9C3', color: '#EAB308' },   // Yellow
+    low: { bg: '#DBEAFE', color: '#3B82F6' },      // Blue
+    info: { bg: '#DBEAFE', color: '#3B82F6' },     // Blue (same as low)
     pass: { bg: '#D1FAE5', color: '#059669' },
     warn: { bg: '#FEF3C7', color: '#D97706' },
     fail: { bg: '#FEE2E2', color: '#DC2626' },
-    info: { bg: '#EEF2FF', color: '#4F6EF7' },
   };
   const c = colors[type.toLowerCase()] || colors.info;
   return (

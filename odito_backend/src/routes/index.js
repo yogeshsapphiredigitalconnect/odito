@@ -14,6 +14,7 @@ import aiVisibilityRoutes from '../modules/app_user/routes/aiVisibilityRoutes.js
 import exportRoutes from '../modules/export/exportRoutes.js';
 import keywordResearchRoutes from '../modules/keyword_research/routes/keywordResearchRoutes.js';
 import pdfRoutes from '../modules/pdf/routes/pdfRoutes.js';
+import { aiVideoRoutes } from '../modules/aiVideo/aiVideo.routes.js';
 
 const router = express.Router();
 
@@ -45,5 +46,8 @@ router.use('/export', exportRoutes);
 router.use('/keywords', keywordResearchRoutes);
 // PDF data routes
 router.use('/pdf', pdfRoutes);
+// AI Video script generation routes
+console.log("🎬 Registering AI Video routes at /api/ai-video");
+router.use('/ai-video', aiVideoRoutes);
 
 export default router;

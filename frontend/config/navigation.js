@@ -41,9 +41,9 @@ export const navigation = {
       icon: "fileAi"
     },
     {
-      title: "7-Day Growth Plan",
-      url: "/7-day-growth-plan",
-      icon: "camera"
+      title: "AI Video Report",
+      url: "/ai-video",
+      icon: "video"
     }
   ],
 
@@ -66,6 +66,7 @@ export const iconMap = {
   camera: "IconCamera",
   fileDescription: "IconFileDescription",
   fileAi: "IconFileAi",
+  video: "IconVideo",
   zap: "IconBolt",
   key: "IconKey",
   link: "IconLink"

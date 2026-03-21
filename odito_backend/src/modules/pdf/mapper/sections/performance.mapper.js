@@ -11,9 +11,31 @@ export class PerformanceMapper {
   
   /**
    * Transform Core Web Vitals data
+   * Uses real performance data if available, falls back to mock data
    */
-  static transformCoreWebVitals(performanceMetrics) {
-    // Placeholder data since real CWV data isn't available yet
+  static transformCoreWebVitals(performanceMetrics, aggregatedData) {
+    // Check if we have real performance data from the database
+    const realPerformanceData = aggregatedData?.performance;
+    
+    if (realPerformanceData?.mobile || realPerformanceData?.desktop) {
+      // Use real data from the API/database
+      const mobile = realPerformanceData.mobile || {};
+      const desktop = realPerformanceData.desktop || {};
+      
+      return {
+        stats: {
+          desktopScore: desktop.performance ?? 0,
+          mobileScore: mobile.performance ?? 0,
+          mobileLCP: mobile.metrics?.lcp ?? mobile.lcp ?? 0,
+          mobileTBT: mobile.metrics?.tbt ?? mobile.tbt ?? 0
+        },
+        metrics: this.generateCWVMetricsFromRealData({ mobile, desktop }),
+        seoImpact: this.generateCWVImpactFromRealData({ mobile, desktop }),
+        _source: 'real' // For debugging
+      };
+    }
+    
+    // Fallback to mock data if no real data available
     const mockData = this.generateMockCWVData();
     
     return {
@@ -24,7 +46,8 @@ export class PerformanceMapper {
         mobileTBT: mockData.mobile.tbt
       },
       metrics: this.generateCWVMetrics(mockData),
-      seoImpact: this.generateCWVImpact(mockData)
+      seoImpact: this.generateCWVImpact(mockData),
+      _source: 'mock' // For debugging
     };
   }
 
@@ -69,6 +92,93 @@ export class PerformanceMapper {
         ttfb: '280ms'
       }
     };
+  }
+
+  /**
+   * Generate Core Web Vitals metrics table from real data
+   */
+  static generateCWVMetricsFromRealData({ mobile, desktop }) {
+    const metrics = [
+      {
+        metric: 'First Contentful Paint',
+        desktop: this.formatMetricValue(desktop.metrics?.fcp ?? desktop.fcp, 's'),
+        desktopRating: this.getRating(this.parseMetricValue(desktop.metrics?.fcp ?? desktop.fcp), 'fcp'),
+        mobile: this.formatMetricValue(mobile.metrics?.fcp ?? mobile.fcp, 's'),
+        mobileRating: this.getRating(this.parseMetricValue(mobile.metrics?.fcp ?? mobile.fcp), 'fcp'),
+        priority: 'MEDIUM'
+      },
+      {
+        metric: 'Largest Contentful Paint',
+        desktop: this.formatMetricValue(desktop.metrics?.lcp ?? desktop.lcp, 's'),
+        desktopRating: this.getRating(this.parseMetricValue(desktop.metrics?.lcp ?? desktop.lcp), 'lcp'),
+        mobile: this.formatMetricValue(mobile.metrics?.lcp ?? mobile.lcp, 's'),
+        mobileRating: this.getRating(this.parseMetricValue(mobile.metrics?.lcp ?? mobile.lcp), 'lcp'),
+        priority: 'HIGH'
+      },
+      {
+        metric: 'Total Blocking Time',
+        desktop: this.formatMetricValue(desktop.metrics?.tbt ?? desktop.tbt, 'ms'),
+        desktopRating: this.getRating(this.parseMetricValue(desktop.metrics?.tbt ?? desktop.tbt), 'tbt'),
+        mobile: this.formatMetricValue(mobile.metrics?.tbt ?? mobile.tbt, 'ms'),
+        mobileRating: this.getRating(this.parseMetricValue(mobile.metrics?.tbt ?? mobile.tbt), 'tbt'),
+        priority: 'HIGH'
+      },
+      {
+        metric: 'Cumulative Layout Shift',
+        desktop: this.formatMetricValue(desktop.metrics?.cls ?? desktop.cls, ''),
+        desktopRating: this.getRating(this.parseMetricValue(desktop.metrics?.cls ?? desktop.cls), 'cls'),
+        mobile: this.formatMetricValue(mobile.metrics?.cls ?? mobile.cls, ''),
+        mobileRating: this.getRating(this.parseMetricValue(mobile.metrics?.cls ?? mobile.cls), 'cls'),
+        priority: 'MEDIUM'
+      },
+      {
+        metric: 'Time to First Byte',
+        desktop: this.formatMetricValue(desktop.ttfb?.value ?? desktop.metrics?.ttfb ?? desktop.ttfb, 'ms'),
+        desktopRating: this.getRating(this.parseMetricValue(desktop.ttfb?.value ?? desktop.metrics?.ttfb ?? desktop.ttfb), 'ttfb'),
+        mobile: this.formatMetricValue(mobile.ttfb?.value ?? mobile.metrics?.ttfb ?? mobile.ttfb, 'ms'),
+        mobileRating: this.getRating(this.parseMetricValue(mobile.ttfb?.value ?? mobile.metrics?.ttfb ?? mobile.ttfb), 'ttfb'),
+        priority: 'LOW'
+      }
+    ];
+
+    // Update priorities based on mobile ratings
+    return metrics.map(m => ({
+      ...m,
+      priority: m.mobileRating === 'Poor' ? 'HIGH' : m.mobileRating === 'Needs Work' ? 'MEDIUM' : 'LOW'
+    }));
+  }
+
+  /**
+   * Format metric value with unit
+   */
+  static formatMetricValue(value, unit) {
+    if (value === null || value === undefined) return 'N/A';
+    const num = this.parseMetricValue(value);
+    if (unit === 's') return num >= 1 ? `${num.toFixed(1)}s` : `${num.toFixed(2)}s`;
+    if (unit === 'ms') return `${Math.round(num)}ms`;
+    if (num < 1) return num.toFixed(2);
+    return num.toFixed(1);
+  }
+
+  /**
+   * Generate Core Web Vitals SEO impact from real data
+   */
+  static generateCWVImpactFromRealData({ mobile, desktop }) {
+    const mobileScore = mobile.performance ?? 0;
+    const desktopScore = desktop.performance ?? 0;
+    const mobileLCP = mobile.metrics?.lcp ?? mobile.lcp ?? 0;
+    
+    if (!mobile.performance && !desktop.performance) {
+      return 'Performance data not available. Run a PageSpeed audit to see Core Web Vitals metrics and their impact on search rankings.';
+    }
+    
+    if (mobileScore >= 75 && desktopScore >= 75) {
+      return `Excellent Core Web Vitals with mobile score ${mobileScore} and desktop score ${desktopScore}. These metrics provide a strong foundation for search rankings and user experience.`;
+    } else if (mobileScore >= 60 && desktopScore >= 60) {
+      return `Good Core Web Vitals with room for improvement. Mobile score (${mobileScore}) and desktop score (${desktopScore}) can be enhanced for better rankings.`;
+    } else {
+      return `Core Web Vitals require optimization. Mobile performance (${mobileScore}) and desktop performance (${desktopScore}) impact search visibility and user experience. LCP of ${mobileLCP}s needs attention.`;
+    }
   }
 
   /**

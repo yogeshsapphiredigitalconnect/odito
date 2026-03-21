@@ -16,8 +16,13 @@ export class TechnicalChecksService {
    * Extracted from getTechnicalChecks controller function
    */
   static async getTechnicalChecks(project) {
+    // Add null checks to prevent crashes
+    if (!project || !project._id) {
+      throw new Error('Project ID is required');
+    }
+    
     const projectId = project._id.toString();
-    const userId = project.user_id.toString();
+    const userId = project.user_id ? project.user_id.toString() : 'unknown';
     
     LoggerUtil.info('Technical Checks API called', { projectId, userId });
 
@@ -96,8 +101,13 @@ export class TechnicalChecksService {
    * Extracted from getTechnicalCheckDetail controller function
    */
   static async getTechnicalCheckDetail(project, checkId) {
+    // Add null checks to prevent crashes
+    if (!project || !project._id) {
+      throw new Error('Project ID is required');
+    }
+    
     const projectId = project._id.toString();
-    const userId = project.user_id.toString();
+    const userId = project.user_id ? project.user_id.toString() : 'unknown';
     
     LoggerUtil.info('Technical Check Detail API called', { projectId, checkId, userId });
 

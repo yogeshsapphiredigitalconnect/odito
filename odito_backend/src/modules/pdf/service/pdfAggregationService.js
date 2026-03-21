@@ -33,7 +33,8 @@ export class PDFAggregationService {
         internalLinksData,
         externalLinksData,
         socialLinksData,
-        onpageIssuesData
+        onpageIssuesData,
+        performanceData
       ] = await Promise.all([
         // 1. Basic project information
         this.fetchProjectData(db, projectIdObj),
@@ -65,7 +66,10 @@ export class PDFAggregationService {
         // 10. Link data
         this.fetchInternalLinksData(db, projectIdObj),
         this.fetchExternalLinksData(db, projectIdObj),
-        this.fetchSocialLinksData(db, projectIdObj)
+        this.fetchSocialLinksData(db, projectIdObj),
+        
+        // 11. Performance data (for Core Web Vitals)
+        this.fetchPerformanceData(db, projectIdObj)
       ]);
 
       const aggregatedData = {
@@ -79,7 +83,7 @@ export class PDFAggregationService {
         technical: domainTechnicalData,
         pages: {
           issues: pageIssuesData,
-          onpageIssues: onpageIssuesData, // NEW: Onpage issues for executive summary
+          onpageIssues: onpageIssuesData,
           data: pageData
         },
         links: {
@@ -87,6 +91,7 @@ export class PDFAggregationService {
           external: externalLinksData,
           social: socialLinksData
         },
+        performance: performanceData,
         metadata: {
           fetchedAt: new Date(),
           projectId,
@@ -678,6 +683,67 @@ export class PDFAggregationService {
         warnings: 0,
         informational: 0
       };
+    }
+  }
+
+  /**
+   * Fetch performance data from seo_domain_performance collection
+   */
+  static async fetchPerformanceData(db, projectId) {
+    try {
+      const performance = await db.collection('seo_domain_performance')
+        .findOne({ project_id: projectId }, {
+          mobile: 1,
+          desktop: 1,
+          domain: 1,
+          tested_at: 1
+        });
+
+      if (!performance) {
+        return { mobile: null, desktop: null };
+      }
+
+      // Format device data similar to projectPerformance.service.js
+      const formatDeviceData = (deviceData) => {
+        if (!deviceData) return null;
+        
+        // Extract TTFB from diagnostics if available
+        let ttfb = null;
+        if (deviceData.diagnostics && Array.isArray(deviceData.diagnostics)) {
+          const serverResponseTime = deviceData.diagnostics.find(d => d.id === 'server-response-time');
+          if (serverResponseTime && serverResponseTime.details && serverResponseTime.details.items && serverResponseTime.details.items.length > 0) {
+            const responseTime = serverResponseTime.details.items[0].responseTime;
+            if (responseTime !== undefined) {
+              ttfb = { value: responseTime, unit: 'ms', display_value: `${responseTime} ms` };
+            }
+          }
+        }
+
+        return {
+          performance: deviceData.performance_score || 0,
+          accessibility: deviceData.accessibility_score || 0,
+          best_practices: deviceData.best_practices_score || 0,
+          seo: deviceData.seo_score || 0,
+          metrics: deviceData.metrics || {},
+          fcp: deviceData.fcp,
+          lcp: deviceData.lcp,
+          cls: deviceData.cls,
+          tbt: deviceData.tbt,
+          ttfb: ttfb,
+          opportunities: deviceData.opportunities || [],
+          diagnostics: deviceData.diagnostics || []
+        };
+      };
+
+      return {
+        mobile: formatDeviceData(performance.mobile),
+        desktop: formatDeviceData(performance.desktop),
+        domain: performance.domain,
+        tested_at: performance.tested_at
+      };
+    } catch (error) {
+      LoggerUtil.error('Failed to fetch performance data', error);
+      return { mobile: null, desktop: null };
     }
   }
 

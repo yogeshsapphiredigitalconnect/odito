@@ -21,6 +21,7 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconVideo,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -60,6 +61,7 @@ const iconComponents = {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconVideo,
 }
 
 // Helper function to get icon component by name

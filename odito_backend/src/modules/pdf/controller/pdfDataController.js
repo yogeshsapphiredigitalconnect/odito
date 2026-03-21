@@ -6,6 +6,10 @@
 import { PDFDataService } from '../service/pdfDataService.js';
 import { CoverPageService } from '../service/coverPageService.js';
 import { PDFAggregationService } from '../service/pdfAggregationService.js';
+import { Page08Service } from '../service/page08Service.js';
+import { Page09Service } from '../service/page09Service.js';
+import { Page10Service } from '../service/page10Service.js';
+import { Page11Service } from '../service/page11Service.js';
 import { ExecutiveMapper } from '../mapper/sections/executive.mapper.js';
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 
@@ -613,6 +617,188 @@ export class PDFDataController {
       
     } catch (error) {
       LoggerUtil.error('Cover page controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 08 - On-Page SEO Audit data
+   */
+  static async getPage08Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      const result = await Page08Service.getPage08Data(projectId);
+      
+      if (!result.success) {
+        return res.status(500).json(result);
+      }
+      
+      res.json(result);
+      
+    } catch (error) {
+      LoggerUtil.error('Page 08 controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 09 - Structured Data Analysis data
+   */
+  static async getPage09Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      const result = await Page09Service.getPage09Data(projectId);
+      
+      if (!result.success) {
+        return res.status(500).json(result);
+      }
+      
+      res.json(result);
+      
+    } catch (error) {
+      LoggerUtil.error('Page 09 controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 10 - Technical SEO Health data
+   */
+  static async getPage10Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      const result = await Page10Service.getPage10Data(projectId);
+      
+      if (!result) {
+        return res.status(500).json({
+          success: false,
+          error: {
+            message: 'Failed to generate Page 10 data',
+            code: 'SERVICE_ERROR'
+          }
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: result
+      });
+      
+    } catch (error) {
+      LoggerUtil.error('Page 10 controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 11 - Crawlability Analysis data
+   */
+  static async getPage11Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      const result = await Page11Service.getPage11Data(projectId);
+      
+      if (!result) {
+        return res.status(500).json({
+          success: false,
+          error: {
+            message: 'Failed to generate Page 11 data',
+            code: 'SERVICE_ERROR'
+          }
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: result
+      });
+      
+    } catch (error) {
+      LoggerUtil.error('Page 11 controller error', error, {
         projectId: req.params.projectId,
         userId: req.user?.id
       });

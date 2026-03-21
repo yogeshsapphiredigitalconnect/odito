@@ -56,7 +56,7 @@ export class PDFDataMapper {
         crawlability: TechnicalMapper.transformCrawlability(pageMetrics, percentages),
         
         // Core Web Vitals
-        coreWebVitals: PerformanceMapper.transformCoreWebVitals(calculatedMetrics.performanceMetrics),
+        coreWebVitals: PerformanceMapper.transformCoreWebVitals(calculatedMetrics.performanceMetrics, aggregatedData),
         
         // Performance Opportunities
         performance: PerformanceMapper.transformOpportunities(technicalMetrics),

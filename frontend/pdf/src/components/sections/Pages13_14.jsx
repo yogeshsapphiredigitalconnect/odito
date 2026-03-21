@@ -1,18 +1,239 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, Badge, InsightBox } from '../layout';
 
+// API configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// ---- Helper Functions for Rating and Priority ----
+function getRating(metric, value) {
+  if (metric === 'LCP') {
+    if (value < 2.5) return 'Good';
+    if (value < 4) return 'Needs Work';
+    return 'Poor';
+  }
+
+  if (metric === 'TBT') {
+    if (value < 200) return 'Good';
+    if (value < 600) return 'Needs Work';
+    return 'Poor';
+  }
+
+  if (metric === 'CLS') {
+    if (value < 0.1) return 'Good';
+    if (value < 0.25) return 'Needs Work';
+    return 'Poor';
+  }
+
+  if (metric === 'FCP') {
+    if (value < 1.8) return 'Good';
+    if (value < 3.0) return 'Needs Work';
+    return 'Poor';
+  }
+
+  if (metric === 'TTFB') {
+    if (value < 800) return 'Good';
+    if (value < 1800) return 'Needs Work';
+    return 'Poor';
+  }
+
+  return 'Good';
+}
+
+function getPriority(rating) {
+  if (rating === 'Poor') return 'HIGH';
+  if (rating === 'Needs Work') return 'MEDIUM';
+  return 'LOW';
+}
+
+function safeValue(value) {
+  if (value === null || value === undefined || isNaN(value) || typeof value === 'object') {
+    return 0;
+  }
+  return typeof value === 'number' ? value : parseFloat(value) || 0;
+}
+
+function getTTFBFromDiagnostics(diagnostics) {
+  if (!Array.isArray(diagnostics)) return 0;
+  const serverResponseTime = diagnostics.find(d => d.id === 'server-response-time');
+  if (serverResponseTime?.details?.items?.[0]?.responseTime !== undefined) {
+    return serverResponseTime.details.items[0].responseTime;
+  }
+  return 0;
+}
+
+function formatMetricValue(value, unit = '') {
+  const numValue = safeValue(value);
+  if (numValue === 0 && unit !== '') return '0' + unit;
+  if (unit === 's' && numValue >= 1) return `${numValue.toFixed(1)}s`;
+  if (unit === 'ms') return `${Math.round(numValue)}ms`;
+  if (numValue < 1) return numValue.toFixed(2);
+  return numValue.toFixed(1);
+}
+
 // ---- Page 13: Core Web Vitals ----
-export function CoreWebVitalsPage() {
-  const vitals = [
-    ['First Contentful Paint (FCP)', '1.2s', 'Good', '1.8s', 'Good', 'LOW'],
-    ['Largest Contentful Paint (LCP)', '2.1s', 'Good', '3.2s', 'Needs Work', 'MEDIUM'],
-    ['Total Blocking Time (TBT)', '120ms', 'Good', '280ms', 'Needs Work', 'MEDIUM'],
-    ['Cumulative Layout Shift (CLS)', '0.04', 'Good', '0.08', 'Good', 'LOW'],
-    ['Time to First Byte (TTFB)', '280ms', 'Good', '340ms', 'Good', 'LOW'],
+export function CoreWebVitalsPage({ projectId }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!projectId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchPerformanceData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/app_user/projects/${projectId}/performance`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("API data:", result.data);
+        console.log("Mobile metrics:", result.data?.mobile);
+        console.log("Desktop metrics:", result.data?.desktop);
+        console.log("Mobile LCP structure:", result.data?.mobile?.metrics?.lcp);
+        console.log("Mobile TBT structure:", result.data?.mobile?.metrics?.tbt);
+        console.log("Mobile diagnostics TTFB:", getTTFBFromDiagnostics(result.data?.mobile?.diagnostics));
+        setData(result.data);
+      } catch (err) {
+        console.error('Failed to fetch performance data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
+  }, [projectId]);
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff', display: 'flex',
+        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 40px rgba(0,0,0,0.12)', margin: '0 auto', fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <div style={{ fontSize: 16, color: '#6B7280' }}>Loading Core Web Vitals data...</div>
+      </div>
+    );
+  }
+
+  // Use mock data if no real data available (for PDF safety)
+  const mobile = data?.mobile || {};
+  const desktop = data?.desktop || {};
+
+  // Map top cards data with safe extraction
+  const desktopScore = safeValue(desktop.performance_score || desktop.performance);
+  const mobileScore = safeValue(mobile.performance_score || mobile.performance);
+  const mobileLCP = safeValue(mobile.metrics?.lcp?.value || mobile.lcp?.value || mobile.lcp);
+  const mobileTBT = safeValue(mobile.metrics?.tbt?.value || mobile.tbt?.value || mobile.tbt);
+
+  console.log("Extracted values:", {
+    desktopScore,
+    mobileScore,
+    mobileLCP,
+    mobileTBT,
+    mobileMetrics: mobile.metrics,
+    mobileTTFB: mobile.ttfb,
+    mobileLCPObj: mobile.metrics?.lcp,
+    mobileTBTObj: mobile.metrics?.tbt
+  });
+
+  // Desktop vs Mobile comparison
+  const comparison = [
+    { label: 'Performance', d: safeValue(desktop.performance_score || desktop.performance), m: safeValue(mobile.performance_score || mobile.performance) },
+    { label: 'Best Practices', d: safeValue(desktop.best_practices_score || desktop.best_practices), m: safeValue(mobile.best_practices_score || mobile.best_practices) },
+    { label: 'Accessibility', d: safeValue(desktop.accessibility_score || desktop.accessibility), m: safeValue(mobile.accessibility_score || mobile.accessibility) },
   ];
 
+  // Core Web Vitals metrics table
+  const metrics = [
+    {
+      name: 'First Contentful Paint (FCP)',
+      desktop: safeValue(desktop.metrics?.fcp?.value || desktop.fcp?.value || desktop.fcp),
+      mobile: safeValue(mobile.metrics?.fcp?.value || mobile.fcp?.value || mobile.fcp),
+      unit: 's'
+    },
+    {
+      name: 'Largest Contentful Paint (LCP)',
+      desktop: safeValue(desktop.metrics?.lcp?.value || desktop.lcp?.value || desktop.lcp),
+      mobile: safeValue(mobile.metrics?.lcp?.value || mobile.lcp?.value || mobile.lcp),
+      unit: 's'
+    },
+    {
+      name: 'Total Blocking Time (TBT)',
+      desktop: safeValue(desktop.metrics?.tbt?.value || desktop.tbt?.value || desktop.tbt),
+      mobile: safeValue(mobile.metrics?.tbt?.value || mobile.tbt?.value || mobile.tbt),
+      unit: 'ms'
+    },
+    {
+      name: 'Cumulative Layout Shift (CLS)',
+      desktop: safeValue(desktop.metrics?.cls?.value || desktop.cls?.value || desktop.cls),
+      mobile: safeValue(mobile.metrics?.cls?.value || mobile.cls?.value || mobile.cls),
+      unit: ''
+    },
+    {
+      name: 'Time to First Byte (TTFB)',
+      desktop: safeValue(desktop.ttfb?.value || desktop.metrics?.ttfb?.value || getTTFBFromDiagnostics(desktop.diagnostics)),
+      mobile: safeValue(mobile.ttfb?.value || mobile.metrics?.ttfb?.value || getTTFBFromDiagnostics(mobile.diagnostics)),
+      unit: 'ms'
+    }
+  ];
+
+  // Generate vitals table with ratings and priorities
+  const vitals = metrics.map(m => {
+    const dRating = getRating(m.name.includes('LCP') ? 'LCP' : m.name.includes('TBT') ? 'TBT' : m.name.includes('CLS') ? 'CLS' : m.name.includes('FCP') ? 'FCP' : 'TTFB', m.desktop);
+    const mRating = getRating(m.name.includes('LCP') ? 'LCP' : m.name.includes('TBT') ? 'TBT' : m.name.includes('CLS') ? 'CLS' : m.name.includes('FCP') ? 'FCP' : 'TTFB', m.mobile);
+    const priority = getPriority(mRating);
+
+    return [
+      m.name,
+      formatMetricValue(m.desktop, m.unit),
+      dRating,
+      formatMetricValue(m.mobile, m.unit),
+      mRating,
+      priority
+    ];
+  });
+
+  // Helper for rating color
   const ratingColor = (r) => r === 'Good' ? '#10B981' : r === 'Needs Work' ? '#F59E0B' : '#EF4444';
   const priorityType = (p) => p === 'LOW' ? 'low' : p === 'MEDIUM' ? 'medium' : 'critical';
+
+  // Score color based on value
+  const getScoreColor = (score) => {
+    if (score >= 90) return '#10B981';
+    if (score >= 50) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  // LCP color
+  const lcpColor = getScoreColor(mobileLCP < 2.5 ? 90 : mobileLCP < 4 ? 75 : 50);
+
+  // SEO Impact text based on data
+  const getSEOImpact = () => {
+    if (!data?.mobile && !data?.desktop) {
+      return 'Performance data not available. Run a PageSpeed audit to see Core Web Vitals metrics and their impact on search rankings.';
+    }
+
+    if (mobileScore >= 75 && desktopScore >= 75) {
+      return `Excellent Core Web Vitals with mobile score ${mobileScore} and desktop score ${desktopScore}. These metrics provide a strong foundation for search rankings and user experience.`;
+    } else if (mobileScore >= 60 && desktopScore >= 60) {
+      return `Good Core Web Vitals with room for improvement. Mobile score (${mobileScore}) and desktop score (${desktopScore}) can be enhanced for better rankings.`;
+    } else {
+      return `Core Web Vitals require optimization. Mobile performance (${mobileScore}) and desktop performance (${desktopScore}) impact search visibility and user experience. LCP of ${formatMetricValue(mobileLCP, 's')} needs attention.`;
+    }
+  };
 
   return (
     <div style={{
@@ -25,10 +246,10 @@ export function CoreWebVitalsPage() {
         <SectionHeader num="10" title="Core Web Vitals" subtitle="Desktop and mobile Lighthouse analysis" />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 28 }}>
-          <StatCard value={82} label="Desktop Score" sub="Lighthouse" color="#10B981" borderColor="#10B981" />
-          <StatCard value={71} label="Mobile Score" sub="Lighthouse" color="#F59E0B" borderColor="#F59E0B" />
-          <StatCard value="3.2s" label="Mobile LCP" sub="Target < 2.5s" color="#EF4444" borderColor="#EF4444" />
-          <StatCard value="280ms" label="Mobile TBT" sub="Target < 200ms" color="#F59E0B" borderColor="#F59E0B" />
+          <StatCard value={desktopScore} label="Desktop Score" sub="Lighthouse" color={getScoreColor(desktopScore)} borderColor={getScoreColor(desktopScore)} />
+          <StatCard value={mobileScore} label="Mobile Score" sub="Lighthouse" color={getScoreColor(mobileScore)} borderColor={getScoreColor(mobileScore)} />
+          <StatCard value={formatMetricValue(mobileLCP, 's')} label="Mobile LCP" sub="Target < 2.5s" color={lcpColor} borderColor={lcpColor} />
+          <StatCard value={formatMetricValue(mobileTBT, 'ms')} label="Mobile TBT" sub="Target < 200ms" color={getScoreColor(mobileTBT < 200 ? 90 : mobileTBT < 600 ? 75 : 50)} borderColor={getScoreColor(mobileTBT < 200 ? 90 : mobileTBT < 600 ? 75 : 50)} />
         </div>
 
         <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: "'Syne', sans-serif" }}>Desktop vs Mobile Comparison</h3>
@@ -48,17 +269,13 @@ export function CoreWebVitalsPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end', height: 160 }}>
-              {[
-                { label: 'Performance', d: 82, m: 71 },
-                { label: 'Best Practices', d: 82, m: 71 },
-                { label: 'Accessibility', d: 92, m: 88 },
-              ].map(({ label, d, m }) => (
+              {comparison.map(({ label, d, m }) => (
                 <div key={label} style={{ flex: 1, textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', justifyContent: 'center', height: 130 }}>
-                    <div style={{ width: 26, height: `${d * 1.2}px`, background: '#4F6EF7', borderRadius: '3px 3px 0 0', position: 'relative' }}>
+                    <div style={{ width: 26, height: `${Math.min(d * 1.2, 120)}px`, background: '#4F6EF7', borderRadius: '3px 3px 0 0', position: 'relative' }}>
                       <span style={{ position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)', fontSize: 11, fontWeight: 700, color: '#374151' }}>{d}</span>
                     </div>
-                    <div style={{ width: 26, height: `${m * 1.2}px`, background: '#00D4FF', borderRadius: '3px 3px 0 0', position: 'relative' }}>
+                    <div style={{ width: 26, height: `${Math.min(m * 1.2, 120)}px`, background: '#00D4FF', borderRadius: '3px 3px 0 0', position: 'relative' }}>
                       <span style={{ position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)', fontSize: 11, fontWeight: 700, color: '#374151' }}>{m}</span>
                     </div>
                   </div>
@@ -68,8 +285,8 @@ export function CoreWebVitalsPage() {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}>
-            <p style={{ fontSize: 14, color: '#374151' }}>Desktop: <strong style={{ color: '#4F6EF7' }}>82/100</strong></p>
-            <p style={{ fontSize: 14, color: '#374151' }}>Mobile: <strong style={{ color: '#F59E0B' }}>71/100</strong></p>
+            <p style={{ fontSize: 14, color: '#374151' }}>Desktop: <strong style={{ color: '#4F6EF7' }}>{desktopScore}/100</strong></p>
+            <p style={{ fontSize: 14, color: '#374151' }}>Mobile: <strong style={{ color: getScoreColor(mobileScore) }}>{mobileScore}/100</strong></p>
             <p style={{ fontSize: 13, color: '#10B981', marginTop: 8 }}>Good: ≥90 &nbsp; Fair: 50-89 &nbsp; Poor: &lt;50</p>
           </div>
         </div>
@@ -90,7 +307,7 @@ export function CoreWebVitalsPage() {
               {vitals.map(([metric, dval, drat, mval, mrat, priority], i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #F3F4F6', background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
                   <td style={{ padding: '10px 14px', fontWeight: 600, color: '#111827' }}>{metric}</td>
-                  <td style={{ padding: '10px 14px', color: '#10B981', fontWeight: 600 }}>{dval}</td>
+                  <td style={{ padding: '10px 14px', color: ratingColor(drat), fontWeight: 600 }}>{dval}</td>
                   <td style={{ padding: '10px 14px', color: ratingColor(drat), fontWeight: 600 }}>{drat}</td>
                   <td style={{ padding: '10px 14px', color: ratingColor(mrat), fontWeight: 600 }}>{mval}</td>
                   <td style={{ padding: '10px 14px', color: ratingColor(mrat), fontWeight: 600 }}>{mrat}</td>
@@ -102,7 +319,7 @@ export function CoreWebVitalsPage() {
         </div>
 
         <InsightBox title="Core Web Vitals SEO Impact">
-          Mobile LCP of 3.2s is the critical ranking factor. Moving from Poor to Good (&lt;2.5s) can improve mobile rankings 10-15%. The optimisation page shows how to achieve this with a combined 2,500ms saving.
+          {getSEOImpact()}
         </InsightBox>
       </div>
       <PageFooter page={13} />
