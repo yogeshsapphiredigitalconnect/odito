@@ -56,6 +56,13 @@ export class AiScriptService {
     }
     return [];
   }
+
+  /** Human-readable issue line for scripts (Page08 uses `issue`, not `title`) */
+  static formatIssueLabel(issue) {
+    if (issue == null || issue === '') return 'Unknown issue';
+    if (typeof issue === 'string') return issue;
+    return issue.issue || issue.title || issue.name || 'Unknown issue';
+  }
   
   /**
    * Generate script for a project
@@ -833,7 +840,7 @@ AI Discovery Score: ${scores.aiVisibility}/100
 Our audit identified ${issueDistribution.critical} critical issues, ${issueDistribution.medium} medium-level issues, for a total of ${issueDistribution.total} issues.
 
 Critical areas needing attention:
-${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${issue.title || issue}`).join('\n') || '- No critical issues identified'}
+${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No critical issues identified'}
 
 These issues are affecting your search visibility and user experience.
 Addressing them will have the most significant impact on your rankings.
@@ -889,16 +896,18 @@ Website: ${url}
 
 ⚠️ KEY ISSUES (${issueDistribution?.total || 0} Total - ${issueDistribution?.critical || 0} Critical, ${issueDistribution?.medium || 0} Medium):
 Critical areas needing attention:
-${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${issue.title || issue}`).join('\n') || '- No critical issues identified'}
-${(topIssues.medium || []).slice(0, 3).map((issue, i) => `${i + 1}. ${issue.title || issue}`).join('\n') || '- No medium issues identified'}
-${(topIssues.low || []).slice(0, 1).map((issue, i) => `${i + 1}. ${issue.title || issue}`).join('\n') || '- No low issues identified'}
+${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No critical issues identified'}
+${(topIssues.medium || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No medium issues identified'}
+${(topIssues.low || []).slice(0, 1).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No low issues identified'}
 
 ⚡ TECHNICAL HIGHLIGHTS:
-${(technicalHighlights?.criticalIssues || []).map((issue, i) => `  ${i + 1}. ${issue}`).join('\n') || '  - No critical technical issues'}
+${(technicalHighlights?.criticalIssues || []).map((issue, i) => `  ${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '  - No critical technical issues'}
 
 💨 PERFORMANCE:
 Page Speed Score: ${performanceMetrics?.pageSpeed || 0}
-Key Metrics: ${(performanceMetrics?.metrics || []).join(', ') || 'Standard metrics'}
+Key Metrics: ${(performanceMetrics?.metrics || [])
+  .map((m) => `${m.metric}: ${m.mobile ?? m.value ?? 'N/A'}`)
+  .join(', ') || 'Metrics unavailable'}
 
 🔍 KEYWORDS:
 Total Keywords Tracked: ${keywordData?.totalKeywords || 0}
