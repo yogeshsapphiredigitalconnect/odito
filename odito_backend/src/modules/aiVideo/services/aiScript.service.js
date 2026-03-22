@@ -61,7 +61,15 @@ export class AiScriptService {
   static formatIssueLabel(issue) {
     if (issue == null || issue === '') return 'Unknown issue';
     if (typeof issue === 'string') return issue;
-    return issue.issue || issue.title || issue.name || 'Unknown issue';
+    return issue.issue || issue.title || issue.name || issue.detail || 'Unknown issue';
+  }
+
+  /** Format CWV rows for script prompts (mobile or desktop column) */
+  static formatMetricRows(rows, column = 'mobile') {
+    if (!rows?.length) return 'N/A';
+    return rows
+      .map((r) => `${r.metric}: ${r[column] ?? r.value ?? 'N/A'}`)
+      .join(', ');
   }
   
   /**
@@ -365,31 +373,34 @@ export class AiScriptService {
       const perf = auditData.performance || {};
       const mobileScore = Number(perf.mobileScore) || 0;
       const desktopScore = Number(perf.desktopScore) || 0;
-      const pageSpeed = mobileScore || desktopScore || 0;
+      const avgPerf = Number(perf.avgPerformance) || 0;
+      const pageSpeed = avgPerf || mobileScore || desktopScore || 0;
 
-      const rawRows =
-        Array.isArray(perf.mobileMetrics) && perf.mobileMetrics.length
-          ? perf.mobileMetrics
-          : Array.isArray(perf.desktopMetrics) && perf.desktopMetrics.length
-            ? perf.desktopMetrics
-            : [];
+      const defaultVit = [
+        { metric: 'Largest Contentful Paint', mobile: 'N/A', desktop: 'N/A' },
+        { metric: 'Total Blocking Time', mobile: 'N/A', desktop: 'N/A' },
+        { metric: 'First Contentful Paint', mobile: 'N/A', desktop: 'N/A' },
+        { metric: 'Cumulative Layout Shift', mobile: 'N/A', desktop: 'N/A' }
+      ];
 
-      const metrics =
-        rawRows.length > 0
-          ? rawRows.map((row) => ({
+      const mapVitals = (rows) =>
+        Array.isArray(rows) && rows.length
+          ? rows.map((row) => ({
               metric: row.metric,
-              mobile: row.mobile ?? row.value ?? 'N/A'
+              mobile: row.mobile ?? row.value ?? 'N/A',
+              desktop: row.desktop ?? row.value ?? 'N/A'
             }))
-          : [
-              { metric: 'Largest Contentful Paint', mobile: 'N/A' },
-              { metric: 'Total Blocking Time', mobile: 'N/A' },
-              { metric: 'First Contentful Paint', mobile: 'N/A' },
-              { metric: 'Cumulative Layout Shift', mobile: 'N/A' }
-            ];
+          : null;
+
+      const mobileMetrics = mapVitals(perf.mobileMetrics) || defaultVit;
+      const desktopMetrics = mapVitals(perf.desktopMetrics) || defaultVit;
 
       const performanceMetrics = {
         pageSpeed,
-        metrics
+        mobileScore,
+        desktopScore,
+        metrics: mobileMetrics,
+        desktopMetrics
       };
       
       console.log('✅ Built performanceMetrics:', performanceMetrics);
@@ -435,7 +446,10 @@ export class AiScriptService {
 
       // Extract other data safely
       const aiObj = this.safe(auditData.ai, {});
-      const aiVisibilityScore = this.safe(aiObj.visibility, this.safe(auditData.scores?.aiVisibility, 0));
+      const aiVisibilityScore =
+        auditData.scores?.aiVisibility != null
+          ? Number(auditData.scores.aiVisibility)
+          : Number(aiObj.visibility ?? 0);
       const schemaMarkup = this.safeArray(aiObj.schemaMarkup);
       const recommendations = this.safeArray(auditData.recommendations).slice(0, 5);
       const keywordsObj = this.safe(auditData.keywords, {});
@@ -482,6 +496,8 @@ export class AiScriptService {
       });
       console.log('Performance:', {
         pageSpeed: performanceMetrics.pageSpeed,
+        mobileScore: performanceMetrics.mobileScore,
+        desktopScore: performanceMetrics.desktopScore,
         metricsCount: performanceMetrics.metrics.length
       });
 
@@ -515,7 +531,7 @@ export class AiScriptService {
         
         // AI visibility insights
         aiAnalysis: {
-          score: Math.round(aiVisibilityScore),
+          score: Math.round(scores.aiVisibility || aiVisibilityScore),
           schemaMarkupCount: schemaMarkup.length,
           hasKnowledgeGraph: !!(aiObj.knowledgeGraph?.exists)
         },
@@ -624,18 +640,28 @@ export class AiScriptService {
       const perf = auditData.performance || {};
       const mScore = Number(perf.mobileScore) || 0;
       const dScore = Number(perf.desktopScore) || 0;
-      const performanceMetrics = [
-        {
-          name: 'Page Speed',
-          value: mScore || dScore || 0,
-          status: (mScore || dScore) >= 90 ? 'GOOD' : 'NEEDS_IMPROVEMENT'
-        },
-        {
-          name: 'Mobile Performance',
-          value: mScore,
-          status: mScore >= 90 ? 'GOOD' : 'NEEDS_IMPROVEMENT'
-        }
+      const avgP = Number(perf.avgPerformance) || 0;
+      const defaultVit = [
+        { metric: 'Largest Contentful Paint', mobile: 'N/A', desktop: 'N/A' },
+        { metric: 'Total Blocking Time', mobile: 'N/A', desktop: 'N/A' },
+        { metric: 'First Contentful Paint', mobile: 'N/A', desktop: 'N/A' },
+        { metric: 'Cumulative Layout Shift', mobile: 'N/A', desktop: 'N/A' }
       ];
+      const mapVitals = (rows) =>
+        Array.isArray(rows) && rows.length
+          ? rows.map((row) => ({
+              metric: row.metric,
+              mobile: row.mobile ?? row.value ?? 'N/A',
+              desktop: row.desktop ?? row.value ?? 'N/A'
+            }))
+          : null;
+      const promptPerfMetrics = {
+        pageSpeed: avgP || mScore || dScore || 0,
+        mobileScore: mScore,
+        desktopScore: dScore,
+        metrics: mapVitals(perf.mobileMetrics) || defaultVit,
+        desktopMetrics: mapVitals(perf.desktopMetrics) || defaultVit
+      };
 
       const issueDistribution = {
         total: this.get(auditData, "issueDistribution.total", 0),
@@ -709,23 +735,21 @@ export class AiScriptService {
         topIssues: {
           critical: topIssues.critical,
           high: topIssues.high,
-          medium: topIssues.medium
+          medium: topIssues.medium,
+          low: topIssues.low
         },
         technicalHighlights: {
           criticalIssues: technicalHighlights.criticalIssues,
           topRecommendations: technicalHighlights.topRecommendations
         },
-        performanceMetrics: {
-          pageSpeed: this.safe(perf.pageSpeed, mScore || dScore || 0),
-          metrics: performanceMetrics
-        },
+        performanceMetrics: promptPerfMetrics,
         keywordData: {
           totalKeywords: this.safe(keywordsObj.totalKeywords, 0),
           topRankings: topRankings,
           opportunities: opportunities
         },
         aiVisibility: {
-          score: Math.round(this.safe(aiObj.visibility, 0)),
+          score: Math.round(scores.aiVisibility || aiObj.visibility || 0),
           schemaMarkupCount: schemaMarkup.length,
           hasKnowledgeGraph: !!(aiObj.knowledgeGraph?.exists)
         },
@@ -761,7 +785,10 @@ export class AiScriptService {
         },
         performanceMetrics: {
           pageSpeed: 0,
-          metrics: []
+          mobileScore: 0,
+          desktopScore: 0,
+          metrics: [],
+          desktopMetrics: []
         },
         keywordData: {
           totalKeywords: 0,
@@ -819,7 +846,8 @@ Sample Recommendation: ${auditSnapshot.recommendations[0] || 'None'}
       scores,
       issueDistribution,
       topIssues,
-      recommendations
+      recommendations,
+      performanceMetrics: pm
     } = auditSnapshot;
 
     const overallAssessment = scores.overall >= 80 ? 'strong' : scores.overall >= 60 ? 'moderate' : 'needs improvement';
@@ -836,10 +864,13 @@ Performance Score: ${scores.performance}/100
 SEO Health: ${scores.seo}/100
 AI Discovery Score: ${scores.aiVisibility}/100
 
-[KEY FINDINGS]
-Our audit identified ${issueDistribution.critical} critical issues, ${issueDistribution.medium} medium-level issues, for a total of ${issueDistribution.total} issues.
+Mobile PageSpeed: ${pm?.mobileScore ?? 0}/100
+Desktop PageSpeed: ${pm?.desktopScore ?? 0}/100
 
-Critical areas needing attention:
+[KEY FINDINGS]
+Our audit identified ${issueDistribution.critical} critical, ${issueDistribution.high} high-severity, ${issueDistribution.medium} medium, and ${issueDistribution.low} low-priority issues, for a total of ${issueDistribution.total} issues.
+
+Critical areas needing attention (sample):
 ${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No critical issues identified'}
 
 These issues are affecting your search visibility and user experience.
@@ -894,20 +925,20 @@ Website: ${url}
 - SEO Health: ${scores?.seo || 0}/100
 - AI Visibility: ${scores?.aiVisibility || 0}/100
 
-⚠️ KEY ISSUES (${issueDistribution?.total || 0} Total - ${issueDistribution?.critical || 0} Critical, ${issueDistribution?.medium || 0} Medium):
-Critical areas needing attention:
-${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No critical issues identified'}
-${(topIssues.medium || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No medium issues identified'}
-${(topIssues.low || []).slice(0, 1).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No low issues identified'}
+⚠️ KEY ISSUES (${issueDistribution?.total || 0} total — ${issueDistribution?.critical || 0} critical, ${issueDistribution?.high || 0} high, ${issueDistribution?.medium || 0} medium, ${issueDistribution?.low || 0} low/info):
+High-priority examples:
+${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No high-severity samples'}
+${(topIssues.medium || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No medium samples'}
+${(topIssues.low || []).slice(0, 1).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No low samples'}
 
 ⚡ TECHNICAL HIGHLIGHTS:
 ${(technicalHighlights?.criticalIssues || []).map((issue, i) => `  ${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '  - No critical technical issues'}
 
 💨 PERFORMANCE:
-Page Speed Score: ${performanceMetrics?.pageSpeed || 0}
-Key Metrics: ${(performanceMetrics?.metrics || [])
-  .map((m) => `${m.metric}: ${m.mobile ?? m.value ?? 'N/A'}`)
-  .join(', ') || 'Metrics unavailable'}
+Mobile PageSpeed: ${performanceMetrics?.mobileScore ?? performanceMetrics?.pageSpeed ?? 0}/100
+Desktop PageSpeed: ${performanceMetrics?.desktopScore ?? performanceMetrics?.pageSpeed ?? 0}/100
+Mobile Core Web Vitals: ${AiScriptService.formatMetricRows(performanceMetrics?.metrics, 'mobile')}
+Desktop Core Web Vitals: ${AiScriptService.formatMetricRows(performanceMetrics?.desktopMetrics, 'desktop')}
 
 🔍 KEYWORDS:
 Total Keywords Tracked: ${keywordData?.totalKeywords || 0}

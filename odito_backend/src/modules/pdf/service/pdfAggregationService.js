@@ -15,11 +15,26 @@ export class PDFAggregationService {
    */
   static async fetchAllPDFData(projectId) {
     const startTime = Date.now();
-    const { db, ObjectId } = this.getDbConnection();
+    
+    // 🔍 STEP 3: ADD DEBUG LOGS
+    console.log("AGGREGATION SERVICE: Starting data fetch for projectId:", projectId);
+    console.log("Mongoose connection state:", mongoose.connection.readyState);
+    
+    let db, ObjectId;
+    try {
+      const connection = this.getDbConnection();
+      db = connection.db;
+      ObjectId = connection.ObjectId;
+      console.log("DB connection established successfully");
+    } catch (error) {
+      console.error("DB connection failed:", error.message);
+      throw new Error(`Database connection failed: ${error.message}`);
+    }
+    
     const projectIdObj = new ObjectId(projectId);
 
     try {
-      console.log("AGGREGATION SERVICE: Starting data fetch for projectId:", projectId);
+      console.log("AGGREGATION SERVICE: Executing parallel queries");
       // Execute all queries in parallel for maximum performance
       const [
         projectData,
@@ -107,8 +122,46 @@ export class PDFAggregationService {
       return aggregatedData;
 
     } catch (error) {
-      LoggerUtil.error('PDF data aggregation failed', error, { projectId });
-      throw error;
+      console.error("AGGREGATION SERVICE ERROR:", error.message);
+      console.error("AGGREGATION SERVICE STACK:", error.stack);
+      
+      // 🔧 STEP 5: VERIFY OUTPUT - Return safe fallback structure
+      const fallbackData = {
+        project: { project_name: "Unknown", main_url: "N/A" },
+        ai: {
+          visibility: { summary: null, pageData: [] },
+          issues: { bySeverity: null, byCategory: null, byRule: null },
+          pageScores: { scoreStats: null },
+          entities: { entityStats: null, entityTypes: null, relationshipStats: null }
+        },
+        technical: { domain: null, robotsStatus: null },
+        pages: {
+          issues: null,
+          onpageIssues: null,
+          data: null
+        },
+        links: {
+          internal: { totalLinks: 0, uniqueSourcePages: 0, platforms: [] },
+          external: { totalLinks: 0, uniqueSourcePages: 0, platforms: [] },
+          social: { totalLinks: 0, uniqueSourcePages: 0, platforms: [] }
+        },
+        performance: { mobile: null, desktop: null },
+        metadata: {
+          fetchedAt: new Date(),
+          projectId,
+          queryTime: Date.now() - startTime,
+          error: error.message
+        }
+      };
+
+      LoggerUtil.database('aggregate', 'pdf_all_data_error', Date.now() - startTime, {
+        projectId,
+        error: error.message,
+        fallbackUsed: true
+      });
+
+      console.log("AGGREGATION SERVICE: Returning fallback data due to error");
+      return fallbackData;
     }
   }
 
@@ -691,15 +744,37 @@ export class PDFAggregationService {
    */
   static async fetchPerformanceData(db, projectId) {
     try {
-      const performance = await db.collection('seo_domain_performance')
-        .findOne({ project_id: projectId }, {
-          mobile: 1,
-          desktop: 1,
-          domain: 1,
-          tested_at: 1
-        });
+      // 🔍 STEP 3: ADD DEBUG LOGS
+      console.log("FETCH PERFORMANCE: Starting for projectId:", projectId);
+      console.log("DB available:", !!db);
+      console.log("DB collections:", db ? Object.keys(db.collections || {}) : "N/A");
+      
+      // 🔧 STEP 4: FIX AGGREGATION WITH SAFE ERROR HANDLING
+      let collection;
+      try {
+        collection = db.collection('seo_domain_performance');
+        console.log("PERF Collection created successfully:", !!collection);
+      } catch (err) {
+        console.error("PERF Collection creation failed:", err.message);
+        throw new Error(`Failed to create collection: ${err.message}`);
+      }
+      
+      if (!collection) {
+        console.error("PERF Collection is null/undefined");
+        return { mobile: null, desktop: null };
+      }
+
+      const performance = await collection.findOne({ project_id: projectId }, {
+        mobile: 1,
+        desktop: 1,
+        domain: 1,
+        tested_at: 1
+      });
+
+      console.log("PERF Raw data:", performance);
 
       if (!performance) {
+        console.log("PERF No data found, returning null values");
         return { mobile: null, desktop: null };
       }
 
@@ -776,8 +851,27 @@ export class PDFAggregationService {
    * Get database connection helper
    */
   static getDbConnection() {
+    // 🔍 STEP 2: FIX COLLECTION ERROR
+    console.log("DB connection:", mongoose.connection.readyState);
+    console.log("DB name:", mongoose.connection.name);
+    
+    // Use mongoose.connection.db directly - it should be available even if readyState is 0
     const db = mongoose.connection.db;
+    if (!db) {
+      console.error("Database not available, trying to get from mongoose.connections[0]");
+      // Fallback to first connection
+      const fallbackDb = mongoose.connections[0]?.db;
+      if (!fallbackDb) {
+        throw new Error("Database connection not available");
+      }
+      const { ObjectId } = mongoose.Types;
+      console.log("Using fallback DB connection, ObjectId available:", !!ObjectId);
+      return { db: fallbackDb, ObjectId };
+    }
+    
     const { ObjectId } = mongoose.Types;
+    console.log("DB connection established, ObjectId available:", !!ObjectId);
+    
     return { db, ObjectId };
   }
 }

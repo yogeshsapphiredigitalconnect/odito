@@ -3,10 +3,17 @@
  * Main module file for PDF data generation system
  */
 
+import express from 'express';
 import pdfRoutes from './routes/pdfRoutes.js';
+import unifiedJsonRoutes from './routes/unifiedJsonRoutes.js';
 
-// Export the routes for use in main router
-export default pdfRoutes;
+// Combine all routes
+const router = express.Router();
+router.use('/pdf', pdfRoutes);
+router.use('/pdf/unified', unifiedJsonRoutes);
+
+// Export the combined routes for use in main router
+export default router;
 
 // Export key classes for potential direct use
 export {
@@ -24,6 +31,10 @@ export {
 export {
   PDFDataMapper
 } from './mapper/pdfDataMapper.js';
+
+export {
+  UnifiedJsonService
+} from './service/unifiedJsonService.js';
 
 // Export utilities for external use
 export {
@@ -64,7 +75,12 @@ export const moduleInfo = {
     'GET /api/pdf/:projectId/validate': 'Validate project data',
     'GET /api/pdf/:projectId/status': 'Get generation status',
     'GET /api/pdf/health': 'Health check',
-    'GET /api/pdf/sections': 'List available sections'
+    'GET /api/pdf/sections': 'List available sections',
+    'GET /api/pdf/unified/:projectId/full-report': 'Generate unified JSON for AI',
+    'GET /api/pdf/unified/:projectId/ai-summary': 'Get AI-optimized summary',
+    'GET /api/pdf/unified/:projectId/validate': 'Validate unified data',
+    'GET /api/pdf/unified/sections': 'List unified sections',
+    'GET /api/pdf/unified/health': 'Unified service health check'
   },
   performance: {
     targetResponseTime: '<500ms',

@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { useAuth } from '@/contexts/AuthContext';
 import { useProject } from '@/contexts/ProjectContext';
-import { AIVideoGenerator } from '@/components/ai-video';
+import { generateScript } from '@/services/aiVideoApi';
 import { 
   Play, 
   Download, 
@@ -20,13 +20,69 @@ import {
   CheckCircle,
   AlertCircle,
   Sparkles,
-  ChevronDown
+  RefreshCw,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function AIVideoReport() {
   const { user, logout, isLoading } = useAuth();
   const { activeProject, projects, isLoading: projectsLoading, setActiveProject } = useProject();
   const router = useRouter();
+
+  // Script generation state
+  const [script, setScript] = useState('');
+  const [scriptLoading, setScriptLoading] = useState(false);
+  const [scriptError, setScriptError] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [scriptMetadata, setScriptMetadata] = useState(null);
+
+  // Generate script handler
+  const handleGenerateScript = async () => {
+    if (!activeProject) {
+      setScriptError('No project selected');
+      return;
+    }
+
+    setScriptLoading(true);
+    setScriptError('');
+    setScript('');
+
+    try {
+      console.log('Generating script for project:', activeProject._id);
+
+      const response = await generateScript(activeProject._id);
+
+      if (response.success && response.script) {
+        setScript(response.script);
+        setScriptMetadata({
+          isExisting: response.isExisting,
+          processingTime: response.processingTime,
+          generatedAt: new Date().toLocaleString()
+        });
+        console.log('Script generated successfully');
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error) {
+      console.error('Error generating script:', error);
+      setScriptError(error.message || 'Failed to generate script. Please try again.');
+    } finally {
+      setScriptLoading(false);
+    }
+  };
+
+  // Copy to clipboard handler
+  const handleCopyScript = () => {
+    if (script) {
+      navigator.clipboard.writeText(script).then(() => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      }).catch((error) => {
+        console.error('Failed to copy:', error);
+      });
+    }
+  };
 
   // Show loading state while checking authentication and projects
   if (isLoading || projectsLoading) {
@@ -102,7 +158,6 @@ export default function AIVideoReport() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  // Auto-select first project
                   setActiveProject(projects[0]);
                 }}
               >
@@ -139,6 +194,9 @@ export default function AIVideoReport() {
                         const project = projects.find(p => p._id === e.target.value);
                         if (project) {
                           setActiveProject(project);
+                          setScript('');
+                          setScriptError('');
+                          setScriptMetadata(null);
                         }
                       }}
                       className="text-sm bg-background border border-border rounded-md px-3 py-1 pr-8 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -166,11 +224,132 @@ export default function AIVideoReport() {
 
         {/* Main Content */}
         <div className="grid gap-6">
-          {/* AI Video Generator Component */}
-          <AIVideoGenerator 
-            projectId={activeProject._id}
-            className="w-full"
-          />
+          {/* Generate Script Section */}
+          <Card className="p-6 border-2 border-primary/20">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">Generate Your Script</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Click the button below to generate a professional video narration script powered by AI
+                  </p>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {scriptError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-red-900">Error</h4>
+                    <p className="text-sm text-red-700 mt-1">{scriptError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Generate Button */}
+              <div>
+                <Button 
+                  onClick={handleGenerateScript}
+                  disabled={scriptLoading}
+                  size="lg"
+                  className="w-full md:w-auto"
+                >
+                  {scriptLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating Script...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Script
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Metadata */}
+              {scriptMetadata && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 flex items-start gap-3">
+                  <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="text-blue-900 font-medium">
+                      {scriptMetadata.isExisting ? 'Existing Script Retrieved' : 'Script Generated Successfully'}
+                    </p>
+                    <p className="text-blue-700 text-xs mt-1">
+                      {scriptMetadata.generatedAt}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Script Display */}
+          {script && (
+            <Card className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Your Video Script
+                  </h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleCopyScript}
+                  >
+                    {copySuccess ? (
+                      <>
+                        <Check className="h-4 w-4 mr-1" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Script Content */}
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-6 border border-slate-200 dark:border-slate-700 max-h-[600px] overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-mono">
+                    {script}
+                  </pre>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 flex-wrap">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleGenerateScript}
+                    disabled={scriptLoading}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      const element = document.createElement('a');
+                      const file = new Blob([script], { type: 'text/plain' });
+                      element.href = URL.createObjectURL(file);
+                      element.download = `script-${activeProject?._id?.slice(-8)}-${new Date().getTime()}.txt`;
+                      document.body.appendChild(element);
+                      element.click();
+                      document.body.removeChild(element);
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Info Cards */}
           <div className="grid md:grid-cols-2 gap-6">

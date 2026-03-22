@@ -14,7 +14,8 @@ import aiVisibilityRoutes from '../modules/app_user/routes/aiVisibilityRoutes.js
 import exportRoutes from '../modules/export/exportRoutes.js';
 import keywordResearchRoutes from '../modules/keyword_research/routes/keywordResearchRoutes.js';
 import pdfRoutes from '../modules/pdf/routes/pdfRoutes.js';
-import { aiVideoRoutes } from '../modules/aiVideo/aiVideo.routes.js';
+import aiVideoScriptRoutes from '../modules/aiVideo/routes/aiScript.routes.js';
+import debugRoutes from '../modules/aiVideo/routes/debug.routes.js';
 
 const router = express.Router();
 
@@ -42,12 +43,13 @@ router.use('/payments', paymentRoutes);
 router.use('/ai-visibility', aiVisibilityRoutes);
 // Export routes
 router.use('/export', exportRoutes);
-// Keyword Research routes
+// Keywords Research routes
 router.use('/keywords', keywordResearchRoutes);
 // PDF data routes
 router.use('/pdf', pdfRoutes);
-// AI Video script generation routes
-console.log("🎬 Registering AI Video routes at /api/ai-video");
-router.use('/ai-video', aiVideoRoutes);
+// AI Video Script routes
+router.use('/ai-video', aiVideoScriptRoutes);
+// Debug routes for AI script generation
+router.use('/debug', debugRoutes);
 
 export default router;

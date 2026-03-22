@@ -5,14 +5,39 @@
 
 import fetch from 'node-fetch';
 
+// ✅ Configuration: Model fallback chain with per-model API versions
+// Each model specifies its own API version (some models only work on specific versions)
+const MODELS = [
+  { model: 'gemini-2.0-flash',      version: 'v1beta' },
+  { model: 'gemini-1.5-flash-001',  version: 'v1beta' },  // versioned alias
+  { model: 'gemini-1.5-flash-8b',   version: 'v1beta' },  // lighter variant
+  { model: 'gemini-1.0-pro',        version: 'v1beta' },  // oldest, most available on free tier
+];
+const DEFAULT_MODEL_INDEX = 0;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || MODELS[DEFAULT_MODEL_INDEX].model;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/${MODELS[DEFAULT_MODEL_INDEX].version}/models/${GEMINI_MODEL}:generateContent`;
+
 export class GeminiService {
+  /**
+   * Get Gemini API URL for a specific model with its version
+   * @param {string} model - Model name
+   * @returns {string} API URL
+   */
+  static getApiUrl(model) {
+    // Find the model config in MODELS array
+    const modelConfig = MODELS.find(m => m.model === model);
+    const version = modelConfig?.version || 'v1beta'; // fallback to v1beta if not found
+    return `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent`;
+  }
   
   /**
-   * Generate video script using Gemini API
+   * Generate video script using Gemini API with automatic model fallback
    * @param {string} prompt - AI prompt for script generation
+   * @param {string} modelToUse - Optional model override
+   * @param {number} modelIndex - Internal: index of model to try in chain
    * @returns {string} Generated script
    */
-  static async generateScript(prompt) {
+  static async generateScript(prompt, modelToUse = GEMINI_MODEL, modelIndex = DEFAULT_MODEL_INDEX) {
     const startTime = Date.now();
     
     try {
@@ -24,11 +49,29 @@ export class GeminiService {
         throw new Error('Gemini API key not configured');
       }
       
+      // Determine which model to use: either explicit override or from chain
+      let selectedModel = modelToUse;
+      let modelConfig = MODELS.find(m => m.model === modelToUse);
+      
+      // If using from chain, get model config at index
+      if (modelToUse === GEMINI_MODEL && modelIndex < MODELS.length) {
+        selectedModel = MODELS[modelIndex].model;
+        modelConfig = MODELS[modelIndex];
+      }
+      
+      // Fallback to v1beta if config not found
+      const version = modelConfig?.version || 'v1beta';
+      
       console.log('🤖 Gemini Service: Starting script generation', {
-        promptLength: prompt.length
+        promptLength: prompt.length,
+        model: selectedModel,
+        apiVersion: version,
+        modelIndex: modelIndex,
+        chainLength: MODELS.length
       });
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      const apiUrl = this.getApiUrl(selectedModel);
+      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,14 +114,31 @@ export class GeminiService {
         console.error('❌ Gemini API error:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorData
+          error: errorData,
+          modelUsed: selectedModel,
+          apiVersion: version
         });
         
         if (response.status === 401 || response.status === 403) {
           throw new Error('Invalid Gemini API key');
         }
+        
+        if (response.status === 404) {
+          const errorMsg = errorData?.error?.message || 'Model not found';
+          if (errorMsg.includes('models/')) {
+            console.warn(`⚠️ Model "${selectedModel}" not available on ${version}. Trying next in chain...`);
+          }
+          throw new Error('Gemini API resource not found');
+        }
+        
         if (response.status === 429) {
-          throw new Error('Gemini API quota exceeded');
+          // Quota exceeded - try next model in chain
+          if (modelIndex < MODELS.length - 1) {
+            const nextModelName = MODELS[modelIndex + 1].model;
+            console.warn(`⚠️ Quota exceeded for "${selectedModel}". Trying next model: "${nextModelName}"`);
+            return this.generateScript(prompt, MODELS[modelIndex + 1].model, modelIndex + 1);
+          }
+          throw new Error('Gemini API quota exceeded on all models in chain');
         }
         throw new Error(`Gemini API error: ${response.status}`);
       }
@@ -101,6 +161,7 @@ export class GeminiService {
       
       console.log('✅ Gemini Service: Script generation completed', {
         processingTime,
+        modelUsed: selectedModel,
         responseLength: generatedText.length
       });
       
@@ -128,6 +189,8 @@ export class GeminiService {
         throw new Error('AI service timeout');
       }
       
+      // Wrap all other errors as service unavailable
+      console.error('❌ Critical Gemini service error:', error);
       throw new Error('AI service temporarily unavailable');
     }
   }

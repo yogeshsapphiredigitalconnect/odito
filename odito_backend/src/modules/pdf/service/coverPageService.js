@@ -119,6 +119,46 @@ export class CoverPageService {
   }
   
   /**
+   * Row-level severity counts for unified JSON / AI scripts (matches DB totals, e.g. 848).
+   * Page 08 "top issues" is aggregated by issue type — do not use that list for totals.
+   */
+  static async getFullIssueSeverityCounts(db, projectIdObj) {
+    try {
+      const rows = await db
+        .collection('seo_page_issues')
+        .aggregate([
+          { $match: { projectId: projectIdObj } },
+          {
+            $group: {
+              _id: null,
+              totalIssues: { $sum: 1 },
+              critical: { $sum: { $cond: [{ $eq: ['$severity', 'critical'] }, 1, 0] } },
+              high: { $sum: { $cond: [{ $eq: ['$severity', 'high'] }, 1, 0] } },
+              medium: { $sum: { $cond: [{ $eq: ['$severity', 'medium'] }, 1, 0] } },
+              low: { $sum: { $cond: [{ $eq: ['$severity', 'low'] }, 1, 0] } },
+              info: { $sum: { $cond: [{ $eq: ['$severity', 'info'] }, 1, 0] } }
+            }
+          }
+        ])
+        .toArray();
+
+      const c = rows[0] || {};
+      const lowInfo = (c.low || 0) + (c.info || 0);
+      const total = c.totalIssues || 0;
+      return {
+        critical: c.critical || 0,
+        high: c.high || 0,
+        medium: c.medium || 0,
+        low: lowInfo,
+        total
+      };
+    } catch (e) {
+      LoggerUtil.warn('CoverPageService.getFullIssueSeverityCounts failed', { message: e?.message });
+      return { critical: 0, high: 0, medium: 0, low: 0, total: 0 };
+    }
+  }
+
+  /**
    * Get issue statistics from seo_page_issues collection
    * Updated with new business logic mapping
    */
@@ -285,7 +325,9 @@ export class CoverPageService {
 
     let seoHealth = 0;
     try {
-      if (total === 0) {
+      if (project?.website_score != null && !Number.isNaN(Number(project.website_score))) {
+        seoHealth = clamp(project.website_score);
+      } else if (total === 0) {
         seoHealth = 90;
       } else {
         const weighted = critical * 2.5 + warnings * 1.5 + informational * 0.4;

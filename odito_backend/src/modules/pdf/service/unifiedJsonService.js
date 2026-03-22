@@ -13,12 +13,21 @@ import { ContentMapper } from '../mapper/sections/content.mapper.js';
 import { TechnicalMapper } from '../mapper/sections/technical.mapper.js';
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import axios from 'axios';
+import mongoose from 'mongoose';
+import SeoProject from '../../app_user/model/SeoProject.js';
+import { ProjectPerformanceService } from '../../app_user/service/projectPerformance.service.js';
 
-/** Extract display string for a Core Web Vital from ProjectPerformance device blob */
+/** Extract display string for a Core Web Vital from Lighthouse device blob (lcp/fcp on device or under metrics) */
 function pickPerfMetric(device, id) {
   if (!device) return 'N/A';
+  const direct = device[id];
+  if (direct && typeof direct === 'object') {
+    if (direct.display_value != null) return String(direct.display_value);
+    if (direct.value != null) return String(direct.value);
+  }
+  if (typeof direct === 'string' || typeof direct === 'number') return String(direct);
   const metrics = device.metrics || {};
-  const block = metrics[id] || device[id];
+  const block = metrics[id] || metrics[String(id).toUpperCase()];
   if (typeof block === 'string') return block;
   if (block && typeof block === 'object') {
     if (block.display_value != null) return String(block.display_value);
@@ -30,10 +39,10 @@ function pickPerfMetric(device, id) {
 function buildDeviceMetrics(device) {
   if (!device) return [];
   return [
-    { metric: 'Largest Contentful Paint', mobile: pickPerfMetric(device, 'lcp'), value: pickPerfMetric(device, 'lcp') },
-    { metric: 'Total Blocking Time', mobile: pickPerfMetric(device, 'tbt'), value: pickPerfMetric(device, 'tbt') },
-    { metric: 'First Contentful Paint', mobile: pickPerfMetric(device, 'fcp'), value: pickPerfMetric(device, 'fcp') },
-    { metric: 'Cumulative Layout Shift', mobile: pickPerfMetric(device, 'cls'), value: pickPerfMetric(device, 'cls') }
+    { metric: 'Largest Contentful Paint', mobile: pickPerfMetric(device, 'lcp'), value: pickPerfMetric(device, 'lcp'), desktop: pickPerfMetric(device, 'lcp') },
+    { metric: 'Total Blocking Time', mobile: pickPerfMetric(device, 'tbt'), value: pickPerfMetric(device, 'tbt'), desktop: pickPerfMetric(device, 'tbt') },
+    { metric: 'First Contentful Paint', mobile: pickPerfMetric(device, 'fcp'), value: pickPerfMetric(device, 'fcp'), desktop: pickPerfMetric(device, 'fcp') },
+    { metric: 'Cumulative Layout Shift', mobile: pickPerfMetric(device, 'cls'), value: pickPerfMetric(device, 'cls'), desktop: pickPerfMetric(device, 'cls') }
   ];
 }
 
@@ -87,19 +96,21 @@ export class UnifiedJsonService {
         page10Data = {};
       }
 
-      // 🔧 STEP 3: CALL PERFORMANCE API (CORRECT ENDPOINT)
-      console.log('UNIFIED SERVICE: Calling Performance API for metrics');
-      console.log('UNIFIED SERVICE: Full URL:', `${BASE_URL}/app_user/projects/${projectId}/performance`);
-      let page13Data;
+      // Performance: same source as app (Mongo seo_domain_performance) — avoids localhost HTTP/auth gaps
+      let page13Data = {};
       try {
-        const headers = options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {};
-        const page13Response = await axios.get(`${BASE_URL}/app_user/projects/${projectId}/performance`, { headers });
-        page13Data = page13Response.data;
-        console.log('UNIFIED SERVICE: Page 13 API response status:', page13Response.status);
-        console.log('UNIFIED SERVICE: Page 13 API response data:', page13Data);
+        const projectDoc = await SeoProject.findById(projectId);
+        if (projectDoc) {
+          const perfSvc = await ProjectPerformanceService.getProjectPerformance(projectDoc);
+          page13Data = {
+            success: perfSvc.success,
+            data: perfSvc.data,
+            message: perfSvc.data?.message
+          };
+          console.log('UNIFIED SERVICE: Performance from ProjectPerformanceService (DB)');
+        }
       } catch (error) {
-        console.warn('UNIFIED SERVICE: Page 13 API failed, using empty fallback:', error.message);
-        page13Data = {};
+        console.warn('UNIFIED SERVICE: ProjectPerformanceService failed:', error.message);
       }
 
       // 🔧 STEP 4: GET COVER DATA FOR SCORES (reuse existing computation)
@@ -112,19 +123,24 @@ export class UnifiedJsonService {
       // 🔧 STEP 5: BUILD UNIFIED RESPONSE STRUCTURE
       console.log('UNIFIED SERVICE: Building unified response structure');
       
-      // 🔧 STEP 5A: MAP PAGE 08 DATA - USE TOP ISSUES (REAL DATA)
-      console.log('\n🔧 EXTRACTING PAGE 08 DATA (Real Top Issues)');
+      // 🔧 STEP 5A: PAGE 08 = display list only; totals = row-level counts from seo_page_issues (848, etc.)
+      console.log('\n🔧 EXTRACTING PAGE 08 DATA (Top issues for display)');
       const topIssuesArray = page08Data?.data?.topIssues || page08Data?.topIssues || [];
-      console.log('Top Issues Array:', topIssuesArray);
-      console.log('Top Issues Count:', topIssuesArray.length);
-      
-      // Extract real issue counts from top issues array
-      const criticalCount = topIssuesArray.filter(i => i.severity === 'critical').length;
-      const highCount = topIssuesArray.filter(i => i.severity === 'high').length;
-      const mediumCount = topIssuesArray.filter(i => i.severity === 'medium').length;
-      const lowInfoCount = topIssuesArray.filter(i => i.severity === 'low' || i.severity === 'info').length;
-      
-      console.log(`\n✅ Issue Counts: Critical=${criticalCount}, High=${highCount}, Medium=${mediumCount}, Low/Info=${lowInfoCount}`);
+      console.log('Top Issues Array (aggregated types):', topIssuesArray.length);
+
+      const { ObjectId } = mongoose.Types;
+      const projectIdObj = new ObjectId(projectId);
+      const db = mongoose.connection.db;
+      const severityCounts = await CoverPageService.getFullIssueSeverityCounts(db, projectIdObj);
+      const criticalCount = severityCounts.critical;
+      const highCount = severityCounts.high;
+      const mediumCount = severityCounts.medium;
+      const lowInfoCount = severityCounts.low;
+      const issueTotalCount = severityCounts.total;
+
+      console.log(
+        `\n✅ Issue counts from DB (seo_page_issues): Critical=${criticalCount}, High=${highCount}, Medium=${mediumCount}, Low/Info=${lowInfoCount}, Total=${issueTotalCount}`
+      );
       
       // Sliced lists for display only (unchanged caps)
       const topIssues = {
@@ -133,13 +149,6 @@ export class UnifiedJsonService {
         medium: topIssuesArray.filter(i => i.severity === 'medium').slice(0, 2),
         low: topIssuesArray.filter(i => i.severity === 'low' || i.severity === 'info').slice(0, 1)
       };
-
-      const issueTotalCount =
-        criticalCount + highCount + mediumCount + lowInfoCount;
-      console.log(
-        'UNIFIED issue counts (full):',
-        { criticalCount, highCount, mediumCount, lowInfoCount, issueTotalCount }
-      );
 
       // 🔧 STEP 5B: MAP PAGE 10 DATA - USE CHECKS (REAL DATA)
       console.log('\n🔧 EXTRACTING PAGE 10 DATA (Real Checks)');
@@ -170,7 +179,11 @@ export class UnifiedJsonService {
         desktopScore,
         mobileScore,
         desktopMetrics: buildDeviceMetrics(desktopDev),
-        mobileMetrics: buildDeviceMetrics(mobileDev)
+        mobileMetrics: buildDeviceMetrics(mobileDev),
+        avgPerformance:
+          desktopScore && mobileScore
+            ? Math.round((desktopScore + mobileScore) / 2)
+            : desktopScore || mobileScore || 0
       };
 
       // Get scores from cover data (nested under data.scores)
