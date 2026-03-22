@@ -14,6 +14,29 @@ import { TechnicalMapper } from '../mapper/sections/technical.mapper.js';
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import axios from 'axios';
 
+/** Extract display string for a Core Web Vital from ProjectPerformance device blob */
+function pickPerfMetric(device, id) {
+  if (!device) return 'N/A';
+  const metrics = device.metrics || {};
+  const block = metrics[id] || device[id];
+  if (typeof block === 'string') return block;
+  if (block && typeof block === 'object') {
+    if (block.display_value != null) return String(block.display_value);
+    if (block.value != null) return String(block.value);
+  }
+  return 'N/A';
+}
+
+function buildDeviceMetrics(device) {
+  if (!device) return [];
+  return [
+    { metric: 'Largest Contentful Paint', mobile: pickPerfMetric(device, 'lcp'), value: pickPerfMetric(device, 'lcp') },
+    { metric: 'Total Blocking Time', mobile: pickPerfMetric(device, 'tbt'), value: pickPerfMetric(device, 'tbt') },
+    { metric: 'First Contentful Paint', mobile: pickPerfMetric(device, 'fcp'), value: pickPerfMetric(device, 'fcp') },
+    { metric: 'Cumulative Layout Shift', mobile: pickPerfMetric(device, 'cls'), value: pickPerfMetric(device, 'cls') }
+  ];
+}
+
 export class UnifiedJsonService {
   
   /**
@@ -131,13 +154,23 @@ export class UnifiedJsonService {
       // 🔧 STEP 5C: MAP PERFORMANCE DATA (REAL DATA)
       console.log('\n🔧 EXTRACTING PERFORMANCE DATA');
       const performancePageData = page13Data?.data || page13Data || {};
+      console.log('UNIFIED raw performancePageData keys:', performancePageData ? Object.keys(performancePageData) : []);
       console.log('Performance Data:', performancePageData);
-      
+
+      const summary = performancePageData.summary || {};
+      const desktopScore = Number(
+        summary.desktopScore ?? performancePageData.desktopScore ?? 0
+      ) || 0;
+      const mobileScore = Number(
+        summary.mobileScore ?? performancePageData.mobileScore ?? 0
+      ) || 0;
+      const mobileDev = performancePageData.mobile;
+      const desktopDev = performancePageData.desktop;
       const performanceMetrics = {
-        desktopScore: performancePageData?.desktopScore || 0,
-        mobileScore: performancePageData?.mobileScore || 0,
-        desktopMetrics: performancePageData?.desktopMetrics || [],
-        mobileMetrics: performancePageData?.mobileMetrics || []
+        desktopScore,
+        mobileScore,
+        desktopMetrics: buildDeviceMetrics(desktopDev),
+        mobileMetrics: buildDeviceMetrics(mobileDev)
       };
 
       // Get scores from cover data (nested under data.scores)

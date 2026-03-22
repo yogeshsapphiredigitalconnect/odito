@@ -355,28 +355,34 @@ export class AiScriptService {
       
       console.log("MAPPED scores:", scores);
 
-      // 🔧 STEP 4: FIX PERFORMANCE MAPPING (CORRECTED)
       const perf = auditData.performance || {};
+      const mobileScore = Number(perf.mobileScore) || 0;
+      const desktopScore = Number(perf.desktopScore) || 0;
+      const pageSpeed = mobileScore || desktopScore || 0;
+
+      const rawRows =
+        Array.isArray(perf.mobileMetrics) && perf.mobileMetrics.length
+          ? perf.mobileMetrics
+          : Array.isArray(perf.desktopMetrics) && perf.desktopMetrics.length
+            ? perf.desktopMetrics
+            : [];
+
+      const metrics =
+        rawRows.length > 0
+          ? rawRows.map((row) => ({
+              metric: row.metric,
+              mobile: row.mobile ?? row.value ?? 'N/A'
+            }))
+          : [
+              { metric: 'Largest Contentful Paint', mobile: 'N/A' },
+              { metric: 'Total Blocking Time', mobile: 'N/A' },
+              { metric: 'First Contentful Paint', mobile: 'N/A' },
+              { metric: 'Cumulative Layout Shift', mobile: 'N/A' }
+            ];
+
       const performanceMetrics = {
-        pageSpeed: perf?.stats?.desktopScore || perf?.score || 0,
-        metrics: [
-          {
-            metric: "Largest Contentful Paint",
-            mobile: perf?.stats?.mobileLCP?.display_value || "N/A"
-          },
-          {
-            metric: "Total Blocking Time", 
-            mobile: perf?.stats?.mobileTBT?.display_value || "N/A"
-          },
-          {
-            metric: "First Contentful Paint",
-            mobile: perf?.stats?.mobileFCP?.display_value || "N/A"
-          },
-          {
-            metric: "Cumulative Layout Shift",
-            mobile: perf?.stats?.mobileCLS?.display_value || "N/A"
-          }
-        ]
+        pageSpeed,
+        metrics
       };
       
       console.log('✅ Built performanceMetrics:', performanceMetrics);
@@ -608,20 +614,19 @@ export class AiScriptService {
         aiVisibility: Math.round(this.get(auditData, "scores.aiVisibility"))
       };
 
-      // Define perf for performance metrics
       const perf = auditData.performance || {};
-      
-      // Define performanceMetrics array
+      const mScore = Number(perf.mobileScore) || 0;
+      const dScore = Number(perf.desktopScore) || 0;
       const performanceMetrics = [
         {
           name: 'Page Speed',
-          value: perf?.stats?.desktopScore || perf?.score || 0,
-          status: perf?.stats?.desktopScore >= 90 ? 'GOOD' : 'NEEDS_IMPROVEMENT'
+          value: mScore || dScore || 0,
+          status: (mScore || dScore) >= 90 ? 'GOOD' : 'NEEDS_IMPROVEMENT'
         },
         {
           name: 'Mobile Performance',
-          value: perf?.stats?.mobileScore || 0,
-          status: perf?.stats?.mobileScore >= 90 ? 'GOOD' : 'NEEDS_IMPROVEMENT'
+          value: mScore,
+          status: mScore >= 90 ? 'GOOD' : 'NEEDS_IMPROVEMENT'
         }
       ];
 
@@ -704,7 +709,7 @@ export class AiScriptService {
           topRecommendations: technicalHighlights.topRecommendations
         },
         performanceMetrics: {
-          pageSpeed: this.safe(perf.pageSpeed, perf?.stats?.desktopScore || perf?.score || 0),
+          pageSpeed: this.safe(perf.pageSpeed, mScore || dScore || 0),
           metrics: performanceMetrics
         },
         keywordData: {
