@@ -320,17 +320,26 @@ export class AiScriptService {
       const realIssues = auditData.issues || {};
       console.log('Real issues from API:', realIssues);
       
-      // Map API response to our structure - calculate counts from array lengths
-      const issueDistribution = {
-        critical: Array.isArray(realIssues.critical) ? realIssues.critical.length : (realIssues.critical || 0),
-        high: Array.isArray(realIssues.high) ? realIssues.high.length : (realIssues.high || 0),
-        medium: Array.isArray(realIssues.medium) ? realIssues.medium.length : (realIssues.medium || 0),
-        low: Array.isArray(realIssues.low) ? realIssues.low.length : (Array.isArray(realIssues.info) ? realIssues.info.length : (realIssues.low || realIssues.info || 0)),
-        total: 0 // Will be calculated below
+      const countIssue = (v) => {
+        if (typeof v === 'number' && !Number.isNaN(v)) return v;
+        if (Array.isArray(v)) return v.length;
+        return Number(v) || 0;
       };
-      
-      // Calculate total properly
-      issueDistribution.total = issueDistribution.critical + issueDistribution.high + issueDistribution.medium + issueDistribution.low;
+
+      const issueDistribution = {
+        critical: countIssue(realIssues.critical),
+        high: countIssue(realIssues.high),
+        medium: countIssue(realIssues.medium),
+        low: countIssue(realIssues.low ?? realIssues.info),
+        total: 0
+      };
+      issueDistribution.total =
+        typeof realIssues.total === 'number'
+          ? realIssues.total
+          : issueDistribution.critical +
+            issueDistribution.high +
+            issueDistribution.medium +
+            issueDistribution.low;
       
       console.log('✅ MAPPED issueDistribution FROM API:', issueDistribution);
 
@@ -376,12 +385,11 @@ export class AiScriptService {
       console.log('\n🔧 STEP 5: EXTRACTING PAGE 08 TOP ISSUES');
       console.log('-'.repeat(40));
       
-      // Get top issues from unified response - CORRECTED PATH
-      const topIssuesUnified = auditData.issues || {};
-      console.log('Unified Issues Data:', topIssuesUnified);
+      const topIssuesUnified = auditData.topIssues || {};
+      console.log('Unified topIssues (display slices):', topIssuesUnified);
       
-      // Extract top issues directly from unified data structure
       const topIssues = {
+        critical: topIssuesUnified.critical || [],
         high: topIssuesUnified.high || [],
         medium: topIssuesUnified.medium || [],
         low: topIssuesUnified.low || []
@@ -426,11 +434,15 @@ export class AiScriptService {
       console.log('-'.repeat(40));
       
       // Validate topIssues structure (high/medium/low, not critical)
-      const totalTopIssues = (topIssues.high?.length || 0) + (topIssues.medium?.length || 0) + (topIssues.low?.length || 0);
-      if (totalTopIssues === 0 && issueDistribution.critical > 0) {
-        console.warn('⚠️ Top issues missing but counts exist → extraction failed');
+      const totalTopIssues =
+        (topIssues.critical?.length || 0) +
+        (topIssues.high?.length || 0) +
+        (topIssues.medium?.length || 0) +
+        (topIssues.low?.length || 0);
+      if (totalTopIssues === 0 && issueDistribution.total > 0) {
+        console.warn('⚠️ Top issue slices missing but counts exist → extraction failed');
         console.warn('Expected total issues > 0 but got:', totalTopIssues);
-        console.warn('Issue distribution shows critical:', issueDistribution.critical);
+        console.warn('Issue distribution total:', issueDistribution.total);
       }
       
       if (!technicalHighlights.criticalIssues.length && !technicalHighlights.checks.length) {

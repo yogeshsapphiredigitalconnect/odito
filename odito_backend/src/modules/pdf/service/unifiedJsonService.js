@@ -103,13 +103,20 @@ export class UnifiedJsonService {
       
       console.log(`\n✅ Issue Counts: Critical=${criticalCount}, High=${highCount}, Medium=${mediumCount}, Low/Info=${lowInfoCount}`);
       
-      // Use REAL issue counts from top issues
+      // Sliced lists for display only (unchanged caps)
       const topIssues = {
         critical: topIssuesArray.filter(i => i.severity === 'critical').slice(0, 3),
         high: topIssuesArray.filter(i => i.severity === 'high').slice(0, 3),
         medium: topIssuesArray.filter(i => i.severity === 'medium').slice(0, 2),
         low: topIssuesArray.filter(i => i.severity === 'low' || i.severity === 'info').slice(0, 1)
       };
+
+      const issueTotalCount =
+        criticalCount + highCount + mediumCount + lowInfoCount;
+      console.log(
+        'UNIFIED issue counts (full):',
+        { criticalCount, highCount, mediumCount, lowInfoCount, issueTotalCount }
+      );
 
       // 🔧 STEP 5B: MAP PAGE 10 DATA - USE CHECKS (REAL DATA)
       console.log('\n🔧 EXTRACTING PAGE 10 DATA (Real Checks)');
@@ -154,8 +161,9 @@ export class UnifiedJsonService {
 
       // 🔧 STEP 6: BUILD UNIFIED RESPONSE WITH REAL DATA (NO FALLBACKS)
       console.log('\n🔧 BUILDING UNIFIED RESPONSE');
-      const totalIssues = topIssues.critical + topIssues.high + topIssues.medium + topIssues.info;
-      console.log(`Total Issues: ${totalIssues} (Critical: ${topIssues.critical}, High: ${topIssues.high}, Medium: ${topIssues.medium})`);
+      console.log(
+        `Total Issues (full counts): ${issueTotalCount} (Critical: ${criticalCount}, High: ${highCount}, Medium: ${mediumCount}, Low/Info: ${lowInfoCount})`
+      );
       
       // ⚠️ CRITICAL: Build unifiedResponse object with REAL data - NOT FALLBACKS
       const unifiedResponse = {
@@ -164,19 +172,20 @@ export class UnifiedJsonService {
           project: projectInfo,
           scores: scores,
           issues: {
-            critical: topIssues.critical || 0,  // ← USE REAL COUNTS
-            high: topIssues.high || 0,
-            medium: topIssues.medium || 0,
-            low: topIssues.low || 0,
-            total: (topIssues.critical || 0) + (topIssues.high || 0) + (topIssues.medium || 0) + (topIssues.low || 0)
+            critical: criticalCount,
+            high: highCount,
+            medium: mediumCount,
+            low: lowInfoCount,
+            total: issueTotalCount
           },
           issueDistribution: {
-            critical: topIssues.critical || 0,
-            high: topIssues.high || 0,
-            medium: topIssues.medium || 0,
-            low: topIssues.low || 0,
-            total: (topIssues.critical || 0) + (topIssues.high || 0) + (topIssues.medium || 0) + (topIssues.low || 0)
+            critical: criticalCount,
+            high: highCount,
+            medium: mediumCount,
+            low: lowInfoCount,
+            total: issueTotalCount
           },
+          topIssues,
           technical: {
             checks: technicalHighlights.checks,
             checkCount: technicalHighlights.checkCount
