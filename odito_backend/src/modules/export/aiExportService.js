@@ -583,7 +583,58 @@ export async function validateAIAccess(projectId, userId) {
   };
 }
 
+async function getPage19Data(projectId) {
+  const db = mongoose.connection.db;
+  const projectIdObj = new ObjectId(projectId);
+  
+  // Fetch project from seoprojects collection
+  const project = await db.collection('seoprojects')
+    .findOne({ _id: projectIdObj });
+  
+  if (!project) {
+    throw new Error('Project not found');
+  }
+  
+  // Extract AI visibility data with fallbacks
+  const aiVisibility = project.ai_visibility || {};
+  const categories = aiVisibility.categories || {};
+  
+  // Map fields according to requirements
+  const aiReadiness = Math.round(categories.llm_readiness || 0);
+  const geoScore = Math.round(categories.ai_impact || 0);
+  const aeoScore = Math.round(categories.aeo_score || 0);
+  const aiSeoScore = Math.round(aiVisibility.score || 0);
+  const aiCitation = Math.round(categories.citation_probability || 0);
+  const aiTopicalAuthority = Math.round(categories.topical_authority || 0);
+  
+  // Generate summary based on scores
+  const avgScore = (aiReadiness + geoScore + aeoScore) / 3;
+  let summary = '';
+  
+  if (avgScore >= 80) {
+    summary = 'Excellent AI visibility. Your brand is well-positioned for AI-powered search and conversational queries.';
+  } else if (avgScore >= 60) {
+    summary = 'Good AI visibility with room for improvement. Focus on enhancing structured data and entity optimization.';
+  } else if (avgScore >= 40) {
+    summary = 'Moderate AI visibility. Your brand has limited presence in AI-generated search results.';
+  } else {
+    summary = 'Low AI visibility. Significant optimization needed for AI search readiness and entity recognition.';
+  }
+  
+  return {
+    aiReadiness,
+    geoScore,
+    aeoScore,
+    aiSeoScore,
+    aiCitation,
+    aiTopicalAuthority,
+    summary,
+    overallScore: Math.round((aiReadiness + geoScore + aeoScore + aiSeoScore) / 4)
+  };
+}
+
 export default {
   getAIExportData,
-  validateAIAccess
+  validateAIAccess,
+  getPage19Data
 };

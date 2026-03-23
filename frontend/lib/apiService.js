@@ -1037,6 +1037,22 @@ class ApiService {
 
 
 
+  // PDF endpoints
+  
+  async getPDFPageData(projectId, page) {
+    const endpoint = `/pdf/${projectId}/page${page}`;
+    console.log('📄 Getting PDF page data:', { endpoint, projectId, page });
+    
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ PDF page data response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ PDF page data error:', error);
+      throw error;
+    }
+  }
+
   // Store authentication token
 
   setToken(token) {

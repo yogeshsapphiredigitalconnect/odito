@@ -120,7 +120,7 @@ export function useExportPDF() {
         { id: 'p16', component: <KeywordRankingPage /> },
         { id: 'p17', component: <KeywordOpportunityPage /> },
         { id: 'p18', component: <SectionDivider pageNum={18} sectionNum={5} title="AI Visibility" subtitle="GEO, AEO, AISEO — visibility across AI search platforms" /> },
-        { id: 'p19', component: <AIVisibilityOverviewPage /> },
+        { id: 'p19', component: <AIVisibilityOverviewPage projectId={projectId} /> },
         { id: 'p20', component: <LLMVisibilityPage /> },
         { id: 'p21', component: <LLMCitationForecastPage /> },
         { id: 'p22', component: <AIContentReadinessPage /> },

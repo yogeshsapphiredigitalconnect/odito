@@ -62,6 +62,13 @@ router.get('/:projectId/page10', PDFDataController.getPage10Data);
 router.get('/:projectId/page11', PDFDataController.getPage11Data);
 
 /**
+ * @route GET /api/pdf/:projectId/page19
+ * @desc Generate Page 19 - AI Visibility Overview data
+ * @access Private
+ */
+router.get('/:projectId/page19', PDFDataController.getPage19Data);
+
+/**
  * @route GET /api/pdf/:projectId/executive
  * @desc Generate executive summary data
  * @access Private

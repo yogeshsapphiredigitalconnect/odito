@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, InsightBox } from '../layout';
+import apiService from '../../../../lib/apiService';
 
 // ---- Page 19: AI Visibility Overview ----
-export function AIVisibilityOverviewPage() {
+export function AIVisibilityOverviewPage({ projectId }) {
+  const [pageData, setPageData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const concepts = [
     {
       tag: 'GEO', color: '#4F6EF7', bg: '#EEF2FF',
@@ -21,17 +26,147 @@ export function AIVisibilityOverviewPage() {
     },
   ];
 
+  useEffect(() => {
+    const fetchPageData = async () => {
+      if (!projectId) {
+        setError('Project ID is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('Page19 - Fetching data for projectId:', projectId);
+        
+        const response = await apiService.getPDFPageData(projectId, '19');
+        
+        if (response.success && response.data) {
+          console.log('Page19 - Full Data received:', response.data);
+          console.log('Page19 - AI Readiness:', response.data.aiReadiness);
+          console.log('Page19 - GEO Score:', response.data.geoScore);
+          console.log('Page19 - AEO Score:', response.data.aeoScore);
+          console.log('Page19 - Voice Intent:', response.data.voiceIntent);
+          console.log('Page19 - AI Citation:', response.data.aiCitation);
+          console.log('Page19 - AI Topical Authority:', response.data.aiTopicalAuthority);
+          console.log('Page19 - Top Score (ai_visibility.score):', response.data.topScore);
+          console.log('Page19 - Overall Score for header:', response.data.topScore);
+          setPageData(response.data);
+        } else {
+          console.error('Page19 - Invalid response structure:', response);
+          setError('Invalid data structure received');
+        }
+      } catch (err) {
+        console.error('Page19 - Error fetching data:', err);
+        setError(err.message || 'Failed to fetch AI visibility data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPageData();
+  }, [projectId]);
+
+  // Get score for color coding
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#10B981'; // green
+    if (score >= 60) return '#F59E0B'; // yellow
+    return '#EF4444'; // red
+  };
+
+  // Get overall score for section header - use ai_visibility.score
+  const overallScore = pageData ? pageData.topScore : 0;
+
+  if (loading) {
+    return (
+      <div style={{ width: 960, minHeight: 1280, background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 40px rgba(0,0,0,0.12)', margin: '0 auto', fontFamily: "'DM Sans', sans-serif" }}>
+        <PageHeader page={19} />
+        <div style={{ padding: '32px 40px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 16, color: '#6B7280', marginBottom: 8 }}>Loading AI Visibility data...</div>
+          </div>
+        </div>
+        <PageFooter page={19} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ width: 960, minHeight: 1280, background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 40px rgba(0,0,0,0.12)', margin: '0 auto', fontFamily: "'DM Sans', sans-serif" }}>
+        <PageHeader page={19} />
+        <div style={{ padding: '32px 40px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 16, color: '#EF4444', marginBottom: 8 }}>Error loading data</div>
+            <div style={{ fontSize: 14, color: '#6B7280' }}>{error}</div>
+          </div>
+        </div>
+        <PageFooter page={19} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: 960, minHeight: 1280, background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 40px rgba(0,0,0,0.12)', margin: '0 auto', fontFamily: "'DM Sans', sans-serif" }}>
       <PageHeader page={19} />
       <div style={{ padding: '32px 40px', flex: 1 }}>
-        <SectionHeader num="14" title="AI Visibility Overview" subtitle="GEO · AEO · AISEO — AI search readiness" score={41} />
+        <SectionHeader num="14" title="AI Visibility Overview" subtitle="GEO · AEO · AISEO — AI search readiness" score={overallScore} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 28 }}>
-          <StatCard value={41} label="AI Readiness" sub="/100 overall" color="#EF4444" borderColor="#EF4444" />
-          <StatCard value={36} label="GEO Score" sub="Generative Engine Opt" color="#4F6EF7" borderColor="#4F6EF7" />
-          <StatCard value={38} label="AEO Score" sub="Answer Engine Opt" color="#00D4FF" borderColor="#00D4FF" />
-          <StatCard value={41} label="AISEO Score" sub="AI SEO Composite" color="#7B5CF0" borderColor="#7B5CF0" />
+          <StatCard 
+            value={pageData.aiReadiness} 
+            label="AI Readiness" 
+            sub="/100 overall" 
+            color={getScoreColor(pageData.aiReadiness)} 
+            borderColor={getScoreColor(pageData.aiReadiness)} 
+          />
+          <StatCard 
+            value={pageData.geoScore} 
+            label="GEO Score" 
+            sub="Generative Engine Opt" 
+            color="#4F6EF7" 
+            borderColor="#4F6EF7" 
+          />
+          <StatCard 
+            value={pageData.aeoScore} 
+            label="AEO Score" 
+            sub="Answer Engine Opt" 
+            color="#00D4FF" 
+            borderColor="#00D4FF" 
+          />
+          <StatCard 
+            value={pageData.voiceIntent} 
+            label="Voice Intent" 
+            sub="Voice Search Ready" 
+            color="#8B5CF6" 
+            borderColor="#8B5CF6" 
+          />
+        </div>
+
+        {/* Second row - Additional AI Metrics - FIXED LAYOUT */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: 24, 
+          marginBottom: 28 
+        }}>
+          <div style={{ width: '220px' }}>
+            <StatCard 
+              value={pageData.aiCitation} 
+              label="AI Citation" 
+              sub="Citation Probability" 
+              color="#3B82F6" 
+              borderColor="#3B82F6" 
+            />
+          </div>
+          <div style={{ width: '220px' }}>
+            <StatCard 
+              value={pageData.aiTopicalAuthority} 
+              label="AI Topical Authority" 
+              sub="Topical Authority Score" 
+              color="#8B5CF6" 
+              borderColor="#8B5CF6" 
+            />
+          </div>
         </div>
 
         <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: "'Syne', sans-serif" }}>Understanding AI Search Optimization</h3>
@@ -52,7 +187,7 @@ export function AIVisibilityOverviewPage() {
         </div>
 
         <InsightBox title="AI Readiness Gap Analysis">
-          AI Readiness 41/100 — below industry average (~55). Missing schema (34% coverage) and no Knowledge Graph entity account for an estimated 23 improvement points — more than half the gap to a Good score.
+          {pageData.summary}
         </InsightBox>
       </div>
       <PageFooter page={19} />

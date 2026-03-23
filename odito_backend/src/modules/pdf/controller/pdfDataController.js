@@ -10,6 +10,7 @@ import { Page08Service } from '../service/page08Service.js';
 import { Page09Service } from '../service/page09Service.js';
 import { Page10Service } from '../service/page10Service.js';
 import { Page11Service } from '../service/page11Service.js';
+import { Page19Service } from '../service/page19Service.js';
 import { ExecutiveMapper } from '../mapper/sections/executive.mapper.js';
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 
@@ -749,6 +750,47 @@ export class PDFDataController {
       
     } catch (error) {
       LoggerUtil.error('Page 10 controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 19 - AI Visibility Overview data
+   */
+  static async getPage19Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      const result = await Page19Service.getPage19Data(projectId);
+      
+      if (!result.success) {
+        return res.status(500).json(result);
+      }
+      
+      res.json(result);
+      
+    } catch (error) {
+      LoggerUtil.error('Page 19 controller error', error, {
         projectId: req.params.projectId,
         userId: req.user?.id
       });
