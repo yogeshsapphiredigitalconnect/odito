@@ -50,6 +50,7 @@ export const generateScript = async (req, res) => {
       script: result.script,
       isExisting: result.isExisting || false,
       processingTime: result.processingTime,
+      aiProvider: result.aiProvider || 'unknown',
       message: result.isExisting ? 'Existing script retrieved' : 'Script generated successfully'
     });
 
@@ -126,7 +127,8 @@ export const getScript = async (req, res) => {
       status: script.status,
       createdAt: script.createdAt,
       updatedAt: script.updatedAt,
-      processingTime: script.processingTime
+      processingTime: script.processingTime,
+      aiProvider: script.aiProvider || 'unknown'
     });
 
   } catch (error) {
@@ -217,6 +219,7 @@ export const regenerateScript = async (req, res) => {
       success: true,
       script: result.script,
       processingTime: result.processingTime,
+      aiProvider: result.aiProvider || 'unknown',
       message: 'Script regenerated successfully'
     });
 

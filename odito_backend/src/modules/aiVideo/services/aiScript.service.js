@@ -1,5 +1,7 @@
 import AIScript from '../models/aiScript.model.js';
 import { AiDataService } from './aiData.service.js';
+import { NarrationGeneratorService } from './narrationGenerator.service.js';
+import { GroqService } from '../../../services/groq.service.js';
 import { GeminiService } from '../../../services/gemini.service.js';
 import SeoProject from '../../app_user/model/SeoProject.js';
 
@@ -171,17 +173,53 @@ export class AiScriptService {
       console.log('[SCRIPT_GEN] ✅ Audit snapshot saved successfully');
       console.log('Save result:', saveResult);
 
-      // Step 6: Generate script from Gemini
-      console.log(`[SCRIPT_GEN] Calling Gemini API to generate script...`);
-      const scriptPrompt = this.buildScriptPrompt(structuredData);
+      // Step 6: Generate script using deterministic narration generator
+      // Priority: NarrationGenerator (Primary) → AI Fallback (Optional)
+      console.log(`[SCRIPT_GEN] Generating script using deterministic narration generator...`);
       let generatedScript;
-      
+      let originalProvider = 'narration-generator';
+      let aiProvider = 'narration-generator';
+
       try {
-        generatedScript = await GeminiService.generateScript(scriptPrompt);
-        console.log(`[SCRIPT_GEN] ✅ Gemini API succeeded`);
-      } catch (geminiError) {
-        console.warn(`[SCRIPT_GEN] ⚠️ Gemini API failed, using fallback script:`, geminiError.message);
-        generatedScript = this.generateFallbackScript(auditSnapshot);
+        // Use our deterministic narration generator
+        generatedScript = NarrationGeneratorService.generateNarrationScript(auditSnapshot);
+        console.log(`[SCRIPT_GEN] ✅ Narration generator succeeded`);
+      } catch (narrationError) {
+        console.warn(`[SCRIPT_GEN] ⚠️ Narration generator failed: ${narrationError.message}`);
+        
+        // Fallback to AI providers if narration generator fails
+        console.log(`[SCRIPT_GEN] Attempting AI script generation with Groq API...`);
+        
+        // Build script prompt for AI fallback with strict numeric value rules
+        const scriptPrompt = this.buildScriptPrompt(structuredData);
+        
+        try {
+          const groqResult = await GroqService.generateScript(scriptPrompt);
+          
+          if (groqResult.success && groqResult.script) {
+            generatedScript = groqResult.script;
+            originalProvider = 'groq';
+            aiProvider = 'groq+narration';
+            console.log(`[SCRIPT_GEN] ✅ Groq API fallback succeeded`);
+          } else {
+            throw new Error(groqResult.error?.message || 'Groq returned no script');
+          }
+        } catch (groqError) {
+          console.warn(`[SCRIPT_GEN] ⚠️ Groq API fallback failed: ${groqError.message}`);
+          
+          // Final fallback to Gemini
+          console.log(`[SCRIPT_GEN] Attempting AI script generation with Gemini API...`);
+          try {
+            const geminiScript = await GeminiService.generateScript(scriptPrompt);
+            generatedScript = geminiScript;
+            originalProvider = 'gemini';
+            aiProvider = 'gemini+narration';
+            console.log(`[SCRIPT_GEN] ✅ Gemini API fallback succeeded`);
+          } catch (geminiError) {
+            console.warn(`[SCRIPT_GEN] ⚠️ All methods failed: ${geminiError.message}`);
+            throw new Error(`All script generation methods failed: ${narrationError.message}`);
+          }
+        }
       }
 
       // Step 7: Save completed script
@@ -194,17 +232,19 @@ export class AiScriptService {
           script: generatedScript,
           status: 'completed',
           processingTime,
+          aiProvider: aiProvider,
           error: null
         }
       );
 
-      console.log(`[SCRIPT_GEN] Script generation completed | processingTime=${processingTime}ms`);
+      console.log(`[SCRIPT_GEN] Script generation completed | processingTime=${processingTime}ms | provider=${aiProvider}`);
 
       return {
         success: true,
         script: generatedScript,
         isExisting: false,
-        processingTime
+        processingTime,
+        aiProvider: aiProvider
       };
 
     } catch (error) {
@@ -935,8 +975,10 @@ ${(topIssues.low || []).slice(0, 1).map((issue, i) => `${i + 1}. ${AiScriptServi
 ${(technicalHighlights?.criticalIssues || []).map((issue, i) => `  ${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '  - No critical technical issues'}
 
 💨 PERFORMANCE:
-Mobile PageSpeed: ${performanceMetrics?.mobileScore ?? performanceMetrics?.pageSpeed ?? 0}/100
-Desktop PageSpeed: ${performanceMetrics?.desktopScore ?? performanceMetrics?.pageSpeed ?? 0}/100
+Mobile Score: ${performanceMetrics?.mobileScore || 0}/100
+Desktop Score: ${performanceMetrics?.desktopScore || 0}/100
+Mobile PageSpeed: ${performanceMetrics?.mobileScore || 0}/100
+Desktop PageSpeed: ${performanceMetrics?.desktopScore || 0}/100
 Mobile Core Web Vitals: ${AiScriptService.formatMetricRows(performanceMetrics?.metrics, 'mobile')}
 Desktop Core Web Vitals: ${AiScriptService.formatMetricRows(performanceMetrics?.desktopMetrics, 'desktop')}
 
@@ -997,6 +1039,8 @@ RULES:
 ✓ Total length: 2-3 minutes when read aloud (~500-750 words)
 ✓ Use [SECTION] markers for each part
 ✓ Don't include stage directions or asterisks
+
+CRITICAL: Use ONLY the exact numeric values provided above. Do NOT change, estimate, or assume any numbers. The Mobile Score is exactly ${performanceMetrics?.mobileScore || 0} and Desktop Score is exactly ${performanceMetrics?.desktopScore || 0}. Do not use any other numbers.
 
 START WRITING THE SCRIPT NOW:`;
   }

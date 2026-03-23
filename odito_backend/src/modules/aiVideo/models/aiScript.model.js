@@ -44,6 +44,15 @@ const aiScriptSchema = new mongoose.Schema({
     default: null
   },
 
+  // AI Provider that generated the script
+  // Options: 'groq' (primary), 'gemini' (fallback), 'fallback' (last resort)
+  aiProvider: {
+    type: String,
+    enum: ['groq', 'gemini', 'fallback', 'unknown'],
+    default: 'unknown',
+    index: true
+  },
+
   // Metadata
   createdAt: {
     type: Date,
