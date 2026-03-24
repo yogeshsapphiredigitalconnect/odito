@@ -123,7 +123,7 @@ export function useExportPDF() {
         { id: 'p19', component: <AIVisibilityOverviewPage projectId={projectId} /> },
         { id: 'p20', component: <LLMVisibilityPage /> },
         { id: 'p21', component: <LLMCitationForecastPage /> },
-        { id: 'p22', component: <AIContentReadinessPage /> },
+        { id: 'p22', component: <AIContentReadinessPage projectId={projectId} /> },
         { id: 'p23', component: <AIContentStrategyPage /> },
         { id: 'p24', component: <KnowledgeGraphPage /> },
         { id: 'p25', component: <SectionDivider pageNum={25} sectionNum={6} title="Action Plan & Forecast" subtitle="30-day roadmap, growth projection and methodology" /> },

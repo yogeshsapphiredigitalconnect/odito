@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; font-size: 16px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🎤 Audio Generator for SEO Audit Video</h1>
+    <div class="status info">
+        <strong>Instructions:</strong><br>
+        1. Click each button to generate audio for that slide<br>
+        2. Save each audio file when prompted<br>
+        3. Place all files in: public/audio/ directory
+    </div>
+    
+    <button onclick="generateAudio('overview')">Generate Overview Audio</button>
+    <button onclick="generateAudio('onpage')">Generate On-Page Issues Audio</button>
+    <button onclick="generateAudio('technical')">Generate Technical Issues Audio</button>
+    <button onclick="generateAudio('pagespeed')">Generate PageSpeed Audio</button>
+    <button onclick="generateAudio('keywords')">Generate Keywords Audio</button>
+    <button onclick="generateAudio('aivisibility')">Generate AI Visibility Audio</button>
+    
+    <div id="status"></div>
+
+    <script>
+        const scripts = {"overview":"Welcome to your SEO audit report for Sapphire Digital Connect. Your overall score is 50%, with key opportunities in performance at 52%, SEO at 50%, and AI visibility at 46%.","onpage":"We found 848 total on-page issues, including 521 high-priority items. Critical areas include missing lazy loading on images and accessibility violations that need immediate attention.","technical":"Your technical health score shows room for improvement. While SSL and canonical tags are properly configured, security headers are missing on 20 pages requiring urgent fixes.","pagespeed":"Mobile performance scores 40% with significant delays. Largest Contentful Paint at 5.1 seconds and Total Blocking Time at 1.96 seconds are impacting user experience.","keywords":"Keyword analysis reveals 156 total terms with 12 in top positions. High-potential opportunities include 'seo audit software' at position 11 with 4,400 monthly searches.","aivisibility":"AI visibility score is 46%, indicating moderate presence in AI-powered search. Focus on structured data and schema markup to improve AI understanding."};
+        
+        function generateAudio(type) {
+            const status = document.getElementById('status');
+            status.innerHTML = '<div class="status info">Generating audio for ' + type + '...</div>';
+            
+            const utterance = new SpeechSynthesisUtterance(scripts[type]);
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            // Find a good voice
+            const voices = speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice => 
+                voice.name.includes('Female') || 
+                voice.name.includes('Samantha') || 
+                voice.name.includes('Karen') ||
+                voice.lang.includes('en')
+            );
+            
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+            
+            utterance.onend = function() {
+                status.innerHTML = '<div class="status success">✅ Audio generated for ' + type + '! Right-click and save the audio, or use the download button below.</div>';
+            };
+            
+            utterance.onerror = function(event) {
+                status.innerHTML = '<div class="status error">❌ Error generating audio: ' + event.error + '</div>';
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
+        
+        // Load voices
+        speechSynthesis.getVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = function() {
+                speechSynthesis.getVoices();
+            };
+        }
+    </script>
+</body>
+</html>

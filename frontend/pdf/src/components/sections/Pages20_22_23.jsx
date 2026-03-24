@@ -1,5 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, InsightBox } from '../layout';
+
+// Simple API helper function for PDF app
+const getPDFPageData = async (projectId, page) => {
+  const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const token = localStorage.getItem('token');
+  
+  console.log('📄 PDF API Request:', { 
+    endpoint: `/pdf/${projectId}/page${page}`, 
+    projectId, 
+    page,
+    hasToken: !!token 
+  });
+  
+  const response = await fetch(`${baseURL}/pdf/${projectId}/page${page}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  console.log('✅ PDF API Response:', { 
+    status: response.status, 
+    success: data.success,
+    hasData: !!data.data 
+  });
+  
+  return data;
+};
 
 // ---- Page 20: LLM Visibility Analysis ----
 export function LLMVisibilityPage() {
@@ -92,26 +126,103 @@ export function LLMVisibilityPage() {
 }
 
 // ---- Page 22: AI Content Readiness ----
-export function AIContentReadinessPage() {
+export function AIContentReadinessPage({ projectId }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchPage22Data = async () => {
+      if (!projectId) {
+        console.error('AIContentReadinessPage: No projectId provided');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('AIContentReadinessPage: Fetching data for projectId:', projectId);
+        
+        const response = await getPDFPageData(projectId, '22');
+        
+        if (response.success && response.data) {
+          console.log('AIContentReadinessPage: Data received:', response.data);
+          setData(response.data);
+        } else {
+          console.error('AIContentReadinessPage: Invalid response structure:', response);
+          throw new Error(response.error?.message || 'Invalid data format received');
+        }
+        
+      } catch (err) {
+        console.error('AIContentReadinessPage: Error fetching data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPage22Data();
+  }, [projectId]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff', display: 'flex',
+        flexDirection: 'column', boxShadow: '0 4px 40px rgba(0,0,0,0.12)',
+        margin: '0 auto', fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <PageHeader page={22} />
+        <div style={{ padding: '32px 40px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#6B7280' }}>
+            <div>Loading AI Content Readiness data...</div>
+          </div>
+        </div>
+        <PageFooter page={22} />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={{
+        width: 960, minHeight: 1280, background: '#fff', display: 'flex',
+        flexDirection: 'column', boxShadow: '0 4px 40px rgba(0,0,0,0.12)',
+        margin: '0 auto', fontFamily: "'DM Sans', sans-serif"
+      }}>
+        <PageHeader page={22} />
+        <div style={{ padding: '32px 40px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#EF4444' }}>
+            <div>Error loading data: {error}</div>
+          </div>
+        </div>
+        <PageFooter page={22} />
+      </div>
+    );
+  }
+
+  // Transform API data to component format (IDENTICAL to Dashboard)
   const signals = [
-    { label: 'Schema Coverage', pct: 34, color: '#F59E0B', sub: '34% — 66% of pages missing JSON-LD' },
-    { label: 'FAQ Schema Optimization', pct: 38, color: '#00D4FF', sub: '38% — 31 pages lack FAQPage schema' },
-    { label: 'Conversational Content', pct: 31, color: '#4F6EF7', sub: '31% — intros not optimized for AI' },
-    { label: 'AI Snippet Probability', pct: 29, color: '#10B981', sub: '29% — low snippet extraction rate' },
-    { label: 'AI Citation Rate', pct: 12, color: '#10B981', sub: '12% — below industry avg of 43%' },
-    { label: 'Entity Coverage', pct: 52, color: '#7B5CF0', sub: '52% — 4 key entities missing' },
+    { label: 'Schema Coverage', pct: data?.signals?.schemaCoverage || 0, color: '#F59E0B', sub: `${data?.signals?.schemaCoverage || 0}% — Schema markup coverage` },
+    { label: 'FAQ Schema Optimization', pct: data?.signals?.faqOptimization || 0, color: '#00D4FF', sub: `${data?.signals?.faqOptimization || 0}% — FAQ schema implementation` },
+    { label: 'Conversational Content', pct: data?.signals?.conversationalScore || 0, color: '#4F6EF7', sub: `${data?.signals?.conversationalScore || 0}% — AI-friendly content score` },
+    { label: 'AI Snippet Probability', pct: data?.signals?.aiSnippetProbability || 0, color: '#10B981', sub: `${data?.signals?.aiSnippetProbability || 0}% — Snippet extraction likelihood` },
+    { label: 'AI Citation Rate', pct: data?.signals?.aiCitationRate || 0, color: '#10B981', sub: `${data?.signals?.aiCitationRate || 0}% — AI platform citation rate` },
+    { label: 'Knowledge Graph', pct: data?.signals?.knowledgeGraph || 0, color: '#7B5CF0', sub: `${data?.signals?.knowledgeGraph || 0}% — Named entity coverage` },
   ];
 
-  const checklist = [
-    ['Answer query in first 60 words', 'Failing (38/312)', 'Rewrite intros to lead with direct answer'],
-    ['Q&A; heading structure (H2/H3)', 'Partial (41%)', 'Convert key pages to Q&A; heading format'],
-    ['FAQ section on blog posts', 'Failing (0 pages)', 'Add 3-5 Q&A; pairs to each blog post'],
-    ['Entity-rich content', 'Partial (52%)', 'Add named entities, tools, metrics'],
-    ['Conversational language', 'Failing (31%)', 'Reduce keyword density, add natural language'],
-    ['TL;DR summary blocks', 'Failing (0 pages)', 'Add summary at top of long-form content'],
-  ];
+  const checklist = data?.checklist?.map(item => [
+    item.title || 'Unknown Issue',
+    item.status || 'info',
+    item.recommendation || 'No recommendation available'
+  ]) || [];
 
-  const statusColor = (s) => s.startsWith('Failing') ? '#EF4444' : '#F59E0B';
+  const statusColor = (s) => {
+    if (s === 'critical' || s.startsWith('Failing')) return '#EF4444';
+    if (s === 'warning' || s.startsWith('Partial')) return '#F59E0B';
+    return '#10B981';
+  };
 
   return (
     <div style={{

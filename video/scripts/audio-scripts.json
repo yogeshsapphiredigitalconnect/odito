@@ -1,0 +1,8 @@
+{
+  "overview": "Welcome to your SEO audit report for Sapphire Digital Connect. Your overall score is 50%, with key opportunities in performance at 52%, SEO at 50%, and AI visibility at 46%.",
+  "onpage": "We found 848 total on-page issues, including 521 high-priority items. Critical areas include missing lazy loading on images and accessibility violations that need immediate attention.",
+  "technical": "Your technical health score shows room for improvement. While SSL and canonical tags are properly configured, security headers are missing on 20 pages requiring urgent fixes.",
+  "pagespeed": "Mobile performance scores 40% with significant delays. Largest Contentful Paint at 5.1 seconds and Total Blocking Time at 1.96 seconds are impacting user experience.",
+  "keywords": "Keyword analysis reveals 156 total terms with 12 in top positions. High-potential opportunities include 'seo audit software' at position 11 with 4,400 monthly searches.",
+  "ai": "AI visibility score is 46%, indicating moderate presence in AI-powered search. Focus on structured data and schema markup to improve AI understanding."
+}

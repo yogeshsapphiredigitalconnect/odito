@@ -1,6 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, InsightBox } from '../layout';
-import apiService from '../../../../lib/apiService';
+
+// Simple API helper function for PDF app
+const getPDFPageData = async (projectId, page) => {
+  const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const token = localStorage.getItem('token');
+  
+  console.log('📄 PDF API Request:', { 
+    endpoint: `/pdf/${projectId}/page${page}`, 
+    projectId, 
+    page,
+    hasToken: !!token 
+  });
+  
+  const response = await fetch(`${baseURL}/pdf/${projectId}/page${page}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  console.log('✅ PDF API Response:', { 
+    status: response.status, 
+    success: data.success,
+    hasData: !!data.data 
+  });
+  
+  return data;
+};
 
 // ---- Page 19: AI Visibility Overview ----
 export function AIVisibilityOverviewPage({ projectId }) {
@@ -38,7 +71,7 @@ export function AIVisibilityOverviewPage({ projectId }) {
         setLoading(true);
         console.log('Page19 - Fetching data for projectId:', projectId);
         
-        const response = await apiService.getPDFPageData(projectId, '19');
+        const response = await getPDFPageData(projectId, '19');
         
         if (response.success && response.data) {
           console.log('Page19 - Full Data received:', response.data);

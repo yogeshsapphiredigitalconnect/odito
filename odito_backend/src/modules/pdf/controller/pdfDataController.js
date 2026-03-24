@@ -11,6 +11,7 @@ import { Page09Service } from '../service/page09Service.js';
 import { Page10Service } from '../service/page10Service.js';
 import { Page11Service } from '../service/page11Service.js';
 import { Page19Service } from '../service/page19Service.js';
+import { Page22Service } from '../service/page22Service.js';
 import { ExecutiveMapper } from '../mapper/sections/executive.mapper.js';
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 
@@ -841,6 +842,53 @@ export class PDFDataController {
       
     } catch (error) {
       LoggerUtil.error('Page 11 controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 22 - AI Content Readiness data
+   * Uses IDENTICAL data source AND transformation logic as Dashboard
+   */
+  static async getPage22Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      console.log("Page22 controller hit - projectId:", projectId);
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      // Page22Service now uses SAME data source AND normalization as Dashboard
+      const result = await Page22Service.getPage22Data(projectId);
+      
+      if (!result.success) {
+        return res.status(500).json(result);
+      }
+      
+      console.log("Page22 controller success - returning IDENTICAL normalized data as Dashboard");
+      res.json(result);
+      
+    } catch (error) {
+      console.error("Page22 controller error:", error);
+      LoggerUtil.error('Page 22 controller error', error, {
         projectId: req.params.projectId,
         userId: req.user?.id
       });
