@@ -1,0 +1,64 @@
+{
+  "audioUrl": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b.mp3",
+  "projectId": "69bd4440b9f78e5bd946750b",
+  "videoData": {
+    "project": {
+      "name": "Sapphiredigitalconnect-Com",
+      "url": "https://www.sapphiredigitalconnect.com/",
+      "industry": "tech"
+    },
+    "scores": {
+      "overall": 50,
+      "performance": 52,
+      "seo": 50,
+      "aiVisibility": 46,
+      "accessibility": 0
+    },
+    "issueDistribution": {
+      "critical": 0,
+      "high": 521,
+      "medium": 185,
+      "low": 142,
+      "total": 848
+    },
+    "topIssues": {
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": []
+    },
+    "performanceMetrics": {
+      "mobileScore": 40,
+      "desktopScore": 64,
+      "pageSpeed": 52,
+      "lcp": "5.1 s",
+      "tbt": "1,960 ms",
+      "cls": "0.002"
+    },
+    "technicalHighlights": {
+      "totalChecks": 0,
+      "criticalIssues": [],
+      "topRecommendations": []
+    },
+    "keywordData": {
+      "totalKeywords": 0,
+      "topRankings": [],
+      "opportunities": []
+    },
+    "aiAnalysis": {
+      "score": 46,
+      "schemaMarkupCount": 0,
+      "hasKnowledgeGraph": false,
+      "entityCount": 0
+    },
+    "recommendations": [],
+    "metadata": {
+      "generatedAt": "2026-03-24T10:57:37.573Z",
+      "source": "VideoDataService",
+      "version": "2.0.0"
+    }
+  },
+  "narrationSegments": [
+    "Welcome to your website audit for Sapphiredigitalconnect-Com. Your overall performance score is 50, which indicates significant opportunities for growth and optimization. We found 848 total issues across your site, with 0 critical items requiring immediate attention. This analysis will walk you through the key areas impacting your digital presence and provide clear insights into how your website is performing in today's competitive landscape. Your website has 0 critical and 521 high-priority issues that are actively impacting user experience and search rankings. These issues create friction points that can cause visitors to leave your site and negatively impact your conversion rates. From a technical perspective, your site has 0 checks evaluated, with 0 critical failures that need immediate resolution. These technical barriers prevent search engines from properly indexing your content and can significantly impact your organic visibility. Addressing these foundational issues will create a solid base for all other optimization efforts. Your website performance shows a mobile score of 40 and desktop score of 64, with an overall page speed score of 52. The loading time for your main content is 5.1 s seconds, and users experience 1,960 ms milliseconds of input delay. In today's fast-paced digital environment, every millisecond counts—users form impressions about your brand within the first three seconds. Improving these performance metrics will directly enhance user engagement and search rankings. Your keyword strategy includes 0 total tracked keywords. Optimizing your keyword strategy will help you capture more qualified organic traffic and improve your visibility in search results. Your AI visibility score is 46, which indicates how well your content is optimized for AI-powered search systems. As AI becomes the primary way people find information, optimizing for these systems is crucial for future-proofing your organic traffic."
+  ]
+}

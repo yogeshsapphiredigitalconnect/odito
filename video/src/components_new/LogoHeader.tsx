@@ -43,7 +43,7 @@ export const LogoHeader: React.FC<LogoHeaderProps> = ({
       {/* Logo / Agency name */}
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {logoUrl ? (
-          <Img src={logoUrl} alt={agencyName} style={{ height: 36, objectFit: "contain" }} />
+          <Img src={logoUrl || ''} alt={agencyName} style={{ height: 36, objectFit: "contain" }} />
         ) : (
           <div
             style={{

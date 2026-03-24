@@ -6,6 +6,7 @@ const jobService = new JobService();
 class JobDispatcher {
   constructor() {
     this.pythonBaseURL = 'http://127.0.0.1:8000';
+    this.videoWorkerURL = 'http://127.0.0.1:8001';
     this.isProcessing = false;
     this.jobQueue = [];
   }
@@ -659,6 +660,57 @@ class JobDispatcher {
       return {
         success: false,
         message: 'Failed to dispatch KEYWORD_RESEARCH job to Python worker',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Dispatch VIDEO_GENERATION job to Video Worker via HTTP
+   */
+  async dispatchVideoGenerationJob(job) {
+    try {
+      console.log(`[VIDEO_DISPATCH] Starting dispatch | jobId=${job._id} | projectId=${job.project_id}`);
+
+      // Update job status to processing first
+      await jobService.updateJobStatus(job._id, 'processing', {
+        started_at: new Date(),
+        last_attempted_at: new Date()
+      });
+
+      // Direct HTTP call to Video worker
+      const response = await axios.post(`${this.videoWorkerURL}/jobs/video-generation`, {
+        jobId: job._id.toString(),
+        projectId: job.project_id.toString(),
+        userId: job.user_id.toString()
+      }, {
+        timeout: 300000, // 5 minutes timeout for video generation
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`[VIDEO_DISPATCH] Job dispatched successfully | jobId=${job._id} | workerResponse=${response.status}`);
+
+      return {
+        success: true,
+        jobId: job._id
+      };
+    } catch (error) {
+      console.error(`[VIDEO_DISPATCH] Dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+
+      // Mark job as failed if dispatch fails
+      await jobService.updateJobStatus(job._id, 'failed', {
+        error: {
+          message: `Failed to dispatch job to Video worker: ${error.message}`,
+          timestamp: new Date()
+        },
+        failed_at: new Date()
+      });
+
+      return {
+        success: false,
+        message: 'Failed to dispatch job to Video worker',
         error: error.message
       };
     }

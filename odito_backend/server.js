@@ -14,6 +14,7 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import 'express-async-errors';
+import fs from 'fs';
 import connectDB from './src/config/database.js';
 import routes from './src/routes/index.js';
 import Job from './src/modules/jobs/model/Job.js';
@@ -73,6 +74,35 @@ const startServer = async () => {
     express.static(storagePath)
   );
 
+  /**
+   * STATIC FILE SERVING FOR AUDIO AND VIDEO
+   * Move both audio and video storage into the backend project
+   */
+  const publicPath = path.resolve(
+    process.cwd(),
+    "public"
+  );
+
+  // Ensure public directories exist
+  const audioDir = path.join(publicPath, "audio");
+  const videosDir = path.join(publicPath, "videos");
+  
+  if (!fs.existsSync(audioDir)) {
+    fs.mkdirSync(audioDir, { recursive: true });
+    console.log("🎵 Created audio directory:", audioDir);
+  }
+  
+  if (!fs.existsSync(videosDir)) {
+    fs.mkdirSync(videosDir, { recursive: true });
+    console.log("🎬 Created videos directory:", videosDir);
+  }
+
+  console.log("🎵 Serving audio files from:", audioDir);
+  app.use("/audio", express.static(audioDir));
+
+  console.log("🎬 Serving video files from:", videosDir);
+  app.use("/videos", express.static(videosDir));
+
   app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     credentials: true,
@@ -81,7 +111,9 @@ const startServer = async () => {
   // Raw body parser for Stripe webhooks - MUST be before express.json()
   app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
 
-  app.use(express.json());
+  // Increase payload limit to avoid "request entity too large"
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   app.use('/api', routes);
 
@@ -102,6 +134,61 @@ const startServer = async () => {
   app.get('/api/test', (req, res) => {
     console.log('🧪 Test endpoint called');
     res.json({ success: true, message: 'Test endpoint working', timestamp: new Date() });
+  });
+
+  // File validation endpoints
+  app.get('/api/validate/audio/:projectId', (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const audioPath = path.join(audioDir, `${projectId}.mp3`);
+      
+      if (!fs.existsSync(audioPath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'Audio file not found',
+          path: audioPath
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Audio file exists',
+        url: `/audio/${projectId}.mp3`,
+        path: audioPath
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  });
+
+  app.get('/api/validate/video/:projectId', (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const videoPath = path.join(videosDir, `${projectId}.mp4`);
+      
+      if (!fs.existsSync(videoPath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'Video file not found',
+          path: videoPath
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Video file exists',
+        url: `/videos/${projectId}.mp4`,
+        path: videoPath
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
   });
 
   app.use((err, req, res, next) => {

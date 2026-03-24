@@ -1,45 +1,32 @@
 import express from 'express';
 import { 
-  generateScript, 
-  getScript, 
-  deleteScript, 
-  regenerateScript 
+  generateVideo,
+  getVideoData  // Deprecated endpoint for backward compatibility
 } from '../controllers/aiScript.controller.js';
 import auth from '../../user/middleware/auth.js';
 
 const router = express.Router();
 
 /**
- * AI Video Script Routes
+ * AI Video Script Routes (DEPRECATED - Script-Based)
  * All routes require authentication
+ * ⚠️ These routes are deprecated. Use /api/video routes instead.
  */
 
 // Apply authentication middleware to all routes
 router.use(auth);
 
 /**
- * POST /api/ai-video/script
- * Generate or retrieve a video narration script for a project
+ * POST /api/ai-video/video
+ * Generate a complete video for a project (script-free version)
  */
-router.post('/script', generateScript);
+router.post('/video', generateVideo);
 
 /**
- * POST /api/ai-video/script/regenerate/:projectId
- * Force regenerate script for a project
- * ⚠️ MUST come before other /script/:projectId routes to match correctly
+ * GET /api/ai-video/data/:projectId
+ * Get structured video data (DEPRECATED - use /api/video/data/:projectId)
+ * @deprecated This endpoint is deprecated. Use /api/video/data/:projectId instead.
  */
-router.post('/script/regenerate/:projectId', regenerateScript);
-
-/**
- * GET /api/ai-video/script/:projectId
- * Get existing script for a project
- */
-router.get('/script/:projectId', getScript);
-
-/**
- * DELETE /api/ai-video/script/:projectId
- * Delete script for a project
- */
-router.delete('/script/:projectId', deleteScript);
+router.get('/data/:projectId', getVideoData);
 
 export default router;

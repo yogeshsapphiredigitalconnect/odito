@@ -38,6 +38,9 @@ export const JOB_TYPES = {
 
   // AI Visibility Scoring (final stage)
   AI_VISIBILITY_SCORING: 'AI_VISIBILITY_SCORING',
+
+  // Video Generation Jobs
+  VIDEO_GENERATION: 'VIDEO_GENERATION',
 };
 
 export const JOB_STATUS = {
@@ -163,6 +166,14 @@ export const JOB_TYPE_CONFIG = {
     timeout: 300000,       // 5 minutes
     priority: 8,
     workerType: 'ai_visibility_scorer'
+  },
+
+  // Video Generation Configuration
+  [JOB_TYPES.VIDEO_GENERATION]: {
+    maxAttempts: 3,
+    timeout: 600000,       // 10 minutes for video generation
+    priority: 6,            // Medium priority
+    workerType: 'video_generator'
   }
 };
 

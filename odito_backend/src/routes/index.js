@@ -15,6 +15,8 @@ import exportRoutes from '../modules/export/exportRoutes.js';
 import keywordResearchRoutes from '../modules/keyword_research/routes/keywordResearchRoutes.js';
 import pdfRoutes from '../modules/pdf/routes/pdfRoutes.js';
 import aiVideoScriptRoutes from '../modules/aiVideo/routes/aiScript.routes.js';
+import aiVideoRoutes from '../modules/aiVideo/routes/aiVideo.routes.js';
+import videoDataRoutes from '../modules/video/routes/videoData.routes.js';
 import debugRoutes from '../modules/aiVideo/routes/debug.routes.js';
 
 const router = express.Router();
@@ -47,8 +49,12 @@ router.use('/export', exportRoutes);
 router.use('/keywords', keywordResearchRoutes);
 // PDF data routes
 router.use('/pdf', pdfRoutes);
-// AI Video Script routes
+// AI Video Script routes (deprecated - script-based)
 router.use('/ai-video', aiVideoScriptRoutes);
+// AI Video routes (new - script-free)
+router.use('/ai-video', aiVideoRoutes);
+// Video Data routes (new - structured data only)
+router.use('/video', videoDataRoutes);
 // Debug routes for AI script generation
 router.use('/debug', debugRoutes);
 

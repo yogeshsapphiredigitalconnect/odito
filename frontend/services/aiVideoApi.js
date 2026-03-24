@@ -112,6 +112,54 @@ class AIVideoService {
   }
 
   /**
+   * POST /ai-video/video
+   * Generate a complete video for a project
+   * @param {string} projectId - Project ID
+   * @returns {Promise<Object>} Job ID for tracking
+   */
+  async generateVideo(projectId) {
+    return this.request('/video', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId,
+      }),
+    });
+  }
+
+  /**
+   * GET /jobs/:jobId
+   * Get job status by ID
+   * @param {string} jobId - Job ID
+   * @returns {Promise<Object>} Job status information
+   */
+  async getJobStatus(jobId) {
+    const token = this.getToken();
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/jobs/${jobId}`;
+
+    const config = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `API Error: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`[AI Video API] Get job status error:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get processing status for a script
    * This is a polling helper function
    * @param {string} projectId - Project ID
@@ -144,6 +192,9 @@ export const aiVideoService = new AIVideoService();
 export const generateScript = (projectId, forceRegenerate = false) =>
   aiVideoService.generateScript(projectId, forceRegenerate);
 
+export const generateVideo = (projectId) =>
+  aiVideoService.generateVideo(projectId);
+
 export const getScript = (projectId) =>
   aiVideoService.getScript(projectId);
 
@@ -155,5 +206,8 @@ export const regenerateScript = (projectId, feedback = '') =>
 
 export const getStatus = (projectId) =>
   aiVideoService.getStatus(projectId);
+
+export const getJobStatus = (jobId) =>
+  aiVideoService.getJobStatus(jobId);
 
 export default aiVideoService;

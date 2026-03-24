@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { useAuth } from '@/contexts/AuthContext';
 import { useProject } from '@/contexts/ProjectContext';
-import { generateScript } from '@/services/aiVideoApi';
+import { generateScript, generateVideo, getJobStatus } from '@/services/aiVideoApi';
 import { 
   Play, 
   Download, 
@@ -30,7 +30,15 @@ export default function AIVideoReport() {
   const { activeProject, projects, isLoading: projectsLoading, setActiveProject } = useProject();
   const router = useRouter();
 
-  // Script generation state
+  // Video generation state
+  const [videoJobId, setVideoJobId] = useState('');
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState('');
+  const [videoStatus, setVideoStatus] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [pollingInterval, setPollingInterval] = useState(null);
+
+  // Keep script state for fallback/reference
   const [script, setScript] = useState('');
   const [scriptLoading, setScriptLoading] = useState(false);
   const [scriptError, setScriptError] = useState('');
@@ -71,6 +79,99 @@ export default function AIVideoReport() {
       setScriptLoading(false);
     }
   };
+
+  // Generate video handler
+  const handleGenerateVideo = async () => {
+    if (!activeProject) {
+      setVideoError('No project selected');
+      return;
+    }
+
+    setVideoLoading(true);
+    setVideoError('');
+    setVideoJobId('');
+    setVideoStatus('');
+    setVideoUrl('');
+
+    // Clear any existing polling
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+
+    try {
+      console.log('Generating video for project:', activeProject._id);
+
+      const response = await generateVideo(activeProject._id);
+
+      if (response.success && response.jobId) {
+        setVideoJobId(response.jobId);
+        setVideoStatus('pending');
+        console.log('Video generation job created:', response.jobId);
+        
+        // Start polling for job status
+        startPolling(response.jobId);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error) {
+      console.error('Error generating video:', error);
+      setVideoError(error.message || 'Failed to start video generation. Please try again.');
+      setVideoLoading(false);
+    }
+  };
+
+  // Start polling for job status
+  const startPolling = (jobId) => {
+    console.log('Starting polling for job:', jobId);
+    
+    const interval = setInterval(async () => {
+      try {
+        const jobResponse = await getJobStatus(jobId);
+        
+        if (jobResponse.success && jobResponse.data) {
+          const { status, result_data, error } = jobResponse.data;
+          
+          console.log('Job status update:', { jobId, status, result_data, error });
+          setVideoStatus(status);
+          
+          if (status === 'completed') {
+            // Job completed successfully
+            clearInterval(interval);
+            setPollingInterval(null);
+            setVideoLoading(false);
+            
+            if (result_data && result_data.videoUrl) {
+              setVideoUrl(result_data.videoUrl);
+              console.log('Video generation completed:', result_data.videoUrl);
+            }
+          } else if (status === 'failed') {
+            // Job failed
+            clearInterval(interval);
+            setPollingInterval(null);
+            setVideoLoading(false);
+            setVideoError(error?.message || 'Video generation failed. Please try again.');
+            console.log('Video generation failed:', error);
+          }
+          // For other statuses (pending, processing), continue polling
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        // Don't stop polling on network errors, just log them
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    setPollingInterval(interval);
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   // Copy to clipboard handler
   const handleCopyScript = () => {
@@ -224,25 +325,59 @@ export default function AIVideoReport() {
 
         {/* Main Content */}
         <div className="grid gap-6">
-          {/* Generate Script Section */}
+          {/* Generate Video Section */}
           <Card className="p-6 border-2 border-primary/20">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">Generate Your Script</h3>
+                  <h3 className="text-lg font-semibold">Generate Your Video</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Click the button below to generate a professional video narration script powered by AI
+                    Click the button below to generate a professional narrated video summary of your audit
                   </p>
                 </div>
               </div>
 
               {/* Error Message */}
-              {scriptError && (
+              {videoError && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <h4 className="font-medium text-red-900">Error</h4>
-                    <p className="text-sm text-red-700 mt-1">{scriptError}</p>
+                    <p className="text-sm text-red-700 mt-1">{videoError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Video Status Display */}
+              {videoJobId && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {videoStatus === 'completed' ? (
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      ) : videoStatus === 'failed' ? (
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                      ) : (
+                        <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-blue-900">
+                        Video Generation Status
+                      </h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        {videoStatus === 'pending' && 'Job queued...'}
+                        {videoStatus === 'processing' && 'Generating video...'}
+                        {videoStatus === 'completed' && 'Video completed successfully!'}
+                        {videoStatus === 'failed' && 'Video generation failed'}
+                        {!videoStatus && 'Initializing...'}
+                      </p>
+                      {videoJobId && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          Job ID: {videoJobId}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -250,41 +385,61 @@ export default function AIVideoReport() {
               {/* Generate Button */}
               <div>
                 <Button 
-                  onClick={handleGenerateScript}
-                  disabled={scriptLoading}
+                  onClick={handleGenerateVideo}
+                  disabled={videoLoading}
                   size="lg"
                   className="w-full md:w-auto"
                 >
-                  {scriptLoading ? (
+                  {videoLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating Script...
+                      Generating Video...
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Script
+                      Generate Video
                     </>
                   )}
                 </Button>
               </div>
-
-              {/* Metadata */}
-              {scriptMetadata && (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 flex items-start gap-3">
-                  <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="text-blue-900 font-medium">
-                      {scriptMetadata.isExisting ? 'Existing Script Retrieved' : 'Script Generated Successfully'}
-                    </p>
-                    <p className="text-blue-700 text-xs mt-1">
-                      {scriptMetadata.generatedAt}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </Card>
+
+          {/* Video Display */}
+          {videoUrl && (
+            <Card className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Play className="h-5 w-5" />
+                    Your Generated Video
+                  </h3>
+                </div>
+                
+                <div className="border rounded-lg overflow-hidden">
+                  <video 
+                    controls 
+                    className="w-full"
+                    src={videoUrl}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Video
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Link
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Script Display */}
           {script && (

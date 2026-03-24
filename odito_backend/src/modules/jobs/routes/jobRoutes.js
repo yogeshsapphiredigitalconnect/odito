@@ -59,8 +59,82 @@ router.get('/:jobId/status', async (req, res) => {
 
 /**
  * Job status update endpoints (for Python worker callbacks)
- * These are internal endpoints that Python workers call to update job status
+ * These are internal endpoints that workers call to update job status
  */
+
+// POST /jobs/update-status - Generic job status update (for Video worker)
+router.post('/update-status', async (req, res) => {
+  try {
+    const { jobId, status, ...updateData } = req.body;
+
+    if (!jobId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'jobId and status are required'
+      });
+    }
+
+    console.log(`[API] Job status update | jobId=${jobId} | status=${status}`);
+
+    // Update job status
+    const updatedJob = await jobService.updateJobStatus(jobId, status, updateData);
+
+    if (!updatedJob) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Emit progress update if job is processing
+    if (status === 'processing') {
+      auditProgressService.emitProgress(jobId, {
+        status: 'processing',
+        step: 'Generating Video',
+        percentage: 50,
+        message: 'Video generation in progress...'
+      });
+    }
+
+    // Emit completion if job is completed
+    if (status === 'completed') {
+      auditProgressService.emitProgress(jobId, {
+        status: 'completed',
+        step: 'Completed',
+        percentage: 100,
+        message: 'Video generated successfully'
+      });
+    }
+
+    // Emit failure if job is failed
+    if (status === 'failed') {
+      auditProgressService.emitProgress(jobId, {
+        status: 'failed',
+        step: 'Failed',
+        percentage: 0,
+        message: updateData.error?.message || 'Video generation failed'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Job status updated successfully',
+      data: {
+        jobId,
+        status,
+        updated_at: new Date()
+      }
+    });
+
+  } catch (error) {
+    console.error('[API] Error updating job status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update job status',
+      error: error.message
+    });
+  }
+});
 
 // POST /jobs/:jobId/complete - Mark job as completed
 router.post('/:jobId/complete', validateCompleteJob, completeJobSafely);

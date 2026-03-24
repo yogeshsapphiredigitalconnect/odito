@@ -14,6 +14,8 @@
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
     "elevenlabs-node": "^2.0.3",
+    "express": "^4.18.2",
+    "mongoose": "^7.6.3",
     "node-fetch": "^2.7.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -35,7 +37,8 @@
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
     "generate-audio": "node generate-audio.js",
-    "fix-audio": "node fix-audio.js"
+    "fix-audio": "node fix-audio.js",
+    "worker": "node worker.js"
   },
   "sideEffects": [
     "*.css"
