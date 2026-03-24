@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { JobService } from '../service/jobService.js';
+import AIScript from '../../aiVideo/models/aiScript.model.js';
 
 const jobService = new JobService();
 
@@ -678,12 +679,40 @@ class JobDispatcher {
         last_attempted_at: new Date()
       });
 
-      // Direct HTTP call to Video worker
-      const response = await axios.post(`${this.videoWorkerURL}/jobs/video-generation`, {
+      // Fetch auditSnapshot and script from aiScript collection
+      console.log(`[VIDEO_DISPATCH] Fetching auditSnapshot and script for projectId=${job.project_id}`);
+      const aiScriptRecord = await AIScript.findOne({ 
+        projectId: job.project_id, 
+        status: 'completed' 
+      });
+
+      if (!aiScriptRecord) {
+        throw new Error(`No completed script found for projectId=${job.project_id}`);
+      }
+
+      if (!aiScriptRecord.auditSnapshot) {
+        throw new Error(`auditSnapshot not found for projectId=${job.project_id}`);
+      }
+
+      if (!aiScriptRecord.script) {
+        throw new Error(`script not found for projectId=${job.project_id}`);
+      }
+
+      console.log(`[VIDEO_DISPATCH] ✅ Found auditSnapshot and script`);
+      console.log(`[VIDEO_DISPATCH] auditSnapshot keys:`, Object.keys(aiScriptRecord.auditSnapshot));
+      console.log(`[VIDEO_DISPATCH] script length:`, aiScriptRecord.script.length);
+
+      // Prepare payload with auditSnapshot and script
+      const videoPayload = {
         jobId: job._id.toString(),
         projectId: job.project_id.toString(),
-        userId: job.user_id.toString()
-      }, {
+        userId: job.user_id.toString(),
+        auditSnapshot: aiScriptRecord.auditSnapshot,
+        script: aiScriptRecord.script
+      };
+
+      // Direct HTTP call to Video worker
+      const response = await axios.post(`${this.videoWorkerURL}/jobs/video-generation`, videoPayload, {
         timeout: 300000, // 5 minutes timeout for video generation
         headers: {
           'Content-Type': 'application/json'

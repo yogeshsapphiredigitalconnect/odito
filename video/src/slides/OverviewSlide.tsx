@@ -21,6 +21,14 @@ export const OverviewSlide: React.FC<Props> = ({
   agencyName = "AuditIQ",
   logoUrl,
 }) => {
+  // Hard fail-safe check
+  if (!data) {
+    console.warn("OverviewSlide: Missing slide data");
+    return null;
+  }
+
+  console.log("OverviewSlide Data:", data);
+  
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
@@ -30,17 +38,17 @@ export const OverviewSlide: React.FC<Props> = ({
   });
 
   const scores = [
-    { score: data.scores.seo_health,    label: "SEO Health",    color: "#00f5a0", delay: 10 },
-    { score: data.scores.ai_visibility, label: "AI Visibility", color: "#c77dff", delay: 20 },
-    { score: data.scores.performance,   label: "Performance",   color: "#00dfff", delay: 30 },
-    { score: data.scores.authority,     label: "Authority",     color: "#ffb703", delay: 40 },
+    { score: data.scores?.seo_health || 0,    label: "SEO Health",    color: "#00f5a0", delay: 10 },
+    { score: data.scores?.ai_visibility || 0, label: "AI Visibility", color: "#c77dff", delay: 20 },
+    { score: data.scores?.performance || 0,   label: "Performance",   color: "#00dfff", delay: 30 },
+    { score: data.scores?.authority || 0,     label: "Authority",     color: "#ffb703", delay: 40 },
   ];
 
   const issuePills = [
-    { label: "Critical",  count: data.issues_summary.critical, color: "#ff3860" },
-    { label: "Warnings",  count: data.issues_summary.warning,  color: "#ffb703" },
-    { label: "Info",      count: data.issues_summary.info,     color: "#00dfff" },
-    { label: "Passed",    count: data.issues_summary.passed,   color: "#00f5a0" },
+    { label: "Critical",  count: data?.issues_summary?.critical || 0, color: "#ff3860" },
+    { label: "Warnings",  count: data?.issues_summary?.warning || 0, color: "#ffb703" },
+    { label: "Info",      count: data?.issues_summary?.info || 0, color: "#00dfff" },
+    { label: "Passed",    count: data?.issues_summary?.passed || 0, color: "#00f5a0" },
   ];
 
   return (
@@ -113,7 +121,7 @@ export const OverviewSlide: React.FC<Props> = ({
                 marginBottom: 12,
               }}
             >
-              {data.site.name}
+              {data.site?.name || "Unknown Site"}
             </div>
             <div
               style={{
@@ -123,7 +131,7 @@ export const OverviewSlide: React.FC<Props> = ({
                 marginBottom: 36,
               }}
             >
-              {data.site.domain}
+              {data.site?.domain || "localhost"}
             </div>
           </div>
 
@@ -171,8 +179,8 @@ export const OverviewSlide: React.FC<Props> = ({
             }}
           >
             {[
-              { label: "Pages Crawled", value: String(data.pages_crawled) },
-              { label: "Audit Date",    value: data.audit_date },
+              { label: "Pages Crawled", value: String(data.pages_crawled || "N/A") },
+              { label: "Audit Date",    value: data.audit_date || new Date().toLocaleDateString() },
             ].map((m) => (
               <div key={m.label} style={{ fontFamily: "sans-serif" }}>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>

@@ -17,6 +17,14 @@ const STATUS_COLOR = { critical: "#ff3860", warning: "#ffb703", passed: "#00f5a0
 const STATUS_ICON  = { critical: "✗", warning: "⚠", passed: "✓" };
 
 export const TechnicalIssuesSlide: React.FC<Props> = ({ data, narration, brandColor = "#7730ed", agencyName = "AuditIQ" }) => {
+  // Hard fail-safe check
+  if (!data) {
+    console.warn("TechnicalIssuesSlide: Missing slide data");
+    return null;
+  }
+
+  console.log("TechnicalIssuesSlide Data:", data);
+  
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
@@ -32,13 +40,13 @@ export const TechnicalIssuesSlide: React.FC<Props> = ({ data, narration, brandCo
         <div style={{ padding: "50px 30px 50px 80px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ opacity: childOpacity(0), transform: `translateY(${childY(0)}px)`, textAlign: "center", marginBottom: 30 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#ffb703", textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: "sans-serif", marginBottom: 16 }}>⚙ Technical Health</div>
-            <GaugeScore score={data.health_score} label="Tech Score" size={190} color={data.health_score >= 80 ? "#00f5a0" : data.health_score >= 60 ? "#ffb703" : "#ff3860"} startFrame={12} />
+            <GaugeScore score={data.health_score || 0} label="Tech Score" size={190} color={(data.health_score || 0) >= 80 ? "#00f5a0" : (data.health_score || 0) >= 60 ? "#ffb703" : "#ff3860"} startFrame={12} />
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", opacity: childOpacity(2) }}>
             {[
-              { label: "Critical", count: data.critical_count, color: "#ff3860" },
-              { label: "Warnings", count: data.warning_count,  color: "#ffb703" },
+              { label: "Critical", count: data?.critical_count || 0, color: "#ff3860" },
+              { label: "Warnings",  count: data.warning_count || 0,  color: "#ffb703" },
             ].map((s) => (
               <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: `${s.color}10`, border: `1px solid ${s.color}25`, borderRadius: 10 }}>
                 <span style={{ fontFamily: "sans-serif", fontSize: 16, color: "rgba(255,255,255,0.6)" }}>{s.label}</span>

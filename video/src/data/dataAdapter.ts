@@ -1,5 +1,5 @@
 // Data Adapter: Bridge between existing auditData and new component format
-import { AuditData, Metric, TechnicalCheck } from "./auditData";
+import { AuditData, TechnicalCheck } from "./auditData";
 import { SlideNarration } from "../types";
 
 // New format interfaces (matching ll/ components)
@@ -126,9 +126,11 @@ export const adaptToNewFormat = (auditData: AuditData) => {
   }
 
   // Extract performance metrics from existing data with safe defaults
-  const getMetricValue = (metrics: Metric[] | undefined, metricName: string): number => {
+  const metrics = auditData?.performanceMetrics?.mobile || [];
+  
+  const getMetricValue = (metricName: string): number => {
     // Safe check for undefined metrics array
-    if (!metrics || !Array.isArray(metrics)) {
+    if (!Array.isArray(metrics)) {
       console.warn(`Metrics array is undefined or not an array for "${metricName}", using fallback value`);
       // Return sensible fallbacks for missing metrics
       switch(metricName) {
@@ -212,10 +214,10 @@ export const adaptToNewFormat = (auditData: AuditData) => {
         authority: 75, // TODO: Add authority data source
       },
       issues_summary: {
-        critical: safeIssueDistribution.critical,
-        warning: safeIssueDistribution.high,
-        info: safeIssueDistribution.medium,
-        passed: safeIssueDistribution.low,
+        critical: safeIssueDistribution?.critical || 0,
+        warning: safeIssueDistribution?.high || 0,
+        info: safeIssueDistribution?.medium || 0,
+        passed: safeIssueDistribution?.low || 0,
       },
       site: {
         name: auditData.projectName || "Agency Platform",
@@ -230,11 +232,11 @@ export const adaptToNewFormat = (auditData: AuditData) => {
       seo_score: safeScores.seo,
       accessibility_score: 85, // TODO: Add accessibility data
       best_practices_score: 78, // TODO: Add best practices data
-      fcp_ms: getMetricValue(safePerformance.mobile, 'First Contentful Paint'),
-      lcp_ms: getMetricValue(safePerformance.mobile, 'Largest Contentful Paint'),
-      tbt_ms: getMetricValue(safePerformance.mobile, 'Total Blocking Time'),
-      si_ms: getMetricValue(safePerformance.mobile, 'Speed Index'),
-      ttfb_ms: getMetricValue(safePerformance.mobile, 'Time to First Byte'),
+      fcp_ms: getMetricValue('First Contentful Paint'),
+      lcp_ms: getMetricValue('Largest Contentful Paint'),
+      tbt_ms: getMetricValue('Total Blocking Time'),
+      si_ms: getMetricValue('Speed Index'),
+      ttfb_ms: getMetricValue('Time to First Byte'),
       cls: 0.15, // TODO: Add CLS metric data
       device: "mobile" as const,
       url: auditData.url,
@@ -302,8 +304,8 @@ export const adaptToNewFormat = (auditData: AuditData) => {
 
     technical: {
       health_score: Math.round((safeScores.performance + safeScores.seo) / 2),
-      critical_count: safeIssueDistribution.critical,
-      warning_count: safeIssueDistribution.high,
+      critical_count: safeIssueDistribution?.critical || 0,
+      warning_count: safeIssueDistribution?.high || 0,
       checks: safeTechnicalChecks.map((check: TechnicalCheck) => ({
         name: check.name || 'Unknown Check',
         status: check.status === 'FAIL' ? 'critical' as const : 
@@ -447,36 +449,61 @@ export const adaptToNewFormat = (auditData: AuditData) => {
   };
 };
 
-// Sample narration data (can be customized)
+// Sample narration data for 11 slides (can be customized)
 export const sampleNarration: SlideNarration[] = [
   {
-    title: "Overview",
-    voice_over: "Welcome to your SEO audit report. Your overall scores show room for improvement across key areas.",
-    highlights: ["SEO Health", "AI Visibility", "Performance"],
+    title: "Project Overview",
+    voice_over: "Welcome to your comprehensive SEO audit report. Here's an overview of your website's performance.",
+    highlights: ["Project Overview", "URL", "Initial Assessment"],
   },
   {
-    title: "On-Page Issues",
-    voice_over: "Several on-page SEO issues are impacting your search visibility and user engagement.",
-    highlights: ["Critical Issues", "Missing Elements", "Quick Wins"],
+    title: "Score Summary",
+    voice_over: "Your overall scores show key performance metrics across different areas of your SEO strategy.",
+    highlights: ["Overall Score", "Performance", "SEO", "AI Visibility"],
   },
   {
-    title: "Technical SEO",
-    voice_over: "Technical foundation is solid but some optimizations can boost your performance.",
-    highlights: ["Health Score", "Technical Issues", "Recommendations"],
+    title: "Issue Distribution",
+    voice_over: "Let's break down the issues found by severity level to prioritize our optimization efforts.",
+    highlights: ["Critical Issues", "High Priority", "Medium", "Low Priority"],
   },
   {
-    title: "Page Speed",
-    voice_over: "Your page speed metrics need attention to improve user experience and search rankings.",
-    highlights: ["Mobile Score", "Core Web Vitals", "Optimization Needed"],
+    title: "High Priority Issues",
+    voice_over: "These high-priority issues require immediate attention for maximum impact on your search rankings.",
+    highlights: ["High Issues", "Immediate Action", "High Impact"],
   },
   {
-    title: "Keywords",
-    voice_over: "Keyword opportunities exist to improve your search rankings and traffic.",
-    highlights: ["Near-Top Keywords", "Search Volume", "Growth Potential"],
+    title: "Medium Priority Issues",
+    voice_over: "Medium-priority issues that provide steady improvements when addressed over the coming weeks.",
+    highlights: ["Medium Issues", "Optimization", "Steady Growth"],
   },
   {
-    title: "AI Visibility",
-    voice_over: "AI search visibility is emerging as crucial for future search success.",
-    highlights: ["AI Score", "Schema Coverage", "Optimization Opportunities"],
+    title: "Low Priority Issues",
+    voice_over: "Minor optimizations that can be addressed during routine maintenance for incremental improvements.",
+    highlights: ["Low Issues", "Fine-tuning", "Minor Enhancements"],
+  },
+  {
+    title: "Technical Highlights",
+    voice_over: "Technical SEO foundation analysis with key recommendations for improving site infrastructure.",
+    highlights: ["Technical Health", "Critical Issues", "Recommendations"],
+  },
+  {
+    title: "Critical Technical Issue",
+    voice_over: "A critical security vulnerability has been detected that requires immediate attention.",
+    highlights: ["Security Headers", "Critical Risk", "Immediate Action"],
+  },
+  {
+    title: "Performance Summary",
+    voice_over: "Performance metrics analysis showing speed and user experience across different devices.",
+    highlights: ["PageSpeed", "Mobile", "Desktop", "Performance Grade"],
+  },
+  {
+    title: "Core Web Vitals",
+    voice_over: "Core Web Vitals analysis showing key user experience metrics that impact search rankings.",
+    highlights: ["Core Web Vitals", "LCP", "TBT", "FCP", "CLS"],
+  },
+  {
+    title: "AI Analysis",
+    voice_over: "AI search readiness analysis showing how well your content is optimized for AI-powered search.",
+    highlights: ["AI Score", "Schema Markup", "Knowledge Graph", "AI Optimization"],
   },
 ];

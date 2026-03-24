@@ -55,20 +55,35 @@ class VideoWorker {
     // Main video generation endpoint
     this.app.post('/jobs/video-generation', async (req, res) => {
       try {
-        const { jobId, projectId } = req.body;
+        const { jobId, projectId, auditSnapshot } = req.body;
         
         console.log(`[VIDEO_WORKER] Job received | jobId=${jobId} | projectId=${projectId}`);
+        
+        // CRITICAL: Validate auditSnapshot is present
+        if (!auditSnapshot) {
+          console.error(`[VIDEO_WORKER] ❌ MISSING auditSnapshot | jobId=${jobId} | projectId=${projectId}`);
+          return res.status(400).json({
+            success: false,
+            message: 'auditSnapshot is required',
+            jobId,
+            projectId
+          });
+        }
+
+        console.log(`[VIDEO_WORKER] ✅ auditSnapshot received | keys:`, Object.keys(auditSnapshot));
+        console.log(`[VIDEO_WORKER] 🔍 AUDIT DATA:`, JSON.stringify(auditSnapshot, null, 2));
         
         // Acknowledge job immediately
         res.json({
           success: true,
-          message: 'Video generation job accepted',
+          message: 'Video generation job accepted with auditSnapshot',
           jobId,
-          projectId
+          projectId,
+          hasAuditSnapshot: !!auditSnapshot
         });
 
-        // Process job asynchronously
-        this.processVideoJob(jobId, projectId).catch(error => {
+        // Process job asynchronously with auditSnapshot only (NO script)
+        this.processVideoJob(jobId, projectId, auditSnapshot).catch(error => {
           console.error(`[VIDEO_WORKER] Job processing failed | jobId=${jobId}:`, error);
         });
         
@@ -92,7 +107,7 @@ class VideoWorker {
     }
   }
 
-  async processVideoJob(jobId, projectId) {
+  async processVideoJob(jobId, projectId, auditSnapshot) {
     const maxRetries = 3;
     let retryCount = 0;
     
@@ -100,53 +115,71 @@ class VideoWorker {
       try {
         console.log(`[VIDEO_WORKER] Processing started | jobId=${jobId} | attempt=${retryCount + 1}`);
         
+        // CRITICAL: Ensure auditSnapshot is ALWAYS defined
+        const audit = auditSnapshot;
+        
+        if (!audit) {
+          throw new Error("auditSnapshot is missing in video worker");
+        }
+        
+        console.log(`[VIDEO_WORKER] ✅ Using provided auditSnapshot (NO DB script)`);
+        console.log(`[VIDEO_WORKER] AUDIT SNAPSHOT RECEIVED:`, JSON.stringify(audit, null, 2));
+        
         // Update job status to processing
         await this.updateJobStatus(jobId, 'processing', { 
           retryCount,
           maxRetries,
-          timestamp: new Date()
+          timestamp: new Date(),
+          hasAuditSnapshot: !!auditSnapshot
         });
         
-        // Step 1: Fetch structured data (NO SCRIPT)
-        console.log(`[VIDEO_WORKER] Fetching structured data for projectId=${projectId}`);
-        const videoData = await this.fetchVideoData(projectId);
+        // Step 1: Generate 11 structured slides using auditSnapshot only
+        console.log(`[VIDEO_WORKER] Generating 11 structured slides from audit data...`);
+        const structuredSlides = this.generateStructuredSlides(audit);
         
-        if (!videoData) {
-          throw new Error('No video data found for project');
+        if (!structuredSlides || structuredSlides.length === 0) {
+          throw new Error(`Slides generation failed - no slides created`);
         }
         
-        // Step 2: Generate narration from templates using scores
-        console.log(`[VIDEO_WORKER] Generating narration from templates...`);
-        const fullNarration = this.generateNarrationFromData(videoData);
+        if (structuredSlides.length !== 11) {
+          throw new Error(`Failed to generate exactly 11 slides. Got ${structuredSlides?.length || 0} slides`);
+        }
         
-        // Create narrationSegments array from the generated narration
-        const narrationSegments = fullNarration 
-          ? fullNarration.split('\n').filter(segment => segment.trim() !== '')
-          : [];
+        console.log(`[VIDEO_WORKER] ✅ Created ${structuredSlides.length} structured slides`);
+        console.log(`[VIDEO_WORKER] SLIDES COUNT:`, structuredSlides.length);
         
-        console.log(`[VIDEO_WORKER] ✅ Created ${narrationSegments.length} narration segments`);
-        console.log(`[VIDEO_WORKER] NARRATION TYPE:`, typeof narrationSegments);
-        console.log(`[VIDEO_WORKER] IS ARRAY:`, Array.isArray(narrationSegments));
+        // Step 2: Generate concatenated audio from all slide narrations
+        console.log(`[VIDEO_WORKER] Generating concatenated audio from ${structuredSlides.length} slides...`);
+        const audioPath = await this.generatePerSlideAudio(structuredSlides, projectId);
+        console.log(`[VIDEO_WORKER] ✅ Generated concatenated audio: ${audioPath}`);
         
-        // Step 3: Generate audio from template-based narration
-        console.log(`[VIDEO_WORKER] Generating audio from template narration...`);
-        const audioPath = await this.generateAudioFromNarration(fullNarration, projectId);
-        console.log(`[VIDEO_WORKER] Audio done | path=${audioPath}`);
+        // Step 3: FAIL SAFE RENDER - Validate before rendering
+        console.log(`[VIDEO_WORKER] Starting video render with structured slides...`);
         
-        // Step 4: Render video using structured data
-        console.log(`[VIDEO_WORKER] Starting video render with structured data...`);
-        const videoPath = await this.renderVideo(projectId, audioPath, videoData, narrationSegments);
+        // Fail-safe validation before rendering
+        if (!structuredSlides || structuredSlides.length === 0) {
+          throw new Error("Slides generation failed - cannot render video without slides");
+        }
+        
+        if (!audioPath) {
+          throw new Error("Audio generation failed - cannot render video without audio");
+        }
+        
+        console.log(`[VIDEO_WORKER] ✅ Fail-safe validation passed - proceeding with render`);
+        
+        const videoPath = await this.renderVideoWithSlides(projectId, audioPath, structuredSlides, audit);
         console.log(`[VIDEO_WORKER] Render done | path=${videoPath}`);
         
-        // Step 5: Update job with results
+        // Step 4: Update job with results
         await this.updateJobStatus(jobId, 'completed', {
           result_data: {
             videoUrl: `http://localhost:5000/videos/${projectId}.mp4`,
             audioUrl: audioPath,
             processingTime: Date.now(),
             retryCount,
-            narrationLength: fullNarration.length,
-            providerUsed: 'template_based'
+            slidesGenerated: structuredSlides.length,
+            audioFilesGenerated: 1,
+            providerUsed: 'structured_audit_data_only'
           }
         });
         
@@ -238,6 +271,253 @@ class VideoWorker {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  /**
+   * Generate 11 structured slides using auditSnapshot data only
+   * @param {Object} audit - Audit data snapshot
+   * @returns {Array} Array of 11 structured slide objects
+   */
+  generateStructuredSlides(audit) {
+    try {
+      console.log(`[VIDEO_WORKER] 🎬 Generating 11 structured slides from audit data`);
+      console.log(`[VIDEO_WORKER] � audit available:`, !!audit);
+      
+      // Safety checks
+      if (!audit || typeof audit !== 'object') {
+        throw new Error('Invalid auditSnapshot provided');
+      }
+      
+      // Extract key data from auditSnapshot with safety
+      const projectName = audit?.projectName || 'Website';
+      const url = audit?.url || 'N/A';
+      const scores = audit?.scores || {};
+      
+      // SAFE ACCESS: Use optional chaining and fallbacks for issueDistribution
+      const issueDistribution = audit?.issueDistribution || {};
+      
+      // SAFE ACCESS: Use optional chaining and fallbacks for topIssues
+      const topIssues = audit?.topIssues || {};
+      const criticalIssues = topIssues?.critical || [];
+      const highIssues = topIssues?.high || [];
+      const mediumIssues = topIssues?.medium || [];
+      const lowIssues = topIssues?.low || [];
+      
+      // SAFE ACCESS: Create issueCounts with fallbacks
+      const issueCounts = {
+        critical: issueDistribution?.critical || 0,
+        high: issueDistribution?.high || 0,
+        medium: issueDistribution?.medium || 0,
+        low: issueDistribution?.low || 0,
+        total: issueDistribution?.total || 0
+      };
+      
+      const technicalHighlights = audit?.technicalHighlights || {};
+      const performanceMetrics = audit?.performanceMetrics || {};
+      const aiAnalysis = audit?.aiAnalysis || {};
+      
+      console.log(`[VIDEO_WORKER] 📈 Extracted data - Project: ${projectName}, Overall Score: ${scores.overall}`);
+      
+      // Create exactly 11 structured slides with narration
+      const slides = [
+        {
+          id: 1,
+          type: "projectOverview",
+          title: projectName,
+          subtitle: url,
+          narration: `Welcome to your comprehensive SEO audit for ${projectName}. This analysis provides insights into your website's performance and areas for improvement.`,
+          data: {
+            projectName,
+            url,
+            scores: scores
+          }
+        },
+        {
+          id: 2,
+          type: "scoreSummary",
+          title: "Overall Score Analysis",
+          subtitle: `Score: ${scores.overall || 0}/100`,
+          narration: `Your overall performance score is ${scores.overall || 0} out of 100. Your SEO score is ${scores.seo || 0}, performance is ${scores.performance || 0}, and AI visibility is ${scores.aiVisibility || 0}.`,
+          data: {
+            scores: scores,
+            overall: scores.overall || 0
+          }
+        },
+        {
+          id: 3,
+          type: "issueDistribution",
+          title: "Issue Distribution",
+          subtitle: `${issueCounts.total} Total Issues`,
+          narration: `We found a total of ${issueCounts.total || 0} issues across your website. Critical issues: ${issueCounts.critical || 0}, high: ${issueCounts.high || 0}, medium: ${issueCounts.medium || 0}, low: ${issueCounts.low || 0}.`,
+          data: {
+            issueDistribution: issueCounts,
+            total: issueCounts.total
+          }
+        },
+        {
+          id: 4,
+          type: "highIssues",
+          title: "High Priority Issues",
+          subtitle: `${issueCounts.high} High Issues`,
+          narration: `Your website has ${issueDistribution.high || 0} high-priority issues that require immediate attention. These issues are significantly impacting your search rankings and user experience.`,
+          data: {
+            issues: highIssues,
+            count: issueCounts.high
+          }
+        },
+        {
+          id: 5,
+          type: "mediumIssues",
+          title: "Medium Priority Issues",
+          subtitle: `${issueCounts.medium} Medium Issues`,
+          narration: `There are ${issueDistribution.medium || 0} medium-priority issues that should be addressed. While not critical, these issues provide opportunities for steady improvement.`,
+          data: {
+            issues: mediumIssues,
+            count: issueCounts.medium
+          }
+        },
+        {
+          id: 6,
+          type: "lowIssues",
+          title: "Low Priority Issues",
+          subtitle: `${issueCounts.low} Low Issues`,
+          narration: `We identified ${issueDistribution.low || 0} low-priority issues. These minor optimizations can be addressed during routine maintenance for incremental improvements.`,
+          data: {
+            issues: lowIssues,
+            count: issueCounts.low
+          }
+        },
+        {
+          id: 7,
+          type: "technicalHighlights",
+          title: "Technical Highlights",
+          subtitle: "Technical SEO Overview",
+          narration: `From a technical perspective, your website's infrastructure shows areas for improvement. Technical SEO forms the foundation for all other optimization efforts.`,
+          data: {
+            technicalHighlights: technicalHighlights,
+            checks: technicalHighlights.checks || []
+          }
+        },
+        {
+          id: 8,
+          type: "criticalTechnicalIssue",
+          title: "Critical Technical Issue",
+          subtitle: "Security Headers Analysis",
+          narration: `A critical security issue has been detected. Security headers are missing, which exposes your website to potential security vulnerabilities and affects user trust.`,
+          data: {
+            criticalIssues: technicalHighlights?.criticalIssues || [],
+            securityHeaders: this.findSecurityHeaderIssues(technicalHighlights)
+          }
+        },
+        {
+          id: 9,
+          type: "performanceSummary",
+          title: "Performance Summary",
+          subtitle: `Performance Score: ${performanceMetrics.pageSpeed || 0}`,
+          narration: `Your website performance shows room for improvement. Mobile users experience a score of ${performanceMetrics.mobileScore || 0}, while desktop scores ${performanceMetrics.desktopScore || 0}.`,
+          data: {
+            performanceMetrics: performanceMetrics,
+            mobileScore: performanceMetrics.mobileScore || 0,
+            desktopScore: performanceMetrics.desktopScore || 0
+          }
+        },
+        {
+          id: 10,
+          type: "coreWebVitals",
+          title: "Core Web Vitals",
+          subtitle: "User Experience Metrics",
+          narration: `Core Web Vitals measure user experience loading performance, interactivity, and visual stability. These metrics directly impact your search rankings and user satisfaction.`,
+          data: {
+            metrics: performanceMetrics.metrics || [],
+            lcp: performanceMetrics.lcp || 'N/A',
+            tbt: performanceMetrics.tbt || 'N/A'
+          }
+        },
+        {
+          id: 11,
+          type: "aiAnalysis",
+          title: "AI Visibility Analysis",
+          subtitle: `AI Score: ${aiAnalysis.score || 0}`,
+          narration: `Your AI visibility score is ${aiAnalysis.score || 0}, indicating how well your content is optimized for AI-powered search systems. Schema markup implementations: ${aiAnalysis.schemaMarkupCount || 0}.`,
+          data: {
+            aiAnalysis: aiAnalysis,
+            score: aiAnalysis.score || 0,
+            schemaMarkupCount: aiAnalysis.schemaMarkupCount || 0
+          }
+        }
+      ];
+      
+      // Validate we have exactly 11 slides
+      if (slides.length !== 11) {
+        throw new Error(`Expected 11 slides, got ${slides.length}`);
+      }
+      
+      // Validate each slide has required fields
+      slides.forEach((slide, index) => {
+        if (!slide.id || !slide.type || !slide.narration) {
+          throw new Error(`Slide ${index + 1} missing required fields`);
+        }
+      });
+      
+      console.log(`[VIDEO_WORKER] ✅ Successfully created ${slides.length} structured slides`);
+      return slides;
+      
+    } catch (error) {
+      console.error(`[VIDEO_WORKER] ❌ Error generating structured slides:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate single concatenated audio from all slide narrations
+   * @param {Array} structuredSlides - Array of slide objects
+   * @param {string} projectId - Project ID
+   * @returns {Promise<string>} Single audio file path
+   */
+  async generatePerSlideAudio(structuredSlides, projectId) {
+    try {
+      console.log(`[VIDEO_WORKER] 🎙️ Generating concatenated audio from ${structuredSlides.length} slides`);
+      
+      // Combine all slide narrations into one script
+      const fullNarration = structuredSlides
+        .map((slide, index) => {
+          console.log(`[VIDEO_WORKER] 🎬 Slide ${index + 1}: ${slide.title}`);
+          console.log(`[VIDEO_WORKER] 📝 Narration: "${slide.narration.substring(0, 100)}..."`);
+          return slide.narration;
+        })
+        .join('\n\n');
+      
+      console.log(`[VIDEO_WORKER] 📝 Full narration length: ${fullNarration.length} characters`);
+      
+      // Generate single audio file from all narrations
+      const audioPath = await this.audioService.generateAudioFromText(fullNarration, projectId);
+      
+      console.log(`[VIDEO_WORKER] ✅ Generated single concatenated audio: ${audioPath}`);
+      return audioPath;
+      
+    } catch (error) {
+      console.error('[VIDEO_WORKER] ❌ Error generating concatenated audio:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find security header issues from technical highlights
+   * @param {Object} technicalHighlights - Technical data
+   * @returns {Array} Security header issues
+   */
+  findSecurityHeaderIssues(technicalHighlights) {
+    try {
+      const checks = technicalHighlights.checks || [];
+      return checks.filter(check => 
+        check.name?.toLowerCase().includes('security') || 
+        check.name?.toLowerCase().includes('header') ||
+        check.detail?.toLowerCase().includes('security')
+      );
+    } catch (error) {
+      console.warn(`[VIDEO_WORKER] ⚠️ Error finding security header issues:`, error.message);
+      return [];
+    }
+  }
+
   async fetchVideoData(projectId) {
     try {
       // Call backend API to get structured video data
@@ -258,6 +538,141 @@ class VideoWorker {
     } catch (error) {
       console.error('[VIDEO_WORKER] Error fetching video data:', error);
       return null;
+    }
+  }
+
+  async renderVideoWithSlides(projectId, audioPath, structuredSlides, auditSnapshot) {
+    try {
+      // Dynamic video output path using environment variable or resolved path
+      const videoDir = path.join(this.backendPublicPath, 'videos');
+      const videoPath = path.join(videoDir, `${projectId}.mp4`);
+      
+      console.log(`[VIDEO_WORKER] 🎬 Video output path: ${videoPath}`);
+      console.log(`[VIDEO_WORKER] 📁 Video directory: ${videoDir}`);
+      
+      // Ensure videos directory exists
+      if (!fs.existsSync(videoDir)) {
+        fs.mkdirSync(videoDir, { recursive: true });
+        console.log(`[VIDEO_WORKER] ✅ Created videos directory: ${videoDir}`);
+      } else {
+        console.log(`[VIDEO_WORKER] ✅ Videos directory exists: ${videoDir}`);
+      }
+      
+      // Validate audio path accessibility
+      console.log(`[VIDEO_WORKER] 🎵 Using audio file: ${audioPath}`);
+      
+      // Prepare input data for Remotion with structured slides and single audio URL
+      const inputData = {
+        audioUrl: audioPath,  // Single audio URL for entire video
+        projectId: projectId,
+        structuredSlides: structuredSlides,
+        auditSnapshot: auditSnapshot
+      };
+      
+      const inputDataPath = path.join(__dirname, 'temp', `${projectId}-input.json`);
+      if (!fs.existsSync(path.dirname(inputDataPath))) {
+        fs.mkdirSync(path.dirname(inputDataPath), { recursive: true });
+      }
+      fs.writeFileSync(inputDataPath, JSON.stringify(inputData, null, 2));
+      
+      console.log(`[VIDEO_WORKER] 🎬 Starting Remotion render for projectId=${projectId}`);
+      console.log(`[VIDEO_WORKER] 📊 Structured slides: ${structuredSlides.length}`);
+      console.log(`[VIDEO_WORKER] 🎵 Audio file: ${audioPath}`);
+      console.log(`[VIDEO_WORKER] 📹 Video output: ${videoPath}`);
+      
+      return new Promise((resolve, reject) => {
+        // Use local remotion binary
+        const remotionPath = path.join(
+          __dirname,
+          'node_modules',
+          '.bin',
+          process.platform === 'win32' ? 'remotion.cmd' : 'remotion'
+        );
+        
+        // Safety check: ensure binary exists
+        if (!fs.existsSync(remotionPath)) {
+          reject(new Error(`Remotion binary not found at ${remotionPath}. Run npm install.`));
+          return;
+        }
+        
+        // Arguments for remotion
+        const remotionArgs = [
+          'render',
+          'src/index.ts',
+          'AuditVideo',
+          videoPath,
+          `--props=${inputDataPath}`,
+          '--codec', 'h264',
+          '--pixel-format', 'yuv420p'
+        ];
+        
+        console.log(`[VIDEO_WORKER] Using remotion binary: ${remotionPath}`);
+        console.log(`[VIDEO_WORKER] Command args:`, remotionArgs);
+        
+        // Run Remotion CLI
+        const remotion = spawn(remotionPath, remotionArgs, {
+          cwd: __dirname,
+          stdio: 'pipe',
+          shell: process.platform === 'win32' ? true : false
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        
+        remotion.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        remotion.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        remotion.on('close', (code) => {
+          console.log(`[VIDEO_WORKER] Remotion process exited with code ${code}`);
+          
+          if (code === 0 && fs.existsSync(videoPath)) {
+            console.log(`[VIDEO_WORKER] ✅ Video rendered successfully: ${videoPath}`);
+            
+            // Validate file size and existence
+            const stats = fs.statSync(videoPath);
+            console.log(`[VIDEO_WORKER] 📊 Video file size: ${stats.size} bytes`);
+            console.log(`[VIDEO_WORKER] 📅 Created at: ${stats.birthtime}`);
+            
+            // Return HTTP URL for video access
+            const videoUrl = `http://localhost:5000/videos/${projectId}.mp4`;
+            console.log(`[VIDEO_WORKER] 📡 Video URL: ${videoUrl}`);
+            
+            resolve(videoUrl);
+          } else {
+            console.error('[VIDEO_WORKER] ❌ Remotion stderr:', stderr);
+            
+            // Check if file exists despite error code
+            if (fs.existsSync(videoPath)) {
+              console.log(`[VIDEO_WORKER] ⚠️  File exists but render failed. File: ${videoPath}`);
+              const stats = fs.statSync(videoPath);
+              console.log(`[VIDEO_WORKER] 📊 File size: ${stats.size} bytes`);
+            } else {
+              console.log(`[VIDEO_WORKER] ❌ File does not exist: ${videoPath}`);
+            }
+            
+            reject(new Error(`Video rendering failed with code ${code}: ${stderr}`));
+          }
+        });
+        
+        remotion.on('error', (error) => {
+          console.error('[VIDEO_WORKER] Remotion process error:', error);
+          reject(error);
+        });
+        
+        // Timeout after 10 minutes
+        setTimeout(() => {
+          remotion.kill();
+          reject(new Error('Video rendering timed out after 10 minutes'));
+        }, 10 * 60 * 1000);
+      });
+      
+    } catch (error) {
+      throw new Error(`Video rendering setup failed: ${error.message}`);
     }
   }
 

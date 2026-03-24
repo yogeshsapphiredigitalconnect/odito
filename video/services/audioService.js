@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const crypto = require('crypto');
+const { execSync } = require('child_process');
 
 /**
  * Enhanced Audio Service with Retry Logic, Fallbacks, and Caching
@@ -14,6 +15,9 @@ class AudioService {
     this.ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
     this.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     this.VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'rachel';
+    
+    // CRITICAL: Validate API keys at initialization
+    this.validateApiKeys();
     
     // Update paths to use backend's public directory
     this.OUTPUT_DIR = path.join(__dirname, '../../odito_backend/public/audio');
@@ -31,10 +35,29 @@ class AudioService {
     this.MAX_RETRIES = 3;
     this.RETRY_DELAY_BASE = 1000; // 1 second base delay
     this.RATE_LIMIT_DELAY = 2000; // 2 seconds between requests
-    this.FALLBACK_ENABLED = true;
+    // CRITICAL: Disable silent audio fallback - we want real voice only
+    this.FALLBACK_ENABLED = false;
     
     // Rate limiting
     this.lastRequestTime = 0;
+  }
+
+  /**
+   * Validate API keys at initialization
+   * @throws {Error} If no valid API keys are found
+   */
+  validateApiKeys() {
+    if (!this.ELEVENLABS_API_KEY && !this.OPENAI_API_KEY) {
+      throw new Error('❌ CRITICAL: No TTS API keys configured. Please set ELEVENLABS_API_KEY or OPENAI_API_KEY in your .env file. Real voice narration requires valid API keys.');
+    }
+    
+    if (this.ELEVENLABS_API_KEY) {
+      console.log(`[AUDIO_SERVICE] ✅ ElevenLabs API key loaded: ${this.ELEVENLABS_API_KEY.substring(0, 8)}...`);
+    }
+    
+    if (this.OPENAI_API_KEY) {
+      console.log(`[AUDIO_SERVICE] ✅ OpenAI API key loaded: ${this.OPENAI_API_KEY.substring(0, 8)}...`);
+    }
   }
 
   /**
@@ -48,35 +71,59 @@ class AudioService {
     console.log(`[AUDIO_SERVICE] Text length: ${text.length} characters`);
     
     try {
-      // Check cache first
-      const cachedAudio = this.getCachedAudio(text);
-      if (cachedAudio) {
-        console.log(`[AUDIO_SERVICE] ✅ Using cached audio for project: ${projectId}`);
-        return this.copyCachedAudio(cachedAudio, projectId);
+      // Check if audio already exists
+      if (this.audioExists(projectId)) {
+        console.log(`[AUDIO_SERVICE] Using existing audio for project: ${projectId}`);
+        return this.getAudioUrl(projectId);
       }
-
-      // Clean and prepare text for TTS
-      const cleanedText = this.cleanTextForTTS(text);
       
-      if (!cleanedText || cleanedText.trim().length === 0) {
-        throw new Error('Script text is empty after cleaning');
+      // CRITICAL: Validate API keys configuration - NO SILENT AUDIO FALLBACK
+      if (!this.ELEVENLABS_API_KEY && !this.OPENAI_API_KEY) {
+        throw new Error('❌ CRITICAL: No TTS API keys configured. Please set ELEVENLABS_API_KEY or OPENAI_API_KEY in your .env file. Silent audio fallback is disabled to ensure real voice narration.');
       }
-
+      
+      // Additional validation for ElevenLabs
+      if (this.ELEVENLABS_API_KEY) {
+        console.log(`[AUDIO_SERVICE] ✅ ElevenLabs API key configured: ${this.ELEVENLABS_API_KEY.substring(0, 8)}...`);
+      } else {
+        console.log(`[AUDIO_SERVICE] ⚠️ ElevenLabs API key not configured`);
+      }
+      
+      if (this.OPENAI_API_KEY) {
+        console.log(`[AUDIO_SERVICE] ✅ OpenAI API key configured: ${this.OPENAI_API_KEY.substring(0, 8)}...`);
+      } else {
+        console.log(`[AUDIO_SERVICE] ⚠️ OpenAI API key not configured`);
+      }
+      
+      // Clean and validate input text
+      const cleanedText = this.cleanTextForTTS(text);
+      if (!cleanedText || cleanedText.trim().length === 0) {
+        throw new Error('No valid text provided for audio generation');
+      }
+      
+      console.log(`[AUDIO_SERVICE] Cleaned text length: ${cleanedText.length} characters`);
+      
       // Apply rate limiting
       await this.applyRateLimit();
-
-      // Try primary provider (ElevenLabs) with retries
-      let audioBuffer = null;
-      let providerUsed = 'none';
       
+      let audioBuffer;
+      let providerUsed = 'Unknown';
+      
+      // Try ElevenLabs first
       try {
+        console.log(`[AUDIO_SERVICE] 🎙️ Attempting ElevenLabs TTS with voice: ${this.VOICE_ID}...`);
         audioBuffer = await this.generateWithRetry(
           () => this.generateElevenLabsAudio(cleanedText),
           'ElevenLabs'
         );
         providerUsed = 'ElevenLabs';
       } catch (elevenLabsError) {
-        console.warn(`[AUDIO_SERVICE] ElevenLabs failed: ${elevenLabsError.message}`);
+        console.error(`[AUDIO_SERVICE] ❌ ElevenLabs failed: ${elevenLabsError.message}`);
+        
+        // CRITICAL: Check if this is an authentication error
+        if (elevenLabsError.message?.includes('401') || elevenLabsError.message?.includes('authentication')) {
+          throw new Error(`❌ ElevenLabs authentication failed. Please check your API key: ${elevenLabsError.message}`);
+        }
         
         if (this.FALLBACK_ENABLED && this.OPENAI_API_KEY) {
           try {
@@ -87,11 +134,16 @@ class AudioService {
             );
             providerUsed = 'OpenAI';
           } catch (openAIError) {
-            console.error(`[AUDIO_SERVICE] OpenAI fallback also failed: ${openAIError.message}`);
-            throw new Error(`All TTS providers failed. ElevenLabs: ${elevenLabsError.message}, OpenAI: ${openAIError.message}`);
+            console.error(`[AUDIO_SERVICE] ❌ OpenAI fallback also failed: ${openAIError.message}`);
+            // CRITICAL: DO NOT fallback to silent audio - throw error instead
+            throw new Error(`❌ All TTS providers failed. ElevenLabs: ${elevenLabsError.message}. OpenAI: ${openAIError.message}. Silent audio fallback is disabled.`);
           }
         } else {
-          throw elevenLabsError;
+          // CRITICAL: DO NOT fallback to silent audio - throw error instead
+          const errorMsg = this.OPENAI_API_KEY 
+            ? `❌ ElevenLabs failed and fallback is disabled: ${elevenLabsError.message}`
+            : `❌ ElevenLabs failed and no OpenAI fallback available: ${elevenLabsError.message}. Silent audio fallback is disabled.`;
+          throw new Error(errorMsg);
         }
       }
 
@@ -102,11 +154,12 @@ class AudioService {
       // Cache the generated audio
       this.cacheAudio(text, audioBuffer);
       
-      console.log(`[AUDIO_SERVICE] ✅ Audio saved using ${providerUsed}: ${outputPath}`);
+      console.log(`[AUDIO_SERVICE] ✅ Real voice audio saved using ${providerUsed}: ${outputPath}`);
       console.log(`[AUDIO_SERVICE] 📊 Provider used: ${providerUsed}, Size: ${audioBuffer.length} bytes`);
+      console.log(`[AUDIO_SERVICE] 🎵 Audio duration will be calculated based on text length and speech rate`);
       
-      // Return HTTP URL for backend access
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      // Return PUBLIC URL for Remotion compatibility
+      return `/audio/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[AUDIO_SERVICE] ❌ Audio generation failed for ${projectId}:`, error.message);
@@ -166,17 +219,14 @@ class AudioService {
       throw new Error('ELEVENLABS_API_KEY not configured');
     }
 
-    const response = await axios.post(
-      `https://api.elevenlabs.io/v1/text-to-speech/${this.VOICE_ID}`,
-      {
-        text: text,
-        model_id: 'eleven_flash_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5
-        }
-      },
-      {
+    console.log(`[AUDIO_SERVICE] 🎙️ Calling ElevenLabs API with voice: ${this.VOICE_ID}`);
+    console.log(`[AUDIO_SERVICE] 📝 Text preview: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+    console.log(`[AUDIO_SERVICE] 🔑 API Key: ${this.ELEVENLABS_API_KEY.substring(0, 8)}...${this.ELEVENLABS_API_KEY.substring(-4)}`);
+    console.log(`[AUDIO_SERVICE] 🎛️ Model: eleven_flash_v2`);
+    console.log(`[AUDIO_SERVICE] 📏 Text length: ${text.length} characters`);
+
+    try {
+      const requestConfig = {
         headers: {
           'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
@@ -184,10 +234,78 @@ class AudioService {
         },
         responseType: 'arraybuffer',
         timeout: 30000 // 30 second timeout
-      }
-    );
+      };
 
-    return Buffer.from(response.data);
+      console.log(`[AUDIO_SERVICE] 📡 Request URL: https://api.elevenlabs.io/v1/text-to-speech/${this.VOICE_ID}`);
+      console.log(`[AUDIO_SERVICE] 📋 Request headers:`, JSON.stringify(requestConfig.headers, null, 2));
+
+      const response = await axios.post(
+        `https://api.elevenlabs.io/v1/text-to-speech/${this.VOICE_ID}`,
+        {
+          text: text,
+          model_id: 'eleven_flash_v2',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5
+          }
+        },
+        requestConfig
+      );
+
+      const audioBuffer = Buffer.from(response.data);
+      console.log(`[AUDIO_SERVICE] ✅ ElevenLabs audio generated: ${audioBuffer.length} bytes`);
+      return audioBuffer;
+      
+    } catch (error) {
+      let errorMessage = 'ElevenLabs API call failed';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        console.log(`[AUDIO_SERVICE] 🚨 API Error Details:`);
+        console.log(`[AUDIO_SERVICE]    Status: ${status}`);
+        console.log(`[AUDIO_SERVICE]    Headers:`, JSON.stringify(error.response.headers, null, 2));
+        
+        // Try to parse error response
+        try {
+          let errorText;
+          if (errorData instanceof Buffer) {
+            errorText = errorData.toString('utf8');
+            const errorObj = JSON.parse(errorText);
+            console.log(`[AUDIO_SERVICE]    Parsed Error:`, JSON.stringify(errorObj, null, 2));
+            
+            if (status === 401) {
+              errorMessage = `ElevenLabs authentication failed (401). ${errorObj.detail?.message || 'Invalid API key or insufficient permissions.'}`;
+              console.log(`[AUDIO_SERVICE] ❌ 401 AUTHENTICATION FAILURE:`);
+              console.log(`[AUDIO_SERVICE]    API Key Used: ${this.ELEVENLABS_API_KEY.substring(0, 8)}...${this.ELEVENLABS_API_KEY.substring(-4)}`);
+              console.log(`[AUDIO_SERVICE]    Voice ID: ${this.VOICE_ID}`);
+              console.log(`[AUDIO_SERVICE]    Model: eleven_flash_v2`);
+              console.log(`[AUDIO_SERVICE]    Error Message: ${errorObj.detail?.message || 'No details'}`);
+            } else if (status === 429) {
+              errorMessage = `ElevenLabs rate limit exceeded (429). ${errorObj.detail?.message || 'Please wait before trying again.'}`;
+            } else if (status === 400) {
+              errorMessage = `ElevenLabs bad request (400). ${errorObj.detail?.message || 'Invalid parameters'}`;
+            } else {
+              errorMessage = `ElevenLabs API error (${status}): ${errorObj.detail?.message || error.response.statusText}`;
+            }
+          } else {
+            console.log(`[AUDIO_SERVICE]    Raw Error Data:`, errorData);
+            errorMessage = `ElevenLabs API error (${status}): ${errorData?.detail || error.response.statusText}`;
+          }
+        } catch (parseError) {
+          console.log(`[AUDIO_SERVICE]    Parse Error: ${parseError.message}`);
+          errorMessage = `ElevenLabs API error (${status}): ${error.response.statusText}`;
+        }
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'ElevenLabs request timeout (30s). Please try again.';
+      } else {
+        errorMessage = `ElevenLabs network error: ${error.message}`;
+      }
+      
+      console.error(`[AUDIO_SERVICE] ❌ ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
   }
 
   /**
@@ -371,9 +489,68 @@ class AudioService {
    */
   getAudioUrl(projectId) {
     if (this.audioExists(projectId)) {
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `/audio/${projectId}.mp3`;
     }
     return null;
+  }
+
+  /**
+   * Validate audio file exists and is not empty/corrupted
+   * @param {string} projectId - Project ID
+   * @returns {boolean} True if audio file is valid
+   */
+  validateAudioFile(projectId) {
+    const audioPath = path.join(this.OUTPUT_DIR, `${projectId}.mp3`);
+    
+    try {
+      // Check if file exists
+      if (!fs.existsSync(audioPath)) {
+        console.warn(`[AUDIO_SERVICE] Audio file does not exist: ${audioPath}`);
+        return false;
+      }
+      
+      // Check file size
+      const stats = fs.statSync(audioPath);
+      if (stats.size === 0) {
+        console.warn(`[AUDIO_SERVICE] Audio file is empty: ${audioPath}`);
+        return false;
+      }
+      
+      // Check minimum valid MP3 size (at least 1KB)
+      if (stats.size < 1024) {
+        console.warn(`[AUDIO_SERVICE] Audio file too small (${stats.size} bytes): ${audioPath}`);
+        return false;
+      }
+      
+      console.log(`[AUDIO_SERVICE] ✅ Audio file validated: ${audioPath} (${stats.size} bytes)`);
+      return true;
+      
+    } catch (error) {
+      console.error(`[AUDIO_SERVICE] Error validating audio file for ${projectId}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Ensure valid audio file exists, create if needed
+   * @param {string} projectId - Project ID
+   * @returns {Promise<string>} Audio URL
+   */
+  async ensureValidAudio(projectId) {
+    console.log(`[AUDIO_SERVICE] Ensuring valid audio for project: ${projectId}`);
+    
+    // Check if existing audio is valid
+    if (this.validateAudioFile(projectId)) {
+      console.log(`[AUDIO_SERVICE] Using existing valid audio for project: ${projectId}`);
+      return this.getAudioUrl(projectId);
+    }
+    
+    // Delete corrupted file if it exists
+    this.deleteAudio(projectId);
+    
+    // Create new silent audio
+    console.log(`[AUDIO_SERVICE] Creating new valid silent audio for project: ${projectId}`);
+    return this.createSilentAudio(projectId);
   }
 
   /**
@@ -393,6 +570,52 @@ class AudioService {
     } catch (error) {
       console.error(`[AUDIO_SERVICE] Error deleting audio for ${projectId}:`, error);
       return false;
+    }
+  }
+
+  /**
+   * Create silent audio as fallback using FFmpeg
+   * FIXED: Now creates 44 seconds of silence to match 11 slides × 4 seconds each
+   * @param {string} projectId - Project ID
+   * @returns {string} Path to silent audio file
+   */
+  createSilentAudio(projectId) {
+    console.log(`[AUDIO_SERVICE] Creating valid silent audio for project: ${projectId}`);
+    
+    const outputPath = path.join(this.OUTPUT_DIR, `${projectId}.mp3`);
+    
+    try {
+      // Delete existing corrupted file if it exists
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+        console.log(`[AUDIO_SERVICE] Deleted existing corrupted audio: ${outputPath}`);
+      }
+      
+      // FIXED: Generate valid silent MP3 using FFmpeg (44 seconds of silence for 11 slides)
+      const durationSeconds = 44; // 11 slides × 4 seconds each
+      const ffmpegCommand = `ffmpeg -f lavfi -i anullsrc=r=44100:cl=stereo -t ${durationSeconds} -q:a 9 -acodec libmp3lame "${outputPath}" -y`;
+      console.log(`[AUDIO_SERVICE] Running FFmpeg for ${durationSeconds} seconds: ${ffmpegCommand}`);
+      
+      execSync(ffmpegCommand, { stdio: 'inherit' });
+      
+      // Validate the generated file
+      if (!fs.existsSync(outputPath)) {
+        throw new Error('FFmpeg failed to create silent audio file');
+      }
+      
+      const stats = fs.statSync(outputPath);
+      if (stats.size === 0) {
+        throw new Error('Generated silent audio file is empty');
+      }
+      
+      console.log(`[AUDIO_SERVICE] ✅ Valid silent audio created: ${outputPath} (${stats.size} bytes, ${durationSeconds} seconds)`);
+      
+      // Return PUBLIC URL for Remotion compatibility
+      return `/audio/${projectId}.mp3`;
+      
+    } catch (error) {
+      console.error(`[AUDIO_SERVICE] ❌ Failed to create silent audio:`, error.message);
+      throw new Error(`Silent audio generation failed: ${error.message}`);
     }
   }
 

@@ -1,106 +1,77 @@
 import { AbsoluteFill, Sequence, interpolate, useCurrentFrame, Audio } from "remotion";
-import { adaptToNewFormat } from "./data/dataAdapter";
 import { theme } from "./theme";
-import { TIMING } from "./utils/timingUtils";
+import { TIMING, TOTAL_DURATION_FRAMES, TOTAL_DURATION_SECONDS } from "./utils/timingUtils";
 
-// Import only the working new slides
+// Import all 11 required slides
 import { OverviewSlide } from "./slides/OverviewSlide";
-import { OnPageIssuesSlide } from "./slides/OnPageIssuesSlide";
-import { TechnicalIssuesSlide } from "./slides/TechnicalIssuesSlide";
+import { ScoreSummarySlide } from "./slides/ScoreSummarySlide";
+import { IssueDistributionSlide } from "./slides/IssueDistributionSlide";
+import { HighIssuesSlide } from "./slides/HighIssuesSlide";
+import { MediumIssuesSlide } from "./slides/MediumIssuesSlide";
+import { LowIssuesSlide } from "./slides/LowIssuesSlide";
+import { TechnicalHighlightsSlide } from "./slides/TechnicalHighlightsSlide";
+import { CriticalTechnicalIssueSlide } from "./slides/CriticalTechnicalIssueSlide";
+import { PerformanceSummarySlide } from "./slides/PerformanceSummarySlide";
 import { PageSpeedSlide } from "./slides/PageSpeedSlide";
-import { KeywordSlide } from "./slides/KeywordSlide";
-import { AIVisibilitySlide } from "./slides/AIVisibilitySlide";
+import { AIAnalysisSlide } from "./slides/AIAnalysisSlide";
 
-interface VideoProps {
-  audioUrl: string;  // Updated from audioFile to audioUrl
-  projectId: string;
-  videoData: any;
-  narrationSegments?: string[];
-}
-
-export const AuditVideo = ({ audioUrl, projectId, videoData, narrationSegments }: VideoProps) => {
+export const AuditVideo = (props: Record<string, unknown>) => {
+  let { 
+    audioUrl = '', 
+    projectId = '', 
+    structuredSlides
+  } = props as any;
+  
+  // DEBUG: Add comprehensive logging
+  console.log('🎬 REMOTION: Starting video generation');
+  console.log('🎬 REMOTION: Project ID:', projectId);
+  console.log('🎬 REMOTION: Audio URL:', audioUrl);
+  console.log('🎬 REMOTION: Audio URL type:', typeof audioUrl);
+  console.log('🎬 REMOTION: Audio URL length:', audioUrl?.length);
+  console.log('🎬 REMOTION: Total duration frames:', TOTAL_DURATION_FRAMES);
+  console.log('🎬 REMOTION: Total duration seconds:', TOTAL_DURATION_SECONDS);
+  
+  // CRITICAL: Validate audio URL
+  if (!audioUrl) {
+    console.error('❌ REMOTION: Audio URL is missing or undefined');
+    throw new Error('Audio URL is required but not provided');
+  }
+  
+  if (typeof audioUrl !== 'string') {
+    console.error('❌ REMOTION: Audio URL is not a string:', typeof audioUrl);
+    throw new Error(`Audio URL must be a string, got ${typeof audioUrl}`);
+  }
+  
+  if (!audioUrl.startsWith('/audio/')) {
+    console.error('❌ REMOTION: Audio URL does not start with /audio/:', audioUrl);
+    throw new Error(`Audio URL must start with /audio/, got: ${audioUrl}`);
+  }
+  
+  console.log('✅ REMOTION: Audio URL validation passed');
+  
+  // Validate structured slides format
+  if (!structuredSlides || !Array.isArray(structuredSlides)) {
+    console.error("❌ REMOTION: Invalid structuredSlides - expected array, got:", structuredSlides);
+    return null;
+  }
+  
+  console.log("🎬 REMOTION: Total slides:", structuredSlides.length);
+  
+  if (structuredSlides.length !== 11) {
+    console.error("❌ REMOTION: Invalid slides count - expected 11, got:", structuredSlides.length);
+    return null;
+  }
+  
+  console.log("✅ REMOTION: All 11 slides validated successfully");
+  
+  // Extract narration from structured slides
+  const finalNarration = structuredSlides.map((slide: any) => slide.narration || '').filter((n: any) => n.trim());
+  console.log("🎬 REMOTION: Narration items:", finalNarration.length);
+  
   const frame = useCurrentFrame();
   
-  // Create safe default data structure to prevent runtime crashes
-  const safeData = {
-    topIssues: {
-      critical: [],
-      high: [],
-      medium: [],
-      low: []
-    },
-    recommendations: [],
-    keywordData: {
-      topRankings: [],
-      opportunities: []
-    },
-    technicalHighlights: {
-      criticalIssues: [],
-      topRecommendations: []
-    },
-    performanceMetrics: {
-      mobileScore: 75,
-      desktopScore: 85,
-      pageSpeed: 80,
-      lcp: 2.5,
-      tbt: 300
-    },
-    scores: {
-      overall: 75,
-      technical: 80,
-      performance: 70,
-      seo: 85
-    },
-    issueDistribution: {
-      total: 0,
-      critical: 0,
-      high: 0,
-      medium: 0,
-      low: 0
-    },
-    project: {
-      name: "Website Audit"
-    },
-    aiAnalysis: {
-      score: 70,
-      schemaMarkupCount: 0,
-      hasKnowledgeGraph: false
-    }
-  };
-  
-  // Use dynamic videoData or fallback to static data with safety
-  const dynamicData = videoData || require("./data/auditData").auditData;
-  const mergedData = { ...safeData, ...dynamicData };
-  const adaptedData = adaptToNewFormat(mergedData);
-  
-  // Handle narrationSegments from worker with safety fallback
-  console.log("NARRATION TYPE:", typeof narrationSegments);
-  console.log("IS ARRAY:", Array.isArray(narrationSegments));
-  
-  const safeSegments = Array.isArray(narrationSegments)
-    ? narrationSegments
-    : typeof narrationSegments === "string"
-    ? (narrationSegments as string).split('\n')
-    : [];
-  
-  // If no narrationSegments from worker, generate locally as fallback
-  const finalNarration = safeSegments.length > 0 
-    ? safeSegments 
-    : (() => {
-        console.log("Generating local narration as fallback");
-        const VideoTemplateService = require("../services/videoTemplate.service");
-        const localNarration = VideoTemplateService.generateCompleteNarration(mergedData);
-        return localNarration ? localNarration.split('\n').filter((s: string) => s.trim()) : [];
-      })();
-  
-  // Use dynamic timing based on actual audio durations
-  const TIMING_OBJ = TIMING;
-  
-  // Calculate total duration for fade out
-  const totalDuration = TIMING_OBJ.s6.from + TIMING_OBJ.s6.dur;
-
-  // Global fade out at the end
-  const globalFade = interpolate(frame, [totalDuration - 30, totalDuration], [1, 0], {
+  // Global fade out at the end (last 30 frames)
+  const globalFade = interpolate(frame, [TOTAL_DURATION_FRAMES - 30, TOTAL_DURATION_FRAMES], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -108,64 +79,148 @@ export const AuditVideo = ({ audioUrl, projectId, videoData, narrationSegments }
   return (
     <AbsoluteFill style={{ background: theme.bg, opacity: globalFade }}>
       
-      {/* Single audio track for the entire video */}
-      <Audio src={audioUrl || ''} volume={1} />
+      {/* FIXED: Single audio track for the entire video with proper validation */}
+      {(() => {
+        console.log('🎵 REMOTION: Rendering Audio component with src:', audioUrl);
+        
+        if (!audioUrl) {
+          console.error('❌ REMOTION: Audio src is undefined in Audio component');
+          throw new Error('Audio src is undefined in Audio component');
+        }
+        
+        return (
+          <Audio 
+            src={audioUrl} 
+            volume={1}
+            startFrom={0}
+            endAt={TOTAL_DURATION_FRAMES}
+          />
+        );
+      })()}
       
-      {/* SLIDE 1: OVERVIEW */}
-      <Sequence from={TIMING_OBJ.s1.from} durationInFrames={TIMING_OBJ.s1.dur}>
+      {/* SLIDE 1: PROJECT OVERVIEW */}
+      <Sequence from={TIMING.s1.from} durationInFrames={TIMING.s1.dur}>
         <OverviewSlide
-          data={adaptedData.overview || {}}
+          data={structuredSlides?.[0]?.data || {}}
           narration={finalNarration[0] || ''}
           brandColor="#7730ed"
           agencyName="AuditIQ"
         />
       </Sequence>
 
-      {/* SLIDE 2: ON-PAGE ISSUES */}
-      <Sequence from={TIMING_OBJ.s2.from} durationInFrames={TIMING_OBJ.s2.dur}>
-        <OnPageIssuesSlide
-          data={adaptedData.onpage || {}}
+      {/* SLIDE 2: SCORE SUMMARY */}
+      <Sequence from={TIMING.s2.from} durationInFrames={TIMING.s2.dur}>
+        <ScoreSummarySlide
+          data={structuredSlides?.[1]?.data || {}}
           narration={finalNarration[1] || ''}
           brandColor="#7730ed"
           agencyName="AuditIQ"
         />
       </Sequence>
 
-      {/* SLIDE 3: TECHNICAL ISSUES */}
-      <Sequence from={TIMING_OBJ.s3.from} durationInFrames={TIMING_OBJ.s3.dur}>
-        <TechnicalIssuesSlide
-          data={adaptedData.technical || {}}
+      {/* SLIDE 3: ISSUE DISTRIBUTION */}
+      <Sequence from={TIMING.s3.from} durationInFrames={TIMING.s3.dur}>
+        <IssueDistributionSlide
+          data={structuredSlides?.[2]?.data || {}}
           narration={finalNarration[2] || ''}
           brandColor="#7730ed"
           agencyName="AuditIQ"
         />
       </Sequence>
 
-      {/* SLIDE 4: PAGESPEED */}
-      <Sequence from={TIMING_OBJ.s4.from} durationInFrames={TIMING_OBJ.s4.dur}>
+      {/* SLIDE 4: HIGH ISSUES */}
+      <Sequence from={TIMING.s4.from} durationInFrames={TIMING.s4.dur}>
+        {(() => {
+          const slideData = structuredSlides?.[3]?.data || { issues: [] };
+          console.log("🎬 REMOTION: Rendering HighIssuesSlide with data:", slideData);
+          return (
+            <HighIssuesSlide
+              data={slideData}
+              narration={finalNarration[3] || ''}
+              brandColor="#7730ed"
+              agencyName="AuditIQ"
+            />
+          );
+        })()}
+      </Sequence>
+
+      {/* SLIDE 5: MEDIUM ISSUES */}
+      <Sequence from={TIMING.s5.from} durationInFrames={TIMING.s5.dur}>
+        {(() => {
+          const slideData = structuredSlides?.[4]?.data || { issues: [] };
+          console.log("🎬 REMOTION: Rendering MediumIssuesSlide with data:", slideData);
+          return (
+            <MediumIssuesSlide
+              data={slideData}
+              narration={finalNarration[4] || ''}
+              brandColor="#7730ed"
+              agencyName="AuditIQ"
+            />
+          );
+        })()}
+      </Sequence>
+
+      {/* SLIDE 6: LOW ISSUES */}
+      <Sequence from={TIMING.s6.from} durationInFrames={TIMING.s6.dur}>
+        {(() => {
+          const slideData = structuredSlides?.[5]?.data || { issues: [] };
+          console.log("🎬 REMOTION: Rendering LowIssuesSlide with data:", slideData);
+          return (
+            <LowIssuesSlide
+              data={slideData}
+              narration={finalNarration[5] || ''}
+              brandColor="#7730ed"
+              agencyName="AuditIQ"
+            />
+          );
+        })()}
+      </Sequence>
+
+      {/* SLIDE 7: TECHNICAL HIGHLIGHTS */}
+      <Sequence from={TIMING.s7.from} durationInFrames={TIMING.s7.dur}>
+        <TechnicalHighlightsSlide
+          data={structuredSlides?.[6]?.data || {}}
+          narration={finalNarration[6] || ''}
+          brandColor="#7730ed"
+          agencyName="AuditIQ"
+        />
+      </Sequence>
+
+      {/* SLIDE 8: CRITICAL TECHNICAL ISSUE */}
+      <Sequence from={TIMING.s8.from} durationInFrames={TIMING.s8.dur}>
+        <CriticalTechnicalIssueSlide
+          data={structuredSlides?.[7]?.data || {}}
+          narration={finalNarration[7] || ''}
+          brandColor="#7730ed"
+          agencyName="AuditIQ"
+        />
+      </Sequence>
+
+      {/* SLIDE 9: PERFORMANCE SUMMARY */}
+      <Sequence from={TIMING.s9.from} durationInFrames={TIMING.s9.dur}>
+        <PerformanceSummarySlide
+          data={structuredSlides?.[8]?.data || {}}
+          narration={finalNarration[8] || ''}
+          brandColor="#7730ed"
+          agencyName="AuditIQ"
+        />
+      </Sequence>
+
+      {/* SLIDE 10: CORE WEB VITALS */}
+      <Sequence from={TIMING.s10.from} durationInFrames={TIMING.s10.dur}>
         <PageSpeedSlide
-          data={adaptedData.pagespeed || {}}
-          narration={finalNarration[3] || ''}
+          data={structuredSlides?.[9]?.data || {}}
+          narration={finalNarration[9] || ''}
           brandColor="#7730ed"
           agencyName="AuditIQ"
         />
       </Sequence>
 
-      {/* SLIDE 5: KEYWORDS */}
-      <Sequence from={TIMING_OBJ.s5.from} durationInFrames={TIMING_OBJ.s5.dur}>
-        <KeywordSlide
-          data={adaptedData.keywords || {}}
-          narration={finalNarration[4] || ''}
-          brandColor="#7730ed"
-          agencyName="AuditIQ"
-        />
-      </Sequence>
-
-      {/* SLIDE 6: AI VISIBILITY */}
-      <Sequence from={TIMING_OBJ.s6.from} durationInFrames={TIMING_OBJ.s6.dur}>
-        <AIVisibilitySlide
-          data={adaptedData.ai || {}}
-          narration={finalNarration[5] || ''}
+      {/* SLIDE 11: AI ANALYSIS */}
+      <Sequence from={TIMING.s11.from} durationInFrames={TIMING.s11.dur}>
+        <AIAnalysisSlide
+          data={structuredSlides?.[10]?.data || {}}
+          narration={finalNarration[10] || ''}
           brandColor="#7730ed"
           agencyName="AuditIQ"
         />

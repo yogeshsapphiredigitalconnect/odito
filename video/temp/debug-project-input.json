@@ -1,0 +1,161 @@
+{
+  "audioUrl": "http://localhost:5000/audio/debug-project.mp3",
+  "projectId": "debug-project",
+  "structuredSlides": [
+    {
+      "id": 1,
+      "type": "projectOverview",
+      "title": "Test",
+      "subtitle": "test.com",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "projectName": "Test",
+        "url": "test.com",
+        "scores": {
+          "overall": 85
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "scoreSummary",
+      "title": "Overall Score Analysis",
+      "subtitle": "Score: 85/100",
+      "narration": "This is a test script for audio generation to reproduce the 401 error. Your SEO score is 0, performance is 0, and AI visibility is 0.",
+      "data": {
+        "scores": {
+          "overall": 85
+        },
+        "overall": 85
+      }
+    },
+    {
+      "id": 3,
+      "type": "issueDistribution",
+      "title": "Issue Distribution",
+      "subtitle": "0 Total Issues",
+      "narration": "This is a test script for audio generation to reproduce the 401 error. Critical issues: 0, high: 0, medium: 0, low: 0.",
+      "data": {
+        "issueDistribution": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "total": 0
+        },
+        "total": 0
+      }
+    },
+    {
+      "id": 4,
+      "type": "highIssues",
+      "title": "High Priority Issues",
+      "subtitle": "0 High Issues",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "issues": [],
+        "count": 0
+      }
+    },
+    {
+      "id": 5,
+      "type": "mediumIssues",
+      "title": "Medium Priority Issues",
+      "subtitle": "0 Medium Issues",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "issues": [],
+        "count": 0
+      }
+    },
+    {
+      "id": 6,
+      "type": "lowIssues",
+      "title": "Low Priority Issues",
+      "subtitle": "0 Low Issues",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "issues": [],
+        "count": 0
+      }
+    },
+    {
+      "id": 7,
+      "type": "technicalHighlights",
+      "title": "Technical Highlights",
+      "subtitle": "Technical SEO Overview",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "technicalHighlights": {},
+        "checks": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "criticalTechnicalIssue",
+      "title": "Critical Technical Issue",
+      "subtitle": "Security Headers Analysis",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "criticalIssues": [],
+        "securityHeaders": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "performanceSummary",
+      "title": "Performance Summary",
+      "subtitle": "Performance Score: 0",
+      "narration": "This is a test script for audio generation to reproduce the 401 error. Largest Contentful Paint: N/A seconds. Total Blocking Time: N/A milliseconds.",
+      "data": {
+        "performanceMetrics": {},
+        "mobileScore": 0,
+        "desktopScore": 0
+      }
+    },
+    {
+      "id": 10,
+      "type": "coreWebVitals",
+      "title": "Core Web Vitals",
+      "subtitle": "User Experience Metrics",
+      "narration": "This is a test script for audio generation to reproduce the 401 error.",
+      "data": {
+        "metrics": [],
+        "lcp": "N/A",
+        "tbt": "N/A"
+      }
+    },
+    {
+      "id": 11,
+      "type": "aiAnalysis",
+      "title": "AI Visibility Analysis",
+      "subtitle": "AI Score: 0",
+      "narration": "This is a test script for audio generation to reproduce the 401 error. Schema markup implementations: 0. Knowledge Graph presence: No.",
+      "data": {
+        "aiAnalysis": {},
+        "score": 0,
+        "schemaMarkupCount": 0
+      }
+    }
+  ],
+  "auditSnapshot": {
+    "projectName": "Test",
+    "url": "test.com",
+    "scores": {
+      "overall": 85
+    }
+  },
+  "narrationSegments": [
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error. Your SEO score is 0, performance is 0, and AI visibility is 0.",
+    "This is a test script for audio generation to reproduce the 401 error. Critical issues: 0, high: 0, medium: 0, low: 0.",
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error. Largest Contentful Paint: N/A seconds. Total Blocking Time: N/A milliseconds.",
+    "This is a test script for audio generation to reproduce the 401 error.",
+    "This is a test script for audio generation to reproduce the 401 error. Schema markup implementations: 0. Knowledge Graph presence: No."
+  ]
+}
