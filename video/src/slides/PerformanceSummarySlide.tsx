@@ -8,14 +8,9 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    performanceMetrics: {
-      pageSpeed: number;
-      mobileScore: number;
-      desktopScore: number;
-    };
-    scores: {
-      performance: number;
-    };
+    pageSpeed: number;
+    mobileScore: number;
+    desktopScore: number;
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -28,30 +23,38 @@ export const PerformanceSummarySlide: React.FC<Props> = ({
   brandColor = "#7730ed",
   agencyName = "AuditIQ",
 }) => {
+  console.log("Performance Data:", data);
+  
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const performanceData = {
-    pageSpeed: data.performanceMetrics?.pageSpeed || data.scores?.performance || 75,
-    mobileScore: data.performanceMetrics?.mobileScore || 75,
-    desktopScore: data.performanceMetrics?.desktopScore || 85,
+  // Correct mapping with fallbacks
+  const overall = data?.pageSpeed ?? 0;
+  const mobile = data?.mobileScore ?? 0;
+  const desktop = data?.desktopScore ?? 0;
+
+  // Dynamic grade logic
+  const getGrade = (score: number) => {
+    if (score >= 90) return "A";
+    if (score >= 75) return "B";
+    if (score >= 50) return "C";
+    return "D";
   };
+
+  // Dynamic color logic
+  const getColor = (score: number) => {
+    if (score >= 75) return "green";
+    if (score >= 50) return "yellow";
+    return "red";
+  };
+
+  const grade = getGrade(overall);
+  const gradeColor = getColor(overall);
 
   const performanceScores = [
-    { score: performanceData.pageSpeed, label: "PageSpeed", color: "#00dfff", delay: 10 },
-    { score: performanceData.mobileScore, label: "Mobile", color: "#00f5a0", delay: 20 },
-    { score: performanceData.desktopScore, label: "Desktop", color: "#ffb703", delay: 30 },
+    { score: overall, label: "PageSpeed", color: "#00dfff", delay: 10 },
+    { score: mobile, label: "Mobile", color: "#00f5a0", delay: 20 },
+    { score: desktop, label: "Desktop", color: "#ffb703", delay: 30 },
   ];
-
-  const getPerformanceGrade = (score: number) => {
-    if (score >= 90) return { grade: "A", color: "#00f5a0" };
-    if (score >= 80) return { grade: "B", color: "#00dfff" };
-    if (score >= 70) return { grade: "C", color: "#ffb703" };
-    return { grade: "D", color: "#ff3860" };
-  };
-
-  const overallGrade = getPerformanceGrade(
-    Math.round((performanceData.pageSpeed + performanceData.mobileScore + performanceData.desktopScore) / 3)
-  );
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -149,8 +152,8 @@ export const PerformanceSummarySlide: React.FC<Props> = ({
               alignItems: "center",
               gap: 20,
               padding: "20px 30px",
-              background: `${overallGrade.color}10`,
-              border: `2px solid ${overallGrade.color}30`,
+              background: `${gradeColor === 'green' ? '#00f5a0' : gradeColor === 'yellow' ? '#ffb703' : '#ff3860'}10`,
+              border: `2px solid ${gradeColor === 'green' ? '#00f5a0' : gradeColor === 'yellow' ? '#ffb703' : '#ff3860'}30`,
               borderRadius: 20,
             }}
           >
@@ -158,12 +161,12 @@ export const PerformanceSummarySlide: React.FC<Props> = ({
               style={{
                 fontSize: 72,
                 fontWeight: 800,
-                color: overallGrade.color,
+                color: gradeColor === 'green' ? '#00f5a0' : gradeColor === 'yellow' ? '#ffb703' : '#ff3860',
                 fontFamily: "sans-serif",
                 lineHeight: 1,
               }}
             >
-              {overallGrade.grade}
+              {grade}
             </div>
             <div>
               <div
@@ -184,9 +187,9 @@ export const PerformanceSummarySlide: React.FC<Props> = ({
                   fontFamily: "sans-serif",
                 }}
               >
-                {overallGrade.grade === "A" ? "Excellent" :
-                 overallGrade.grade === "B" ? "Good" :
-                 overallGrade.grade === "C" ? "Fair" : "Needs Improvement"}
+                {grade === "A" ? "Excellent" :
+                 grade === "B" ? "Good" :
+                 grade === "C" ? "Fair" : "Needs Improvement"}
               </div>
             </div>
           </div>
@@ -216,13 +219,13 @@ export const PerformanceSummarySlide: React.FC<Props> = ({
                   marginTop: 12,
                   fontSize: 16,
                   fontWeight: 700,
-                  color: metric.score >= 80 ? "#00f5a0" : metric.score >= 60 ? "#ffb703" : "#ff3860",
+                  color: metric.score >= 75 ? "#00f5a0" : metric.score >= 50 ? "#ffb703" : "#ff3860",
                   fontFamily: "sans-serif",
                 }}
               >
                 {metric.score >= 90 ? "Excellent" : 
-                 metric.score >= 80 ? "Good" : 
-                 metric.score >= 70 ? "Fair" : "Poor"}
+                 metric.score >= 75 ? "Good" : 
+                 metric.score >= 50 ? "Fair" : "Poor"}
               </div>
             </div>
           ))}
@@ -264,7 +267,7 @@ export const PerformanceSummarySlide: React.FC<Props> = ({
                 lineHeight: 1.4,
               }}
             >
-              {performanceData.mobileScore < performanceData.desktopScore 
+              {mobile < desktop 
                 ? "Mobile performance needs optimization - 60% of traffic is mobile"
                 : "Consistent performance across devices provides good user experience"}
             </div>

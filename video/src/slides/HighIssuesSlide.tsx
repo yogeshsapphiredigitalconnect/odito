@@ -7,15 +7,15 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    topIssues: {
-      high: Array<{
-        issue: string;
-        severity: string;
-        pages: number;
-        count: number;
-        recommendation: string;
-      }>;
-    };
+    issues: Array<{
+      issue: string;
+      severity: string;
+      pages: number;
+      count: number;
+      recommendation: string;
+    }>;
+    count: number;
+    totalHigh: number;
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -34,28 +34,24 @@ export const HighIssuesSlide: React.FC<Props> = ({
     return null;
   }
 
-  console.log("HighIssuesSlide Data:", data);
+  console.log("High Issues Data:", {
+    totalHigh: data.totalHigh,
+    shown: data.count,
+    issues: data.issues
+  });
   
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const highIssues = data?.topIssues?.high || [];
+  const highIssues = data?.issues || [];
+  const totalHigh = data?.totalHigh || 0;
+  const shownCount = data?.count || 0;
 
   // Safety check - ensure we have an array
   if (!Array.isArray(highIssues)) {
     console.warn("HighIssuesSlide: data.issues is not an array, using fallback");
     return null;
   }
-
-  // Fallback issues if none provided
-  const fallbackIssues = [
-    { issue: "Missing Meta Descriptions", recommendation: "Add compelling meta descriptions to improve click-through rates" },
-    { issue: "H1 Tag Optimization Needed", recommendation: "Optimize H1 tags for better search visibility" }, 
-    { issue: "Internal Linking Gaps", recommendation: "Improve internal linking structure for better crawling" },
-    { issue: "Image ALT Text Missing", recommendation: "Add descriptive ALT text to all images" }
-  ];
-
-  const issuesToShow = highIssues.length > 0 ? highIssues : fallbackIssues.slice(0, 4);
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -133,7 +129,17 @@ export const HighIssuesSlide: React.FC<Props> = ({
               fontFamily: "sans-serif",
             }}
           >
-            {issuesToShow.length} issue{issuesToShow.length !== 1 ? 's' : ''} requiring attention
+            {totalHigh} high-priority issues detected
+          </div>
+          <div
+            style={{
+              fontSize: 16,
+              color: "rgba(255,255,255,0.3)",
+              fontFamily: "sans-serif",
+              marginTop: 4
+            }}
+          >
+            Top Issues (out of {totalHigh})
           </div>
         </div>
 
@@ -146,7 +152,7 @@ export const HighIssuesSlide: React.FC<Props> = ({
             gap: 24,
           }}
         >
-          {issuesToShow.map((issueData, i) => {
+          {highIssues.map((issueData, i) => {
             const itemDelay = 15 + i * 8;
             const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 20], [0, 1], {
               extrapolateLeft: "clamp",

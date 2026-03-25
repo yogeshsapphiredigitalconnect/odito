@@ -7,15 +7,15 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    topIssues: {
-      low: Array<{
-        issue: string;
-        severity: string;
-        pages: number;
-        count: number;
-        recommendation: string;
-      }>;
-    };
+    issues: Array<{
+      issue: string;
+      severity: string;
+      pages: number;
+      count: number;
+      recommendation: string;
+    }>;
+    count: number;
+    totalLow: number;
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -34,20 +34,23 @@ export const LowIssuesSlide: React.FC<Props> = ({
     return null;
   }
 
-  console.log("LowIssuesSlide Data:", data);
+  console.log("Low Issues:", {
+    total: data.totalLow,
+    shown: data.count,
+    issues: data.issues
+  });
   
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const lowIssues = data?.topIssues?.low || [];
+  const lowIssues = data?.issues || [];
+  const totalLow = data?.totalLow || 0;
 
   // Safety check - ensure we have an array
   if (!Array.isArray(lowIssues)) {
-    console.warn("LowIssuesSlide: data.topIssues.low is not an array, using fallback");
+    console.warn("LowIssuesSlide: data.issues is not an array, using fallback");
     return null;
   }
-
-  const issuesToShow = lowIssues.length > 0 ? lowIssues : [];
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -125,7 +128,7 @@ export const LowIssuesSlide: React.FC<Props> = ({
               fontFamily: "sans-serif",
             }}
           >
-            {issuesToShow.length} minor optimization{issuesToShow.length !== 1 ? 's' : ''} available
+            {totalLow} low-priority issues detected
           </div>
         </div>
 
@@ -138,7 +141,7 @@ export const LowIssuesSlide: React.FC<Props> = ({
             gap: 16,
           }}
         >
-          {issuesToShow.map((item, i) => {
+          {lowIssues.map((item, i) => {
             const itemDelay = 10 + i * 5;
             const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 15], [0, 1], {
               extrapolateLeft: "clamp",

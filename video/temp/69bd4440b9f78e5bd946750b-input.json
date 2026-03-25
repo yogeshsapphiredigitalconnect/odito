@@ -70,33 +70,34 @@
       "id": 4,
       "type": "highIssues",
       "title": "High Priority Issues",
-      "subtitle": "3 High Issues",
+      "subtitle": "Showing top 3 of 521 high-priority issues",
       "narration": "Your website has 521 high-priority issues. Showing the top 3 most important issues that need attention.",
       "data": {
         "issues": [
+          {
+            "issue": "Focus trap detected during keyboard navigation",
+            "severity": "high",
+            "pages": 20,
+            "count": 20,
+            "recommendation": "Address within 7 days - high priority for SEO improvement"
+          },
+          {
+            "issue": "h4 uses generic phrase: services",
+            "severity": "high",
+            "pages": 20,
+            "count": 20,
+            "recommendation": "Address within 7 days - high priority for SEO improvement"
+          },
           {
             "issue": "og:image is missing",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
-          },
-          {
-            "issue": "3 accessibility violation(s) found",
-            "severity": "high",
-            "pages": 20,
-            "count": 20,
-            "recommendation": "Address within 7 days - high priority for SEO improvement"
-          },
-          {
-            "issue": "Schema URL does not match page URL",
-            "severity": "high",
-            "pages": 20,
-            "count": 20,
-            "recommendation": "Address within 7 days - high priority for SEO improvement"
           }
         ],
-        "count": 3
+        "count": 3,
+        "totalHigh": 521
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-4.mp3",
       "duration": 6.873107,
@@ -106,26 +107,27 @@
       "id": 5,
       "type": "mediumIssues",
       "title": "Medium Priority Issues",
-      "subtitle": "2 Medium Issues",
+      "subtitle": "Showing top 2 of 185 issues",
       "narration": "Your website has 185 medium-priority issues. Showing the top 2 most important issues that need attention.",
       "data": {
         "issues": [
           {
-            "issue": "7 image(s) missing role attribute",
+            "issue": "3 duplicate image URL(s) on page",
             "severity": "medium",
             "pages": 20,
             "count": 20,
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           },
           {
-            "issue": "H4 length is 4 chars (6–60)",
+            "issue": "h4 is all lowercase: menu",
             "severity": "medium",
             "pages": 20,
             "count": 20,
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           }
         ],
-        "count": 2
+        "count": 2,
+        "totalMedium": 185
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-5.mp3",
       "duration": 7.569705,
@@ -135,7 +137,7 @@
       "id": 6,
       "type": "lowIssues",
       "title": "Low Priority Issues",
-      "subtitle": "1 Low Issues",
+      "subtitle": "Showing top 1 of 142 issues",
       "narration": "Your website has 142 low-priority issues. Showing the top 1 most important issues that need attention.",
       "data": {
         "issues": [
@@ -147,7 +149,8 @@
             "recommendation": "Consider fixing when time permits - minor SEO improvement opportunity"
           }
         ],
-        "count": 1
+        "count": 1,
+        "totalLow": 142
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-6.mp3",
       "duration": 7.383946,
@@ -160,121 +163,135 @@
       "subtitle": "Technical SEO Overview",
       "narration": "From a technical perspective, your website shows a mix of strengths and issues. Key areas such as Security Headers need attention, while several other aspects are properly configured.",
       "data": {
-        "technicalHighlights": {
-          "checks": [
-            {
-              "name": "SSL Certificate",
-              "status": "PASS",
-              "detail": "SSL certificate is valid and properly configured",
-              "affected_pages": 0
-            },
-            {
-              "name": "Security Headers",
-              "status": "FAIL",
-              "detail": "20 pages missing critical security headers",
-              "affected_pages": 20
-            },
-            {
-              "name": "Canonical Tags",
-              "status": "PASS",
-              "detail": "Canonical tags properly configured",
-              "affected_pages": 0
-            },
-            {
-              "name": "Robots.txt",
-              "status": "PASS",
-              "detail": "Robots.txt is accessible and properly configured",
-              "affected_pages": 0
-            },
-            {
-              "name": "Noindex on Key Pages",
-              "status": "PASS",
-              "detail": "All important pages are indexable",
-              "affected_pages": 0
-            },
-            {
-              "name": "H1 Tags",
-              "status": "WARN",
-              "detail": "1 pages missing H1, 1 with multiple H1s",
-              "affected_pages": 2
-            },
-            {
-              "name": "Structured Data / Schema",
-              "status": "PASS",
-              "detail": "20 pages with valid structured data",
-              "affected_pages": 0
-            },
-            {
-              "name": "Mobile Friendliness",
-              "status": "PASS",
-              "detail": "Mobile-friendly configuration detected",
-              "affected_pages": 0
-            },
-            {
-              "name": "Broken Links (404)",
-              "status": "PASS",
-              "detail": "No broken links detected",
-              "affected_pages": 0
-            },
-            {
-              "name": "XML Sitemap",
-              "status": "PASS",
-              "detail": "XML sitemap accessible with 2 URLs",
-              "affected_pages": 0
-            },
-            {
-              "name": "Redirect Chains",
-              "status": "WARN",
-              "detail": "Redirect chain detected with 2 hops",
-              "affected_pages": 1
-            },
-            {
-              "name": "OG / Social Tags",
-              "status": "WARN",
-              "detail": "2 pages missing Open Graph tags",
-              "affected_pages": 2
-            }
-          ],
-          "criticalIssues": [
-            {
-              "name": "Security Headers",
-              "status": "FAIL",
-              "detail": "20 pages missing critical security headers",
-              "affected_pages": 20
-            }
-          ],
-          "topRecommendations": [
-            {
-              "name": "SSL Certificate",
-              "status": "PASS",
-              "detail": "SSL certificate is valid and properly configured",
-              "affected_pages": 0
-            },
-            {
-              "name": "Security Headers",
-              "status": "FAIL",
-              "detail": "20 pages missing critical security headers",
-              "affected_pages": 20
-            },
-            {
-              "name": "Canonical Tags",
-              "status": "PASS",
-              "detail": "Canonical tags properly configured",
-              "affected_pages": 0
-            },
-            {
-              "name": "Robots.txt",
-              "status": "PASS",
-              "detail": "Robots.txt is accessible and properly configured",
-              "affected_pages": 0
-            },
-            {
-              "name": "Noindex on Key Pages",
-              "status": "PASS",
-              "detail": "All important pages are indexable",
-              "affected_pages": 0
-            }
-          ]
+        "auditSnapshot": {
+          "technicalHighlights": {
+            "checks": [
+              {
+                "name": "SSL Certificate",
+                "status": "PASS",
+                "detail": "SSL certificate is valid and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Security Headers",
+                "status": "FAIL",
+                "detail": "20 pages missing critical security headers",
+                "affected_pages": 20
+              },
+              {
+                "name": "Canonical Tags",
+                "status": "PASS",
+                "detail": "Canonical tags properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Robots.txt",
+                "status": "PASS",
+                "detail": "Robots.txt is accessible and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Noindex on Key Pages",
+                "status": "PASS",
+                "detail": "All important pages are indexable",
+                "affected_pages": 0
+              },
+              {
+                "name": "H1 Tags",
+                "status": "WARN",
+                "detail": "1 pages missing H1, 1 with multiple H1s",
+                "affected_pages": 2
+              },
+              {
+                "name": "Structured Data / Schema",
+                "status": "PASS",
+                "detail": "20 pages with valid structured data",
+                "affected_pages": 0
+              },
+              {
+                "name": "Mobile Friendliness",
+                "status": "PASS",
+                "detail": "Mobile-friendly configuration detected",
+                "affected_pages": 0
+              },
+              {
+                "name": "Broken Links (404)",
+                "status": "PASS",
+                "detail": "No broken links detected",
+                "affected_pages": 0
+              },
+              {
+                "name": "XML Sitemap",
+                "status": "PASS",
+                "detail": "XML sitemap accessible with 2 URLs",
+                "affected_pages": 0
+              },
+              {
+                "name": "Redirect Chains",
+                "status": "WARN",
+                "detail": "Redirect chain detected with 2 hops",
+                "affected_pages": 1
+              },
+              {
+                "name": "OG / Social Tags",
+                "status": "WARN",
+                "detail": "2 pages missing Open Graph tags",
+                "affected_pages": 2
+              }
+            ],
+            "criticalIssues": [
+              {
+                "name": "Security Headers",
+                "status": "FAIL",
+                "detail": "20 pages missing critical security headers",
+                "affected_pages": 20
+              }
+            ],
+            "topRecommendations": [
+              {
+                "name": "SSL Certificate",
+                "status": "PASS",
+                "detail": "SSL certificate is valid and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Security Headers",
+                "status": "FAIL",
+                "detail": "20 pages missing critical security headers",
+                "affected_pages": 20
+              },
+              {
+                "name": "Canonical Tags",
+                "status": "PASS",
+                "detail": "Canonical tags properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Robots.txt",
+                "status": "PASS",
+                "detail": "Robots.txt is accessible and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Noindex on Key Pages",
+                "status": "PASS",
+                "detail": "All important pages are indexable",
+                "affected_pages": 0
+              }
+            ]
+          },
+          "scores": {
+            "overall": 50,
+            "performance": 52,
+            "seo": 50,
+            "aiVisibility": 46
+          },
+          "issueDistribution": {
+            "high": 521,
+            "medium": 185,
+            "low": 142,
+            "total": 848
+          }
         }
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-7.mp3",
@@ -307,13 +324,15 @@
           "lcp": "5.1 s",
           "tbt": "1,960 ms",
           "fcp": "4.4 s",
-          "cls": "0.002"
+          "cls": "0.002",
+          "score": 40
         },
         "desktop": {
           "lcp": "1.4 s",
           "tbt": "420 ms",
           "fcp": "1.0 s",
-          "cls": "0.116"
+          "cls": "0.116",
+          "score": 64
         }
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-9.mp3",

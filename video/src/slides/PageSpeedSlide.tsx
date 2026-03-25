@@ -8,21 +8,19 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    auditSnapshot: {
-      performanceMetrics: {
-        mobileScore: number;
-        desktopScore: number;
-        metrics: Array<{
-          metric: string;
-          mobile: string;
-          desktop: string;
-        }>;
-        desktopMetrics: Array<{
-          metric: string;
-          mobile: string;
-          desktop: string;
-        }>;
-      };
+    mobile: {
+      lcp: string;
+      tbt: string;
+      fcp: string;
+      cls: string;
+      score: number;
+    };
+    desktop: {
+      lcp: string;
+      tbt: string;
+      fcp: string;
+      cls: string;
+      score: number;
     };
   };
   narration: SlideNarration;
@@ -31,30 +29,34 @@ interface Props {
 }
 
 export const PageSpeedSlide: React.FC<Props> = ({ data, narration, brandColor = "#7730ed", agencyName = "AuditIQ" }) => {
+  console.log("Core Web Vitals Data:", data);
+  
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const performanceMetrics = data?.auditSnapshot?.performanceMetrics || {};
-  const mobileMetrics = performanceMetrics.metrics || [];
-  const desktopMetrics = performanceMetrics.desktopMetrics || [];
-  const mobileScore = performanceMetrics.mobileScore || 0;
-  const desktopScore = performanceMetrics.desktopScore || 0;
+  // Extract mobile and desktop data with fallbacks
+  const mobileData = data?.mobile || {};
+  const desktopData = data?.desktop || {};
 
   // Mobile Core Web Vitals
-  const mobileCwv = mobileMetrics.map((item) => ({
-    id: item.metric.toLowerCase().replace(/\s+/g, ''),
-    label: item.metric,
-    value: item.mobile,
-    display: item.mobile,
-  }));
+  const mobileCwv = [
+    { id: 'lcp', label: 'LCP', value: mobileData.lcp || 'N/A', display: mobileData.lcp || 'N/A' },
+    { id: 'tbt', label: 'TBT', value: mobileData.tbt || 'N/A', display: mobileData.tbt || 'N/A' },
+    { id: 'fcp', label: 'FCP', value: mobileData.fcp || 'N/A', display: mobileData.fcp || 'N/A' },
+    { id: 'cls', label: 'CLS', value: mobileData.cls || 'N/A', display: mobileData.cls || 'N/A' }
+  ];
 
   // Desktop Core Web Vitals  
-  const desktopCwv = desktopMetrics.map((item) => ({
-    id: item.metric.toLowerCase().replace(/\s+/g, ''),
-    label: item.metric,
-    value: item.desktop,
-    display: item.desktop,
-  }));
+  const desktopCwv = [
+    { id: 'lcp', label: 'LCP', value: desktopData.lcp || 'N/A', display: desktopData.lcp || 'N/A' },
+    { id: 'tbt', label: 'TBT', value: desktopData.tbt || 'N/A', display: desktopData.tbt || 'N/A' },
+    { id: 'fcp', label: 'FCP', value: desktopData.fcp || 'N/A', display: desktopData.fcp || 'N/A' },
+    { id: 'cls', label: 'CLS', value: desktopData.cls || 'N/A', display: desktopData.cls || 'N/A' }
+  ];
+
+  // Calculate mobile and desktop scores for gauges
+  const mobileScore = mobileData.score || 0;
+  const desktopScore = desktopData.score || 0;
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>

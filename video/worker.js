@@ -386,33 +386,36 @@ class VideoWorker {
           id: 4,
           type: "highIssues",
           title: "High Priority Issues",
-          subtitle: `${highIssues.length} High Issues`,
+          subtitle: `Showing top ${highIssues.length} of ${issueDistribution.high || 0} high-priority issues`,
           narration: this.generateIssueNarration(issueDistribution.high || 0, highIssues.length, 'high'),
           data: {
             issues: highIssues,
-            count: highIssues.length
+            count: highIssues.length,
+            totalHigh: issueDistribution.high || 0
           }
         },
         {
           id: 5,
           type: "mediumIssues",
           title: "Medium Priority Issues",
-          subtitle: `${mediumIssues.length} Medium Issues`,
+          subtitle: `Showing top ${mediumIssues.length} of ${issueDistribution.medium || 0} issues`,
           narration: this.generateIssueNarration(issueDistribution.medium || 0, mediumIssues.length, 'medium'),
           data: {
             issues: mediumIssues,
-            count: mediumIssues.length
+            count: mediumIssues.length,
+            totalMedium: issueDistribution.medium || 0
           }
         },
         {
           id: 6,
           type: "lowIssues",
           title: "Low Priority Issues",
-          subtitle: `${lowIssues.length} Low Issues`,
+          subtitle: `Showing top ${lowIssues.length} of ${issueDistribution.low || 0} issues`,
           narration: this.generateIssueNarration(issueDistribution.low || 0, lowIssues.length, 'low'),
           data: {
             issues: lowIssues,
-            count: lowIssues.length
+            count: lowIssues.length,
+            totalLow: issueDistribution.low || 0
           }
         },
         {
@@ -422,7 +425,11 @@ class VideoWorker {
           subtitle: "Technical SEO Overview",
           narration: this.generateTechnicalNarration(technicalHighlights),
           data: {
-            technicalHighlights
+            auditSnapshot: {
+              technicalHighlights,
+              scores,
+              issueDistribution
+            }
           }
         },
         {
@@ -603,13 +610,15 @@ class VideoWorker {
           lcp: mobileLcpMetric?.mobile || mobileLcpMetric?.desktop || 'N/A',
           tbt: mobileTbtMetric?.mobile || mobileTbtMetric?.desktop || 'N/A',
           fcp: mobileFcpMetric?.mobile || mobileFcpMetric?.desktop || 'N/A',
-          cls: mobileClsMetric?.mobile || mobileClsMetric?.desktop || 'N/A'
+          cls: mobileClsMetric?.mobile || mobileClsMetric?.desktop || 'N/A',
+          score: performanceMetrics?.mobileScore || 0
         },
         desktop: {
           lcp: desktopLcpMetric?.desktop || desktopLcpMetric?.mobile || 'N/A',
           tbt: desktopTbtMetric?.desktop || desktopTbtMetric?.mobile || 'N/A',
           fcp: desktopFcpMetric?.desktop || desktopFcpMetric?.mobile || 'N/A',
-          cls: desktopClsMetric?.desktop || desktopClsMetric?.mobile || 'N/A'
+          cls: desktopClsMetric?.desktop || desktopClsMetric?.mobile || 'N/A',
+          score: performanceMetrics?.desktopScore || 0
         }
       };
     } catch (error) {
@@ -619,13 +628,15 @@ class VideoWorker {
           lcp: 'N/A',
           tbt: 'N/A',
           fcp: 'N/A',
-          cls: 'N/A'
+          cls: 'N/A',
+          score: 0
         },
         desktop: {
           lcp: 'N/A',
           tbt: 'N/A',
           fcp: 'N/A',
-          cls: 'N/A'
+          cls: 'N/A',
+          score: 0
         }
       };
     }

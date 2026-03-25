@@ -7,15 +7,15 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    topIssues: {
-      medium: Array<{
-        issue: string;
-        severity: string;
-        pages: number;
-        count: number;
-        recommendation: string;
-      }>;
-    };
+    issues: Array<{
+      issue: string;
+      severity: string;
+      pages: number;
+      count: number;
+      recommendation: string;
+    }>;
+    count: number;
+    totalMedium: number;
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -39,20 +39,23 @@ export const MediumIssuesSlide: React.FC<Props> = ({
     return null;
   }
 
-  console.log("MediumIssuesSlide Data:", data);
+  console.log("Medium Issues:", {
+    total: data.totalMedium,
+    shown: data.count,
+    issues: data.issues
+  });
   
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const mediumIssues = data?.topIssues?.medium || [];
+  const mediumIssues = data?.issues || [];
+  const totalMedium = data?.totalMedium || 0;
 
   // Safety check - ensure we have an array
   if (!Array.isArray(mediumIssues)) {
-    console.warn("MediumIssuesSlide: data.topIssues.medium is not an array, using fallback");
+    console.warn("MediumIssuesSlide: data.issues is not an array, using fallback");
     return null;
   }
-
-  const issuesToShow = mediumIssues.length > 0 ? mediumIssues : [];
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -130,7 +133,7 @@ export const MediumIssuesSlide: React.FC<Props> = ({
               fontFamily: "sans-serif",
             }}
           >
-            {issuesToShow.length} issue{issuesToShow.length !== 1 ? 's' : ''} for optimization
+            {totalMedium} medium-priority issues detected
           </div>
         </div>
 
@@ -143,7 +146,7 @@ export const MediumIssuesSlide: React.FC<Props> = ({
             gap: 20,
           }}
         >
-          {issuesToShow.map((item, i) => {
+          {mediumIssues.map((item, i) => {
             const itemDelay = 12 + i * 6;
             const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 18], [0, 1], {
               extrapolateLeft: "clamp",
