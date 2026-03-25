@@ -19,7 +19,7 @@ export const GaugeScore: React.FC<GaugeScoreProps> = ({
   const frame = useCurrentFrame();
 
   const animatedScore = Math.round(
-    interpolate(frame, [startFrame, startFrame + 50], [0, score], {
+    interpolate(frame, [startFrame, startFrame + 50], [0, Number(score) || 0], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     })
@@ -33,7 +33,7 @@ export const GaugeScore: React.FC<GaugeScoreProps> = ({
   const animatedDash = interpolate(
     frame,
     [startFrame, startFrame + 50],
-    [0, (score / 100) * circumference],
+    [0, ((Number(score) || 0) / 100) * circumference],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 

@@ -133,53 +133,82 @@ class VideoWorker {
           hasAuditSnapshot: !!auditSnapshot
         });
         
-        // Step 1: Generate 11 structured slides using auditSnapshot only
-        console.log(`[VIDEO_WORKER] Generating 11 structured slides from audit data...`);
+        // Step 1: Generate 10 structured slides using auditSnapshot only
+        console.log(`[VIDEO_WORKER] Generating 10 structured slides from audit data...`);
         const structuredSlides = this.generateStructuredSlides(audit);
         
         if (!structuredSlides || structuredSlides.length === 0) {
           throw new Error(`Slides generation failed - no slides created`);
         }
         
-        if (structuredSlides.length !== 11) {
-          throw new Error(`Failed to generate exactly 11 slides. Got ${structuredSlides?.length || 0} slides`);
+        if (structuredSlides.length !== 10) {
+          throw new Error(`Failed to generate exactly 10 slides. Got ${structuredSlides?.length || 0} slides`);
         }
         
         console.log(`[VIDEO_WORKER] ✅ Created ${structuredSlides.length} structured slides`);
         console.log(`[VIDEO_WORKER] SLIDES COUNT:`, structuredSlides.length);
         
-        // Step 2: Generate concatenated audio from all slide narrations
-        console.log(`[VIDEO_WORKER] Generating concatenated audio from ${structuredSlides.length} slides...`);
-        const audioPath = await this.generatePerSlideAudio(structuredSlides, projectId);
-        console.log(`[VIDEO_WORKER] ✅ Generated concatenated audio: ${audioPath}`);
+        // Step 2: Generate separate audio for each slide
+        console.log(`[VIDEO_WORKER] Generating separate audio for ${structuredSlides.length} slides...`);
+        const audioFiles = await this.generatePerSlideAudio(structuredSlides, projectId);
+        console.log(`[VIDEO_WORKER] ✅ Generated ${audioFiles.length} separate audio files`);
+        
+        // Attach audio files to slides
+        const slidesWithAudio = structuredSlides.map((slide, index) => {
+          const audioFile = audioFiles.find(audio => audio.slideIndex === index + 1);
+          if (!audioFile) {
+            throw new Error(`Missing audio file for slide ${index + 1}`);
+          }
+          
+          console.log(`[VIDEO_WORKER] 🔍 Validating audio file for slide ${index + 1}:`);
+          console.log(`[VIDEO_WORKER]   Audio URL: ${audioFile.audioPath}`);
+          console.log(`[VIDEO_WORKER]   Duration: ${audioFile.duration.toFixed(2)} seconds`);
+          
+          // Validate audio file exists on disk
+          const filename = audioFile.audioPath.replace('http://localhost:5000/audio/', '').replace('.mp3', '');
+          if (!this.audioService.audioExists(filename)) {
+            throw new Error(`Audio file not found on disk for slide ${index + 1}: ${filename}`);
+          }
+          
+          console.log(`[VIDEO_WORKER]   ✅ File exists on disk`);
+          
+          return {
+            ...slide,
+            audio: audioFile.audioPath,
+            duration: audioFile.duration,
+            durationInFrames: Math.round(audioFile.duration * 30) // Assuming 30 FPS
+          };
+        });
+        
+        console.log(`[VIDEO_WORKER] ✅ Attached audio to all slides`);
         
         // Step 3: FAIL SAFE RENDER - Validate before rendering
-        console.log(`[VIDEO_WORKER] Starting video render with structured slides...`);
+        console.log(`[VIDEO_WORKER] Starting video render with slides and per-slide audio...`);
         
         // Fail-safe validation before rendering
-        if (!structuredSlides || structuredSlides.length === 0) {
+        if (!slidesWithAudio || slidesWithAudio.length === 0) {
           throw new Error("Slides generation failed - cannot render video without slides");
         }
         
-        if (!audioPath) {
+        if (!audioFiles || audioFiles.length === 0) {
           throw new Error("Audio generation failed - cannot render video without audio");
         }
         
         console.log(`[VIDEO_WORKER] ✅ Fail-safe validation passed - proceeding with render`);
         
-        const videoPath = await this.renderVideoWithSlides(projectId, audioPath, structuredSlides, audit);
+        const videoPath = await this.renderVideoWithSlides(projectId, slidesWithAudio, audit);
         console.log(`[VIDEO_WORKER] Render done | path=${videoPath}`);
         
         // Step 4: Update job with results
         await this.updateJobStatus(jobId, 'completed', {
           result_data: {
             videoUrl: `http://localhost:5000/videos/${projectId}.mp4`,
-            audioUrl: audioPath,
+            audioFiles: audioFiles,
             processingTime: Date.now(),
             retryCount,
             slidesGenerated: structuredSlides.length,
-            audioFilesGenerated: 1,
-            providerUsed: 'structured_audit_data_only'
+            audioFilesGenerated: audioFiles.length,
+            providerUsed: 'per_slide_audio_generation'
           }
         });
         
@@ -272,14 +301,14 @@ class VideoWorker {
   }
 
   /**
-   * Generate 11 structured slides using auditSnapshot data only
+   * Generate 10 structured slides using auditSnapshot data only
    * @param {Object} audit - Audit data snapshot
-   * @returns {Array} Array of 11 structured slide objects
+   * @returns {Array} Array of 10 structured slide objects
    */
   generateStructuredSlides(audit) {
     try {
-      console.log(`[VIDEO_WORKER] 🎬 Generating 11 structured slides from audit data`);
-      console.log(`[VIDEO_WORKER] � audit available:`, !!audit);
+      console.log(`[VIDEO_WORKER] 🎬 Generating 10 structured slides from audit data`);
+      console.log(`[VIDEO_WORKER] ✅ audit available:`, !!audit);
       
       // Safety checks
       if (!audit || typeof audit !== 'object') {
@@ -290,44 +319,45 @@ class VideoWorker {
       const projectName = audit?.projectName || 'Website';
       const url = audit?.url || 'N/A';
       const scores = audit?.scores || {};
+      const pagesCrawled = audit?.pagesCrawled || 0;
       
-      // SAFE ACCESS: Use optional chaining and fallbacks for issueDistribution
+      // Use EXACT issueDistribution from auditSnapshot - NO critical field
       const issueDistribution = audit?.issueDistribution || {};
       
-      // SAFE ACCESS: Use optional chaining and fallbacks for topIssues
+      // Extract top issues
       const topIssues = audit?.topIssues || {};
-      const criticalIssues = topIssues?.critical || [];
       const highIssues = topIssues?.high || [];
       const mediumIssues = topIssues?.medium || [];
       const lowIssues = topIssues?.low || [];
       
-      // SAFE ACCESS: Create issueCounts with fallbacks
-      const issueCounts = {
-        critical: issueDistribution?.critical || 0,
-        high: issueDistribution?.high || 0,
-        medium: issueDistribution?.medium || 0,
-        low: issueDistribution?.low || 0,
-        total: issueDistribution?.total || 0
-      };
-      
+      // Extract technical highlights - NO duplication
       const technicalHighlights = audit?.technicalHighlights || {};
+      
+      // Extract performance metrics
       const performanceMetrics = audit?.performanceMetrics || {};
+      
+      // Extract Core Web Vitals dynamically from performanceMetrics
+      const coreWebVitals = this.extractCoreWebVitals(performanceMetrics);
+      
+      // Extract AI analysis
       const aiAnalysis = audit?.aiAnalysis || {};
       
       console.log(`[VIDEO_WORKER] 📈 Extracted data - Project: ${projectName}, Overall Score: ${scores.overall}`);
       
-      // Create exactly 11 structured slides with narration
+      // Create exactly 10 structured slides with clean data mapping
       const slides = [
         {
           id: 1,
           type: "projectOverview",
           title: projectName,
           subtitle: url,
-          narration: `Welcome to your comprehensive SEO audit for ${projectName}. This analysis provides insights into your website's performance and areas for improvement.`,
+          narration: `Welcome to your comprehensive SEO audit for ${projectName}. We analyzed ${pagesCrawled} pages of your website to generate this report.`,
           data: {
             projectName,
             url,
-            scores: scores
+            pagesCrawled,
+            scores,
+            issueDistribution
           }
         },
         {
@@ -337,7 +367,7 @@ class VideoWorker {
           subtitle: `Score: ${scores.overall || 0}/100`,
           narration: `Your overall performance score is ${scores.overall || 0} out of 100. Your SEO score is ${scores.seo || 0}, performance is ${scores.performance || 0}, and AI visibility is ${scores.aiVisibility || 0}.`,
           data: {
-            scores: scores,
+            scores,
             overall: scores.overall || 0
           }
         },
@@ -345,44 +375,44 @@ class VideoWorker {
           id: 3,
           type: "issueDistribution",
           title: "Issue Distribution",
-          subtitle: `${issueCounts.total} Total Issues`,
-          narration: `We found a total of ${issueCounts.total || 0} issues across your website. Critical issues: ${issueCounts.critical || 0}, high: ${issueCounts.high || 0}, medium: ${issueCounts.medium || 0}, low: ${issueCounts.low || 0}.`,
+          subtitle: `${issueDistribution.total || 0} Total Issues`,
+          narration: `We found a total of ${issueDistribution.total || 0} issues, including ${issueDistribution.high || 0} high, ${issueDistribution.medium || 0} medium, and ${issueDistribution.low || 0} low priority issues.`,
           data: {
-            issueDistribution: issueCounts,
-            total: issueCounts.total
+            issueDistribution,
+            total: issueDistribution.total || 0
           }
         },
         {
           id: 4,
           type: "highIssues",
           title: "High Priority Issues",
-          subtitle: `${issueCounts.high} High Issues`,
-          narration: `Your website has ${issueDistribution.high || 0} high-priority issues that require immediate attention. These issues are significantly impacting your search rankings and user experience.`,
+          subtitle: `${highIssues.length} High Issues`,
+          narration: this.generateIssueNarration(issueDistribution.high || 0, highIssues.length, 'high'),
           data: {
             issues: highIssues,
-            count: issueCounts.high
+            count: highIssues.length
           }
         },
         {
           id: 5,
           type: "mediumIssues",
           title: "Medium Priority Issues",
-          subtitle: `${issueCounts.medium} Medium Issues`,
-          narration: `There are ${issueDistribution.medium || 0} medium-priority issues that should be addressed. While not critical, these issues provide opportunities for steady improvement.`,
+          subtitle: `${mediumIssues.length} Medium Issues`,
+          narration: this.generateIssueNarration(issueDistribution.medium || 0, mediumIssues.length, 'medium'),
           data: {
             issues: mediumIssues,
-            count: issueCounts.medium
+            count: mediumIssues.length
           }
         },
         {
           id: 6,
           type: "lowIssues",
           title: "Low Priority Issues",
-          subtitle: `${issueCounts.low} Low Issues`,
-          narration: `We identified ${issueDistribution.low || 0} low-priority issues. These minor optimizations can be addressed during routine maintenance for incremental improvements.`,
+          subtitle: `${lowIssues.length} Low Issues`,
+          narration: this.generateIssueNarration(issueDistribution.low || 0, lowIssues.length, 'low'),
           data: {
             issues: lowIssues,
-            count: issueCounts.low
+            count: lowIssues.length
           }
         },
         {
@@ -390,64 +420,51 @@ class VideoWorker {
           type: "technicalHighlights",
           title: "Technical Highlights",
           subtitle: "Technical SEO Overview",
-          narration: `From a technical perspective, your website's infrastructure shows areas for improvement. Technical SEO forms the foundation for all other optimization efforts.`,
+          narration: this.generateTechnicalNarration(technicalHighlights),
           data: {
-            technicalHighlights: technicalHighlights,
-            checks: technicalHighlights.checks || []
+            technicalHighlights
           }
         },
         {
           id: 8,
-          type: "criticalTechnicalIssue",
-          title: "Critical Technical Issue",
-          subtitle: "Security Headers Analysis",
-          narration: `A critical security issue has been detected. Security headers are missing, which exposes your website to potential security vulnerabilities and affects user trust.`,
-          data: {
-            criticalIssues: technicalHighlights?.criticalIssues || [],
-            securityHeaders: this.findSecurityHeaderIssues(technicalHighlights)
-          }
-        },
-        {
-          id: 9,
           type: "performanceSummary",
           title: "Performance Summary",
           subtitle: `Performance Score: ${performanceMetrics.pageSpeed || 0}`,
-          narration: `Your website performance shows room for improvement. Mobile users experience a score of ${performanceMetrics.mobileScore || 0}, while desktop scores ${performanceMetrics.desktopScore || 0}.`,
+          narration: `Your website performance score is ${performanceMetrics.pageSpeed || 0}. Mobile performance is ${performanceMetrics.mobileScore || 0}, while desktop performance is ${performanceMetrics.desktopScore || 0}, indicating areas for improvement.`,
           data: {
-            performanceMetrics: performanceMetrics,
+            pageSpeed: performanceMetrics.pageSpeed || 0,
             mobileScore: performanceMetrics.mobileScore || 0,
             desktopScore: performanceMetrics.desktopScore || 0
           }
         },
         {
-          id: 10,
+          id: 9,
           type: "coreWebVitals",
           title: "Core Web Vitals",
           subtitle: "User Experience Metrics",
-          narration: `Core Web Vitals measure user experience loading performance, interactivity, and visual stability. These metrics directly impact your search rankings and user satisfaction.`,
-          data: {
-            metrics: performanceMetrics.metrics || [],
-            lcp: performanceMetrics.lcp || 'N/A',
-            tbt: performanceMetrics.tbt || 'N/A'
-          }
+          narration: this.generateCoreWebVitalsNarration(coreWebVitals),
+          data: coreWebVitals
         },
         {
-          id: 11,
+          id: 10,
           type: "aiAnalysis",
           title: "AI Visibility Analysis",
           subtitle: `AI Score: ${aiAnalysis.score || 0}`,
-          narration: `Your AI visibility score is ${aiAnalysis.score || 0}, indicating how well your content is optimized for AI-powered search systems. Schema markup implementations: ${aiAnalysis.schemaMarkupCount || 0}.`,
+          narration: `Your AI visibility score is ${aiAnalysis.score || 0}. Currently, your website has ${aiAnalysis.schemaMarkupCount || 0} schema implementations, indicating opportunities to improve AI search optimization.`,
           data: {
-            aiAnalysis: aiAnalysis,
+            aiAnalysis,
             score: aiAnalysis.score || 0,
             schemaMarkupCount: aiAnalysis.schemaMarkupCount || 0
           }
         }
       ];
       
-      // Validate we have exactly 11 slides
-      if (slides.length !== 11) {
-        throw new Error(`Expected 11 slides, got ${slides.length}`);
+      // DEBUG LOG: Final slides data before returning
+      console.log("FINAL SLIDES DATA:", JSON.stringify(slides, null, 2));
+      
+      // Validate we have exactly 10 slides
+      if (slides.length !== 10) {
+        throw new Error(`Expected 10 slides, got ${slides.length}`);
       }
       
       // Validate each slide has required fields
@@ -467,56 +484,182 @@ class VideoWorker {
   }
 
   /**
-   * Generate single concatenated audio from all slide narrations
-   * @param {Array} structuredSlides - Array of slide objects
-   * @param {string} projectId - Project ID
-   * @returns {Promise<string>} Single audio file path
+   * Generate dynamic narration for issue slides based on total vs shown counts
+   * @param {number} totalCount - Total issues from auditSnapshot.issueDistribution
+   * @param {number} shownCount - Number of issues shown (data.issues.length)
+   * @param {string} issueType - Type of issues ('high', 'medium', 'low')
+   * @returns {string} Formatted narration text
    */
-  async generatePerSlideAudio(structuredSlides, projectId) {
-    try {
-      console.log(`[VIDEO_WORKER] 🎙️ Generating concatenated audio from ${structuredSlides.length} slides`);
-      
-      // Combine all slide narrations into one script
-      const fullNarration = structuredSlides
-        .map((slide, index) => {
-          console.log(`[VIDEO_WORKER] 🎬 Slide ${index + 1}: ${slide.title}`);
-          console.log(`[VIDEO_WORKER] 📝 Narration: "${slide.narration.substring(0, 100)}..."`);
-          return slide.narration;
-        })
-        .join('\n\n');
-      
-      console.log(`[VIDEO_WORKER] 📝 Full narration length: ${fullNarration.length} characters`);
-      
-      // Generate single audio file from all narrations
-      const audioPath = await this.audioService.generateAudioFromText(fullNarration, projectId);
-      
-      console.log(`[VIDEO_WORKER] ✅ Generated single concatenated audio: ${audioPath}`);
-      return audioPath;
-      
-    } catch (error) {
-      console.error('[VIDEO_WORKER] ❌ Error generating concatenated audio:', error);
-      throw error;
+  generateIssueNarration(totalCount, shownCount, issueType) {
+    if (shownCount < totalCount) {
+      return `Your website has ${totalCount} ${issueType}-priority issues. Showing the top ${shownCount} most important issues that need attention.`;
+    } else {
+      return `Your website has ${totalCount} ${issueType}-priority issues that need attention.`;
     }
   }
 
   /**
-   * Find security header issues from technical highlights
-   * @param {Object} technicalHighlights - Technical data
-   * @returns {Array} Security header issues
+   * Generate narration for technical highlights slide
+   * @param {Object} technicalHighlights - Technical highlights data
+   * @returns {string} Formatted narration text
    */
-  findSecurityHeaderIssues(technicalHighlights) {
-    try {
-      const checks = technicalHighlights.checks || [];
-      return checks.filter(check => 
-        check.name?.toLowerCase().includes('security') || 
-        check.name?.toLowerCase().includes('header') ||
-        check.detail?.toLowerCase().includes('security')
-      );
-    } catch (error) {
-      console.warn(`[VIDEO_WORKER] ⚠️ Error finding security header issues:`, error.message);
-      return [];
+  generateTechnicalNarration(technicalHighlights) {
+    const firstFailingCheck = this.extractFirstFailingCheck(technicalHighlights);
+    if (firstFailingCheck) {
+      return `From a technical perspective, your website shows a mix of strengths and issues. Key areas such as ${firstFailingCheck} need attention, while several other aspects are properly configured.`;
+    } else {
+      return `From a technical perspective, your website shows a mix of strengths and issues. Several aspects are properly configured while others need attention.`;
     }
   }
+
+  /**
+   * Extract the first FAIL or WARN item from technical highlights
+   * @param {Object} technicalHighlights - Technical highlights data
+   * @returns {string|null} Name of first failing check or null
+   */
+  extractFirstFailingCheck(technicalHighlights) {
+    if (!technicalHighlights || typeof technicalHighlights !== 'object') {
+      return null;
+    }
+    
+    // Look for checks array or similar structure
+    const checks = technicalHighlights.checks || technicalHighlights.items || [];
+    
+    for (const check of checks) {
+      if (check.status === 'FAIL' || check.status === 'WARN') {
+        return check.name || check.check || check.title || 'technical issue';
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Generate narration for Core Web Vitals slide
+   * @param {Object} coreWebVitals - Core Web Vitals data
+   * @returns {string} Formatted narration text
+   */
+  generateCoreWebVitalsNarration(coreWebVitals) {
+    const mobile = coreWebVitals?.mobile || {};
+    const desktop = coreWebVitals?.desktop || {};
+    
+    return `Core Web Vitals show that on mobile, Largest Contentful Paint is ${mobile.lcp || 'N/A'} and Total Blocking Time is ${mobile.tbt || 'N/A'}. On desktop, LCP is ${desktop.lcp || 'N/A'} and TBT is ${desktop.tbt || 'N/A'}, reflecting differences in performance across devices.`;
+  }
+
+  /**
+   * Extract Core Web Vitals from performance metrics dynamically - BOTH mobile and desktop
+   * @param {Object} performanceMetrics - Performance metrics object
+   * @returns {Object} Core Web Vitals values for mobile and desktop
+   */
+  extractCoreWebVitals(performanceMetrics) {
+    try {
+      const mobileMetrics = performanceMetrics?.metrics || [];
+      const desktopMetrics = performanceMetrics?.desktopMetrics || [];
+      
+      // Extract mobile metrics
+      const mobileLcpMetric = mobileMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('largest contentful paint') ||
+        metric?.metric?.toLowerCase().includes('lcp')
+      );
+      
+      const mobileTbtMetric = mobileMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('total blocking time') ||
+        metric?.metric?.toLowerCase().includes('tbt')
+      );
+      
+      const mobileFcpMetric = mobileMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('first contentful paint') ||
+        metric?.metric?.toLowerCase().includes('fcp')
+      );
+      
+      const mobileClsMetric = mobileMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('cumulative layout shift') ||
+        metric?.metric?.toLowerCase().includes('cls')
+      );
+      
+      // Extract desktop metrics
+      const desktopLcpMetric = desktopMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('largest contentful paint') ||
+        metric?.metric?.toLowerCase().includes('lcp')
+      );
+      
+      const desktopTbtMetric = desktopMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('total blocking time') ||
+        metric?.metric?.toLowerCase().includes('tbt')
+      );
+      
+      const desktopFcpMetric = desktopMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('first contentful paint') ||
+        metric?.metric?.toLowerCase().includes('fcp')
+      );
+      
+      const desktopClsMetric = desktopMetrics.find(metric => 
+        metric?.metric?.toLowerCase().includes('cumulative layout shift') ||
+        metric?.metric?.toLowerCase().includes('cls')
+      );
+      
+      return {
+        mobile: {
+          lcp: mobileLcpMetric?.mobile || mobileLcpMetric?.desktop || 'N/A',
+          tbt: mobileTbtMetric?.mobile || mobileTbtMetric?.desktop || 'N/A',
+          fcp: mobileFcpMetric?.mobile || mobileFcpMetric?.desktop || 'N/A',
+          cls: mobileClsMetric?.mobile || mobileClsMetric?.desktop || 'N/A'
+        },
+        desktop: {
+          lcp: desktopLcpMetric?.desktop || desktopLcpMetric?.mobile || 'N/A',
+          tbt: desktopTbtMetric?.desktop || desktopTbtMetric?.mobile || 'N/A',
+          fcp: desktopFcpMetric?.desktop || desktopFcpMetric?.mobile || 'N/A',
+          cls: desktopClsMetric?.desktop || desktopClsMetric?.mobile || 'N/A'
+        }
+      };
+    } catch (error) {
+      console.warn(`[VIDEO_WORKER] ⚠️ Error extracting Core Web Vitals:`, error.message);
+      return {
+        mobile: {
+          lcp: 'N/A',
+          tbt: 'N/A',
+          fcp: 'N/A',
+          cls: 'N/A'
+        },
+        desktop: {
+          lcp: 'N/A',
+          tbt: 'N/A',
+          fcp: 'N/A',
+          cls: 'N/A'
+        }
+      };
+    }
+  }
+
+  /**
+   * Generate separate audio files for each slide using AudioService
+   * @param {Array} structuredSlides - Array of slide objects
+   * @param {string} projectId - Project ID
+   * @returns {Promise<Array>} Array of audio file information
+   */
+  async generatePerSlideAudio(structuredSlides, projectId) {
+    try {
+      console.log(`[VIDEO_WORKER] 🎙️ Delegating per-slide audio generation to AudioService`);
+      
+      // Use AudioService to generate separate audio files
+      const audioFiles = await this.audioService.generatePerSlideAudio(structuredSlides, projectId);
+      
+      console.log(`[VIDEO_WORKER] ✅ AudioService generated ${audioFiles.length} audio files`);
+      
+      // Log each audio file details
+      audioFiles.forEach((audioFile, index) => {
+        console.log(`[VIDEO_WORKER] 🎵 Slide ${audioFile.slideIndex}: ${audioFile.audioPath} (${audioFile.duration.toFixed(2)}s)`);
+      });
+      
+      return audioFiles;
+      
+    } catch (error) {
+      console.error('[VIDEO_WORKER] ❌ Error generating per-slide audio:', error);
+      throw error;
+    }
+  }
+
+  // NOTE: findSecurityHeaderIssues function removed as criticalTechnicalIssue slide is no longer generated
 
   async fetchVideoData(projectId) {
     try {
@@ -541,7 +684,7 @@ class VideoWorker {
     }
   }
 
-  async renderVideoWithSlides(projectId, audioPath, structuredSlides, auditSnapshot) {
+  async renderVideoWithSlides(projectId, slidesWithAudio, auditSnapshot) {
     try {
       // Dynamic video output path using environment variable or resolved path
       const videoDir = path.join(this.backendPublicPath, 'videos');
@@ -558,15 +701,22 @@ class VideoWorker {
         console.log(`[VIDEO_WORKER] ✅ Videos directory exists: ${videoDir}`);
       }
       
-      // Validate audio path accessibility
-      console.log(`[VIDEO_WORKER] 🎵 Using audio file: ${audioPath}`);
+      // Validate slides with audio
+      console.log(`[VIDEO_WORKER] 🎵 Using ${slidesWithAudio.length} slides with per-slide audio`);
       
-      // Prepare input data for Remotion with structured slides and single audio URL
+      // Calculate total video duration based on slide audio durations
+      const totalDuration = slidesWithAudio.reduce((sum, slide) => sum + slide.duration, 0);
+      const totalDurationInFrames = Math.round(totalDuration * 30); // Convert to frames at 30 FPS
+      console.log(`[VIDEO_WORKER] 🕐 Total video duration: ${totalDuration.toFixed(2)} seconds`);
+      console.log(`[VIDEO_WORKER] 🎞️ Total duration frames: ${totalDurationInFrames} frames`);
+      
+      // Prepare input data for Remotion with slides and per-slide audio - CLEAN OUTPUT
       const inputData = {
-        audioUrl: audioPath,  // Single audio URL for entire video
         projectId: projectId,
-        structuredSlides: structuredSlides,
-        auditSnapshot: auditSnapshot
+        slidesWithAudio: slidesWithAudio,
+        fps: 30, // Frame rate for duration calculation
+        durationInFrames: totalDurationInFrames, // Dynamic total duration
+        totalDuration: totalDuration // Pass total duration in seconds for reference
       };
       
       const inputDataPath = path.join(__dirname, 'temp', `${projectId}-input.json`);
@@ -575,9 +725,13 @@ class VideoWorker {
       }
       fs.writeFileSync(inputDataPath, JSON.stringify(inputData, null, 2));
       
+      // DEBUG LOG: Final temp JSON data
+      console.log("FINAL SLIDES DATA:", JSON.stringify(slidesWithAudio, null, 2));
+      
       console.log(`[VIDEO_WORKER] 🎬 Starting Remotion render for projectId=${projectId}`);
-      console.log(`[VIDEO_WORKER] 📊 Structured slides: ${structuredSlides.length}`);
-      console.log(`[VIDEO_WORKER] 🎵 Audio file: ${audioPath}`);
+      console.log(`[VIDEO_WORKER] 📊 Slides with audio: ${slidesWithAudio.length}`);
+      console.log(`[VIDEO_WORKER] 🕐 Total duration: ${totalDuration.toFixed(2)} seconds`);
+      console.log(`[VIDEO_WORKER] 🎞️ Total frames: ${totalDurationInFrames} frames (dynamic)`);
       console.log(`[VIDEO_WORKER] 📹 Video output: ${videoPath}`);
       
       return new Promise((resolve, reject) => {
@@ -602,6 +756,7 @@ class VideoWorker {
           'AuditVideo',
           videoPath,
           `--props=${inputDataPath}`,
+          `--duration=${totalDurationInFrames}`, // Dynamic duration override
           '--codec', 'h264',
           '--pixel-format', 'yuv420p'
         ];
@@ -781,6 +936,7 @@ class VideoWorker {
           'AuditVideo',
           videoPath,
           `--props=${inputDataPath}`,
+          `--duration=${totalDurationInFrames}`, // Dynamic duration override
           '--codec', 'h264',
           '--pixel-format', 'yuv420p'
         ];

@@ -7,13 +7,15 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    issues: Array<{
-      title: string;
-      affected_count?: number;
-      severity?: string;
-      impact?: string;
-    }>;
-    count?: number;
+    topIssues: {
+      medium: Array<{
+        issue: string;
+        severity: string;
+        pages: number;
+        count: number;
+        recommendation: string;
+      }>;
+    };
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -42,25 +44,15 @@ export const MediumIssuesSlide: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const mediumIssues = data?.issues || [];
+  const mediumIssues = data?.topIssues?.medium || [];
 
   // Safety check - ensure we have an array
   if (!Array.isArray(mediumIssues)) {
-    console.warn("MediumIssuesSlide: data.issues is not an array, using fallback");
+    console.warn("MediumIssuesSlide: data.topIssues.medium is not an array, using fallback");
     return null;
   }
 
-  // Fallback issues if none provided
-  const fallbackIssues = [
-    "Title Tag Length Issues",
-    "Meta Description Optimization",
-    "Content Length Variations",
-    "Heading Structure (H2-H6)",
-    "Image File Names Not SEO-Friendly",
-    "Missing Structured Data"
-  ];
-
-  const issuesToShow = mediumIssues.length > 0 ? mediumIssues : fallbackIssues.slice(0, 6);
+  const issuesToShow = mediumIssues.length > 0 ? mediumIssues : [];
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -151,8 +143,7 @@ export const MediumIssuesSlide: React.FC<Props> = ({
             gap: 20,
           }}
         >
-          {issuesToShow.map((issue, i) => {
-            const issueTitle = typeof issue === 'string' ? issue : issue.title;
+          {issuesToShow.map((item, i) => {
             const itemDelay = 12 + i * 6;
             const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 18], [0, 1], {
               extrapolateLeft: "clamp",
@@ -207,7 +198,7 @@ export const MediumIssuesSlide: React.FC<Props> = ({
                       lineHeight: 1.3,
                     }}
                   >
-                    {issueTitle}
+                    {item.issue}
                   </div>
                   <div
                     style={{
@@ -217,7 +208,7 @@ export const MediumIssuesSlide: React.FC<Props> = ({
                       lineHeight: 1.4,
                     }}
                   >
-                    Moderate impact on SEO performance
+                    {item.recommendation}
                   </div>
                 </div>
               </div>

@@ -9,7 +9,6 @@ interface Props {
   data: {
     issueDistribution: {
       total: number;
-      critical: number;
       high: number;
       medium: number;
       low: number;
@@ -39,22 +38,19 @@ export const IssueDistributionSlide: React.FC<Props> = ({
 
   const issueDistribution = data?.issueDistribution || {
     total: 0,
-    critical: 0,
     high: 0,
     medium: 0,
     low: 0
   };
 
   const severityData = [
-    { label: "Critical", count: issueDistribution?.critical || 0, color: "#ff3860", icon: "🚨" },
     { label: "High", count: issueDistribution?.high || 0, color: "#ff6b35", icon: "⚠️" },
     { label: "Medium", count: issueDistribution?.medium || 0, color: "#ffb703", icon: "⚡" },
     { label: "Low", count: issueDistribution?.low || 0, color: "#00dfff", icon: "ℹ️" },
   ];
 
   const totalCount = issueDistribution?.total || 
-    (issueDistribution?.critical || 0) + (issueDistribution?.high || 0) + 
-    (issueDistribution?.medium || 0) + (issueDistribution?.low || 0);
+    (issueDistribution?.high || 0) + (issueDistribution?.medium || 0) + (issueDistribution?.low || 0);
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -169,7 +165,7 @@ export const IssueDistributionSlide: React.FC<Props> = ({
                 lineHeight: 1.4,
               }}
             >
-              Address {(issueDistribution?.critical || 0)} critical{(issueDistribution?.critical || 0) !== 1 ? 's' : ''} and {(issueDistribution?.high || 0)} high-priority issue{(issueDistribution?.high || 0) !== 1 ? 's' : ''} first for maximum impact
+              Focus on {(issueDistribution?.high || 0)} high-priority issue{(issueDistribution?.high || 0) !== 1 ? 's' : ''} first for maximum impact
             </div>
           </div>
         </div>
@@ -267,8 +263,7 @@ export const IssueDistributionSlide: React.FC<Props> = ({
               }}
             >
               💡 <strong style={{ color: "#eef2ff" }}>
-                {(issueDistribution?.critical || 0) > 0 ? "Immediate action required" : 
-                 (issueDistribution?.high || 0) > 2 ? "Focus on high-priority fixes" :
+                 {(issueDistribution?.high || 0) > 2 ? "Focus on high-priority fixes" :
                  "Good health - maintain standards"}
               </strong>
             </div>

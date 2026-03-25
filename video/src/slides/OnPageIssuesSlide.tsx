@@ -43,7 +43,7 @@ export const OnPageIssuesSlide: React.FC<Props> = ({
             </div>
           </div>
 
-          {data.issues.map((issue, i) => (
+              {(data?.issues || []).map((issue, i) => (
             <IssueCard
               key={issue.title}
               title={issue.title}
@@ -68,7 +68,7 @@ export const OnPageIssuesSlide: React.FC<Props> = ({
             </div>
           </div>
 
-          {data.quick_wins.map((win, i) => {
+          {(data?.quick_wins || []).map((win, i) => {
             const delay = 25 + i * 12;
             const op = interpolate(frame, [delay, delay + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const tx = interpolate(frame, [delay, delay + 18], [30, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });

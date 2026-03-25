@@ -7,13 +7,16 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    criticalIssues?: Array<{
-      name: string;
-      status: string;
-      severity?: string;
-      pages?: number;
-      description?: string;
-    }>;
+    auditSnapshot: {
+      technicalHighlights: {
+        criticalIssues?: Array<{
+          name: string;
+          status: string;
+          detail: string;
+          affected_pages: number;
+        }>;
+      };
+    };
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -37,25 +40,10 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const criticalIssues = data?.criticalIssues || [];
+  const criticalIssues = data?.auditSnapshot?.technicalHighlights?.criticalIssues || [];
 
-  // Debug logging to track data structure
-  console.log("CriticalTechnicalIssueSlide - criticalIssues:", criticalIssues);
-  if (criticalIssues.length > 0) {
-    console.log("CriticalTechnicalIssueSlide - first issue structure:", criticalIssues[0]);
-  }
-
-  // Focus on Security Headers as the critical issue
-  const securityHeadersIssue = criticalIssues.find(issue => {
-    console.log("Checking issue:", issue);
-    const issueName = issue?.name || "";
-    return issueName.toLowerCase().includes('security') || 
-           issueName.toLowerCase().includes('header');
-  }) || { name: "Security Headers Missing", status: "FAIL" };
-
-  // Use the securityHeadersIssue in the display
-  const displayIssue = securityHeadersIssue.name;
-  console.log("Selected displayIssue:", displayIssue);
+  // Use first critical issue dynamically
+  const issue = criticalIssues.length > 0 ? criticalIssues[0] : { name: "No Critical Issues", status: "PASS", detail: "All systems operating normally", affected_pages: 0 };
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -139,7 +127,7 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
               marginBottom: 16,
             }}
           >
-            Security Headers
+            {issue.name}
           </div>
           <div
             style={{
@@ -150,7 +138,7 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
               marginBottom: 12,
             }}
           >
-            FAIL
+            {issue.status}
           </div>
           <div
             style={{
@@ -159,7 +147,7 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
               fontFamily: "sans-serif",
             }}
           >
-            {displayIssue} - Critical vulnerability requiring immediate attention
+            {issue.name} - {issue.detail}
           </div>
         </div>
 
@@ -184,42 +172,26 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
                 marginBottom: 16,
               }}
             >
-              What's Missing
+              Issue Details
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                "Strict-Transport-Security (HSTS)",
-                "Content-Security-Policy (CSP)",
-                "X-Content-Type-Options",
-                "X-Frame-Options",
-                "Referrer-Policy"
-              ].map((header, i) => {
-                const itemDelay = 20 + i * 8;
-                const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 15], [0, 1], {
-                  extrapolateLeft: "clamp",
-                  extrapolateRight: "clamp",
-                });
-                return (
-                  <div
-                    key={header}
-                    style={{
-                      opacity: itemOpacity,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "14px 18px",
-                      background: "rgba(255,56,96,0.08)",
-                      border: "1px solid rgba(255,56,96,0.2)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3860", flexShrink: 0 }} />
-                    <span style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", fontFamily: "sans-serif" }}>
-                      {header}
-                    </span>
-                  </div>
-                );
-              })}
+            <div 
+              style={{
+                fontSize: 16,
+                color: "rgba(255,255,255,0.7)",
+                fontFamily: "sans-serif",
+                lineHeight: 1.5,
+                padding: "16px 20px",
+                background: "rgba(255,56,96,0.08)",
+                border: "1px solid rgba(255,56,96,0.2)",
+                borderRadius: 10,
+              }}
+            >
+              {issue.detail}
+              {issue.affected_pages > 0 && (
+                <div style={{ marginTop: 8, fontSize: 14, color: "rgba(255,255,255,0.5)" }}>
+                  Affects {issue.affected_pages} page{issue.affected_pages !== 1 ? 's' : ''}
+                </div>
+              )}
             </div>
           </div>
 
@@ -234,55 +206,25 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
                 marginBottom: 16,
               }}
             >
-              Security Risks
+              Affected Pages
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                { risk: "Man-in-the-Middle Attacks", level: "High" },
-                { risk: "Clickjacking Vulnerabilities", level: "Medium" },
-                { risk: "Cross-Site Scripting (XSS)", level: "High" },
-                { risk: "Data Injection Attacks", level: "High" },
-                { risk: "Content Type Sniffing", level: "Medium" }
-              ].map((item, i) => {
-                const itemDelay = 25 + i * 8;
-                const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 15], [0, 1], {
-                  extrapolateLeft: "clamp",
-                  extrapolateRight: "clamp",
-                });
-                const riskColor = item.level === "High" ? "#ff3860" : "#ffb703";
-                return (
-                  <div
-                    key={item.risk}
-                    style={{
-                      opacity: itemOpacity,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "14px 18px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <span style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", fontFamily: "sans-serif" }}>
-                      {item.risk}
-                    </span>
-                    <span
-                      style={{
-                        padding: "4px 10px",
-                        background: `${riskColor}15`,
-                        color: riskColor,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        fontFamily: "sans-serif",
-                        borderRadius: 6,
-                      }}
-                    >
-                      {item.level}
-                    </span>
-                  </div>
-                );
-              })}
+            <div 
+              style={{
+                fontSize: 24,
+                fontWeight: 800,
+                color: issue.status === 'FAIL' ? "#ff3860" : "#ffb703",
+                fontFamily: "sans-serif",
+                textAlign: "center",
+                padding: "20px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 10,
+              }}
+            >
+              {issue.affected_pages}
+              <div style={{ fontSize: 14, fontWeight: 400, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>
+                page{issue.affected_pages !== 1 ? 's' : ''} impacted
+              </div>
             </div>
           </div>
         </div>
@@ -298,27 +240,55 @@ export const CriticalTechnicalIssueSlide: React.FC<Props> = ({
             textAlign: "center",
           }}
         >
-          <div
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: "#ff3860",
-              fontFamily: "sans-serif",
-              marginBottom: 8,
-            }}
-          >
-            🚨 Immediate Action Required
-          </div>
-          <div
-            style={{
-              fontSize: 16,
-              color: "rgba(255,255,255,0.7)",
-              fontFamily: "sans-serif",
-              lineHeight: 1.5,
-            }}
-          >
-            Implement security headers within 24-48 hours to protect against critical security vulnerabilities and maintain user trust
-          </div>
+            {issue.status === 'FAIL' ? (
+              <>
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color: "#ff3860",
+                    fontFamily: "sans-serif",
+                    marginBottom: 8,
+                  }}
+                >
+                  🚨 Immediate Action Required
+                </div>
+                <div
+                  style={{
+                    fontSize: 16,
+                    color: "rgba(255,255,255,0.7)",
+                    fontFamily: "sans-serif",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Address this critical issue within 24-48 hours to maintain security and performance standards
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color: "#00f5a0",
+                    fontFamily: "sans-serif",
+                    marginBottom: 8,
+                  }}
+                >
+                  ✅ System Status: Good
+                </div>
+                <div
+                  style={{
+                    fontSize: 16,
+                    color: "rgba(255,255,255,0.7)",
+                    fontFamily: "sans-serif",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  No critical technical issues detected - continue monitoring for optimal performance
+                </div>
+              </>
+            )}
         </div>
       </div>
 

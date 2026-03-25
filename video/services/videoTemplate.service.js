@@ -39,7 +39,7 @@ class VideoTemplateService {
     const { scores, project, issueDistribution } = data;
     const scoreLevel = this.getScoreLevel(scores.overall);
     
-    return `Welcome to your website audit for ${project.name}. Your overall performance score is ${scores.overall}, which indicates ${scoreLevel}. We found ${issueDistribution.total} total issues across your site, with ${issueDistribution.critical} critical items requiring immediate attention. This analysis will walk you through the key areas impacting your digital presence and provide clear insights into how your website is performing in today's competitive landscape.`;
+    return `Welcome to your website audit for ${project.name}. Your overall performance score is ${scores.overall}, which indicates ${scoreLevel}. We found ${issueDistribution.total} total issues across your site, with ${issueDistribution.high} high-priority issues requiring attention. This analysis will walk you through the key areas impacting your digital presence and provide clear insights into how your website is performing in today's competitive landscape.`;
   }
 
   /**
@@ -52,7 +52,7 @@ class VideoTemplateService {
     const highIssues = topIssues.high || [];
     const mediumIssues = topIssues.medium || [];
     
-    let narration = `Your website has ${issueDistribution.critical} critical and ${issueDistribution.high} high-priority issues that are actively impacting user experience and search rankings. `;
+    let narration = `Your website has ${issueDistribution.high} high-priority and ${issueDistribution.medium} medium-priority issues that are actively impacting user experience and search rankings. `;
     
     if (highIssues.length > 0) {
       narration += `The main concerns include ${this.joinWithConjunction(highIssues.slice(0, 3))}. `;
@@ -74,12 +74,12 @@ class VideoTemplateService {
    */
   generateTechnicalNarration(data) {
     const { scores, technicalHighlights, topIssues } = data;
-    const criticalIssues = technicalHighlights.criticalIssues || [];
+    const failedChecks = (technicalHighlights.checks || []).filter(c => c.status === 'FAIL');
     
-    let narration = `From a technical perspective, your site has ${technicalHighlights.totalChecks} checks evaluated, with ${criticalIssues.length} critical failures that need immediate resolution. `;
+    let narration = `From a technical perspective, your site has ${technicalHighlights.totalChecks} checks evaluated, with ${failedChecks.length} major technical issues that need resolution. `;
     
-    if (criticalIssues.length > 0) {
-      narration += `The most pressing technical issues include ${this.joinWithConjunction(criticalIssues.slice(0, 3))}. `;
+    if (failedChecks.length > 0) {
+      narration += `The most pressing technical issues include ${this.joinWithConjunction(failedChecks.slice(0, 3))}. `;
     }
     
     narration += `These technical barriers prevent search engines from properly indexing your content and can significantly impact your organic visibility. Addressing these foundational issues will create a solid base for all other optimization efforts.`;
@@ -98,7 +98,21 @@ class VideoTemplateService {
     const desktopScore = performanceMetrics.desktopScore;
     const pageSpeed = performanceMetrics.pageSpeed;
     
-    return `Your website performance shows a mobile score of ${mobileScore} and desktop score of ${desktopScore}, with an overall page speed score of ${pageSpeed}. The loading time for your main content is ${performanceMetrics.lcp} seconds, and users experience ${performanceMetrics.tbt} milliseconds of input delay. In today's fast-paced digital environment, every millisecond counts—users form impressions about your brand within the first three seconds. Improving these performance metrics will directly enhance user engagement and search rankings.`;
+    const mobileMetrics = performanceMetrics.metrics || [];
+    const desktopMetrics = performanceMetrics.desktopMetrics || [];
+    
+    const getMetricValue = (arr, name, key) => {
+      const item = arr.find(m => m.metric === name);
+      return item ? item[key] : 'N/A';
+    };
+    
+    const mobileLCP = getMetricValue(mobileMetrics, 'Largest Contentful Paint', 'mobile');
+    const mobileTBT = getMetricValue(mobileMetrics, 'Total Blocking Time', 'mobile');
+    
+    const desktopLCP = getMetricValue(desktopMetrics, 'Largest Contentful Paint', 'desktop');
+    const desktopTBT = getMetricValue(desktopMetrics, 'Total Blocking Time', 'desktop');
+    
+    return `Your website performance shows a mobile score of ${mobileScore} and desktop score of ${desktopScore}, with an overall page Speed score of ${pageSpeed}. On mobile devices, your Largest Contentful Paint is ${mobileLCP} and Total Blocking Time is ${mobileTBT}. On desktop, your Largest Contentful Paint is ${desktopLCP} and Total Blocking Time is ${desktopTBT}. In today's fast-paced digital environment, every millisecond counts—users form impressions about your brand within the first three seconds. Improving these performance metrics will directly enhance user engagement and search rankings.`;
   }
 
   /**

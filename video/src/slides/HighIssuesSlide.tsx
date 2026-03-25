@@ -7,13 +7,15 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    issues: Array<{
-      title: string;
-      affected_count?: number;
-      severity?: string;
-      impact?: string;
-    }>;
-    count?: number;
+    topIssues: {
+      high: Array<{
+        issue: string;
+        severity: string;
+        pages: number;
+        count: number;
+        recommendation: string;
+      }>;
+    };
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -37,7 +39,7 @@ export const HighIssuesSlide: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const highIssues = data?.issues || [];
+  const highIssues = data?.topIssues?.high || [];
 
   // Safety check - ensure we have an array
   if (!Array.isArray(highIssues)) {
@@ -47,10 +49,10 @@ export const HighIssuesSlide: React.FC<Props> = ({
 
   // Fallback issues if none provided
   const fallbackIssues = [
-    "Missing Meta Descriptions",
-    "H1 Tag Optimization Needed", 
-    "Internal Linking Gaps",
-    "Image ALT Text Missing"
+    { issue: "Missing Meta Descriptions", recommendation: "Add compelling meta descriptions to improve click-through rates" },
+    { issue: "H1 Tag Optimization Needed", recommendation: "Optimize H1 tags for better search visibility" }, 
+    { issue: "Internal Linking Gaps", recommendation: "Improve internal linking structure for better crawling" },
+    { issue: "Image ALT Text Missing", recommendation: "Add descriptive ALT text to all images" }
   ];
 
   const issuesToShow = highIssues.length > 0 ? highIssues : fallbackIssues.slice(0, 4);
@@ -144,8 +146,7 @@ export const HighIssuesSlide: React.FC<Props> = ({
             gap: 24,
           }}
         >
-          {issuesToShow.map((issue, i) => {
-            const issueTitle = typeof issue === 'string' ? issue : issue.title;
+          {issuesToShow.map((issueData, i) => {
             const itemDelay = 15 + i * 8;
             const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 20], [0, 1], {
               extrapolateLeft: "clamp",
@@ -200,7 +201,7 @@ export const HighIssuesSlide: React.FC<Props> = ({
                       lineHeight: 1.3,
                     }}
                   >
-                    {issueTitle}
+                    {issueData.issue}
                   </div>
                   <div
                     style={{
@@ -210,7 +211,7 @@ export const HighIssuesSlide: React.FC<Props> = ({
                       lineHeight: 1.4,
                     }}
                   >
-                    Impact on search rankings and user experience. Fix recommended within 1-2 weeks.
+                    {issueData.recommendation}
                   </div>
                   <div
                     style={{

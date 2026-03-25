@@ -27,28 +27,29 @@ export const OverviewSlide: React.FC<Props> = ({
     return null;
   }
 
-  console.log("OverviewSlide Data:", data);
+  console.log("Slide1 auditSnapshot:", data);
   
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
   // Background gradient pulse
-  const glowOpacity = interpolate(frame, [0, 60, 120], [0, 0.15, 0.08], {
+  const glowOpacity = interpolate(frame, [0, 60], [0, 0.15], {
     extrapolateRight: "clamp",
   });
 
   const scores = [
-    { score: data.scores?.seo_health || 0,    label: "SEO Health",    color: "#00f5a0", delay: 10 },
-    { score: data.scores?.ai_visibility || 0, label: "AI Visibility", color: "#c77dff", delay: 20 },
+    { score: data.scores?.seo || 0,           label: "SEO Health",    color: "#00f5a0", delay: 10 },
+    { score: data.scores?.aiVisibility || 0,  label: "AI Visibility", color: "#c77dff", delay: 20 },
     { score: data.scores?.performance || 0,   label: "Performance",   color: "#00dfff", delay: 30 },
     { score: data.scores?.authority || 0,     label: "Authority",     color: "#ffb703", delay: 40 },
   ];
 
+  // FIXED: Use auditSnapshot issueDistribution in correct order
   const issuePills = [
-    { label: "Critical",  count: data?.issues_summary?.critical || 0, color: "#ff3860" },
-    { label: "Warnings",  count: data?.issues_summary?.warning || 0, color: "#ffb703" },
-    { label: "Info",      count: data?.issues_summary?.info || 0, color: "#00dfff" },
-    { label: "Passed",    count: data?.issues_summary?.passed || 0, color: "#00f5a0" },
+    { label: "Total",     count: data.issueDistribution?.total || 0,   color: "#ff3860" },
+    { label: "Critical",  count: data.issueDistribution?.high || 0,    color: "#ff3860" },
+    { label: "Warnings",  count: data.issueDistribution?.medium || 0,  color: "#ffb703" },
+    { label: "Info",      count: data.issueDistribution?.low || 0,     color: "#00dfff" },
   ];
 
   return (
@@ -121,7 +122,7 @@ export const OverviewSlide: React.FC<Props> = ({
                 marginBottom: 12,
               }}
             >
-              {data.site?.name || "Unknown Site"}
+              {data.projectName || "Project"}
             </div>
             <div
               style={{
@@ -131,7 +132,7 @@ export const OverviewSlide: React.FC<Props> = ({
                 marginBottom: 36,
               }}
             >
-              {data.site?.domain || "localhost"}
+              {data.url || "-"}
             </div>
           </div>
 
@@ -179,7 +180,7 @@ export const OverviewSlide: React.FC<Props> = ({
             }}
           >
             {[
-              { label: "Pages Crawled", value: String(data.pages_crawled || "N/A") },
+              { label: "Pages Crawled", value: String(data.pagesCrawled ?? 0) },
               { label: "Audit Date",    value: data.audit_date || new Date().toLocaleDateString() },
             ].map((m) => (
               <div key={m.label} style={{ fontFamily: "sans-serif" }}>

@@ -60,42 +60,40 @@ export const calculateTiming = async () => {
   };
 };
 
-// FIXED: Standardized timing for 11 slides at 4 seconds each
-const FPS = 30;
-const SECONDS_PER_SLIDE = 4;
-const DURATION_PER_SLIDE = FPS * SECONDS_PER_SLIDE; // 120 frames per slide
+// DEPRECATED: Use dynamic duration calculation based on actual audio files
+// const FPS = 30;
+// const SECONDS_PER_SLIDE = 4;
+// const DURATION_PER_SLIDE = FPS * SECONDS_PER_SLIDE; // 120 frames per slide
+// const TOTAL_SLIDES = 11;
+// export const TOTAL_DURATION_FRAMES = TOTAL_SLIDES * DURATION_PER_SLIDE; // 1320 frames
+// export const TOTAL_DURATION_SECONDS = TOTAL_SLIDES * SECONDS_PER_SLIDE; // 44 seconds
 
-// Calculate total video duration
-export const TOTAL_SLIDES = 11;
-export const TOTAL_DURATION_FRAMES = TOTAL_SLIDES * DURATION_PER_SLIDE; // 1320 frames
-export const TOTAL_DURATION_SECONDS = TOTAL_SLIDES * SECONDS_PER_SLIDE; // 44 seconds
+// DEPRECATED: Use dynamic timing from calculateDynamicTiming() instead
+// export const durations = {
+//   s1: DURATION_PER_SLIDE, // 120 frames = 4 seconds
+//   s2: DURATION_PER_SLIDE,
+//   s3: DURATION_PER_SLIDE,
+//   s4: DURATION_PER_SLIDE,
+//   s5: DURATION_PER_SLIDE,
+//   s6: DURATION_PER_SLIDE,
+//   s7: DURATION_PER_SLIDE,
+//   s8: DURATION_PER_SLIDE,
+//   s9: DURATION_PER_SLIDE,
+//   s10: DURATION_PER_SLIDE,
+//   s11: DURATION_PER_SLIDE,
+// };
 
-// Standardized durations for all 11 slides (4 seconds each at 30 FPS)
-export const durations = {
-  s1: DURATION_PER_SLIDE, // 120 frames = 4 seconds
-  s2: DURATION_PER_SLIDE,
-  s3: DURATION_PER_SLIDE,
-  s4: DURATION_PER_SLIDE,
-  s5: DURATION_PER_SLIDE,
-  s6: DURATION_PER_SLIDE,
-  s7: DURATION_PER_SLIDE,
-  s8: DURATION_PER_SLIDE,
-  s9: DURATION_PER_SLIDE,
-  s10: DURATION_PER_SLIDE,
-  s11: DURATION_PER_SLIDE,
-};
-
-// FIXED: Dynamic timing object for 11 slides with standardized durations
-export const TIMING = {
-  s1: { from: 0, dur: durations.s1 },
-  s2: { from: durations.s1, dur: durations.s2 },
-  s3: { from: durations.s1 + durations.s2, dur: durations.s3 },
-  s4: { from: durations.s1 + durations.s2 + durations.s3, dur: durations.s4 },
-  s5: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4, dur: durations.s5 },
-  s6: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5, dur: durations.s6 },
-  s7: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6, dur: durations.s7 },
-  s8: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7, dur: durations.s8 },
-  s9: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7 + durations.s8, dur: durations.s9 },
-  s10: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7 + durations.s8 + durations.s9, dur: durations.s10 },
-  s11: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7 + durations.s8 + durations.s9 + durations.s10, dur: durations.s11 },
-};
+// DEPRECATED: Use calculateDynamicTiming() for dynamic timing
+// export const TIMING = {
+//   s1: { from: 0, dur: durations.s1 },
+//   s2: { from: durations.s1, dur: durations.s2 },
+//   s3: { from: durations.s1 + durations.s2, dur: durations.s3 },
+//   s4: { from: durations.s1 + durations.s2 + durations.s3, dur: durations.s4 },
+//   s5: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4, dur: durations.s5 },
+//   s6: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5, dur: durations.s6 },
+//   s7: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6, dur: durations.s7 },
+//   s8: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7, dur: durations.s8 },
+//   s9: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7 + durations.s8, dur: durations.s9 },
+//   s10: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7 + durations.s8 + durations.s9, dur: durations.s10 },
+//   s11: { from: durations.s1 + durations.s2 + durations.s3 + durations.s4 + durations.s5 + durations.s6 + durations.s7 + durations.s8 + durations.s9 + durations.s10, dur: durations.s11 },
+// };

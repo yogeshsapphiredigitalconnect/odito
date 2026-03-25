@@ -28,13 +28,15 @@ export const ChartBar: React.FC<ChartBarProps> = ({
   const frame = useCurrentFrame();
   const delay = startFrame + index * 10;
 
-  const barWidth = interpolate(frame, [delay, delay + 40], [0, (value / maxValue) * 100], {
+  const safeValue = typeof value === "number" && !isNaN(value) ? value : 0;
+
+  const barWidth = interpolate(frame, [delay, delay + 40], [0, (safeValue / maxValue) * 100], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
   const displayValue = Math.round(
-    interpolate(frame, [delay, delay + 40], [0, value], {
+    interpolate(frame, [delay, delay + 40], [0, safeValue], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     })

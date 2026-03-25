@@ -180,7 +180,7 @@ export const ScoreCard: React.FC<ScoreCardProps> = ({
   const numericValue =
     typeof value === "number"
       ? Math.round(
-          interpolate(frame, [delay, delay + 45], [0, value], {
+          interpolate(frame, [delay, delay + 45], [0, typeof value === "number" && !isNaN(value) ? value : 0], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
           })

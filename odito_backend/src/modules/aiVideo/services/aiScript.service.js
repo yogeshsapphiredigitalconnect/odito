@@ -382,7 +382,6 @@ export class AiScriptService {
       };
 
       const issueDistribution = {
-        critical: countIssue(realIssues.critical),
         high: countIssue(realIssues.high),
         medium: countIssue(realIssues.medium),
         low: countIssue(realIssues.low ?? realIssues.info),
@@ -391,8 +390,7 @@ export class AiScriptService {
       issueDistribution.total =
         typeof realIssues.total === 'number'
           ? realIssues.total
-          : issueDistribution.critical +
-            issueDistribution.high +
+          : issueDistribution.high +
             issueDistribution.medium +
             issueDistribution.low;
       
@@ -453,7 +451,6 @@ export class AiScriptService {
       console.log('Unified topIssues (display slices):', topIssuesUnified);
       
       const topIssues = {
-        critical: topIssuesUnified.critical || [],
         high: topIssuesUnified.high || [],
         medium: topIssuesUnified.medium || [],
         low: topIssuesUnified.low || []
@@ -463,6 +460,27 @@ export class AiScriptService {
       console.log('High issues count:', topIssues.high.length);
       console.log('Medium issues count:', topIssues.medium.length);
       console.log('Low issues count:', topIssues.low.length);
+
+      // Extract pagesCrawled from topIssues (not from issues total)
+      let pagesCrawled = 0;
+      
+      // Extract from topIssues.high[].pages first
+      if (topIssues.high && Array.isArray(topIssues.high) && topIssues.high.length > 0) {
+        pagesCrawled = topIssues.high[0]?.pages || 0;
+      }
+      
+      // Fallback to topIssues.medium[].pages
+      if (pagesCrawled === 0 && topIssues.medium && Array.isArray(topIssues.medium) && topIssues.medium.length > 0) {
+        pagesCrawled = topIssues.medium[0]?.pages || 0;
+      }
+      
+      // Fallback to topIssues.low[].pages
+      if (pagesCrawled === 0 && topIssues.low && Array.isArray(topIssues.low) && topIssues.low.length > 0) {
+        pagesCrawled = topIssues.low[0]?.pages || 0;
+      }
+      
+      console.log("PAGES SOURCE:", topIssues.high?.[0]?.pages);
+      console.log('✅ Extracted pagesCrawled:', pagesCrawled);
 
       // 🔧 STEP 6: EXTRACT PAGE 10 DATA (REAL TECHNICAL CHECKS)
       console.log('\n🔧 STEP 6: EXTRACTING PAGE 10 TECHNICAL HIGHLIGHTS');
@@ -500,9 +518,8 @@ export class AiScriptService {
       console.log('\n🔧 STEP 7: VALIDATION CHECKS');
       console.log('-'.repeat(40));
       
-      // Validate topIssues structure (high/medium/low, not critical)
+      // Validate topIssues structure (high/medium/low only)
       const totalTopIssues =
-        (topIssues.critical?.length || 0) +
         (topIssues.high?.length || 0) +
         (topIssues.medium?.length || 0) +
         (topIssues.low?.length || 0);
@@ -549,6 +566,7 @@ export class AiScriptService {
         // Real project data
         projectName: this.get(auditData, "project.name", "Website"),
         url: this.get(auditData, "project.url", "N/A"),
+        pagesCrawled: pagesCrawled,
         
         scores: scores,
         issueDistribution: issueDistribution,
@@ -593,7 +611,6 @@ export class AiScriptService {
       console.log('[AUDIT_SNAPSHOT] ✅ Snapshot created from REAL DATA', {
         projectName: auditSnapshot.projectName,
         overallScore: auditSnapshot.scores.overall,
-        criticalIssues: auditSnapshot.issueDistribution.critical,
         topIssuesCount: topIssues.high.length + topIssues.medium.length + topIssues.low.length,
         technicalIssuesCount: technicalHighlights.criticalIssues.length,
         performanceScore: performanceMetrics.pageSpeed,
@@ -602,6 +619,20 @@ export class AiScriptService {
 
       // 🔧 STEP 9: FREEZE DATA (IMPORTANT)
       console.log('\n🔧 STEP 9: FREEZE DATA (IMPORTANT)');
+      
+      // Remove unwanted fields if they exist
+      if (auditSnapshot.site) delete auditSnapshot.site;
+      if (auditSnapshot.pages_crawled) delete auditSnapshot.pages_crawled;
+      if (auditSnapshot.issues_summary) {
+        // Remove the critical field from issues_summary if it exists
+        if (auditSnapshot.issues_summary.critical) delete auditSnapshot.issues_summary.critical;
+        // Then remove the entire issues_summary object
+        delete auditSnapshot.issues_summary;
+      }
+      // Remove any standalone critical field that's not part of issueDistribution
+      if (auditSnapshot.critical !== undefined && !auditSnapshot.issueDistribution?.critical) delete auditSnapshot.critical;
+      
+      console.log("FINAL SNAPSHOT:", auditSnapshot);
       Object.freeze(auditSnapshot);
       console.log('auditSnapshot frozen:', Object.isFrozen(auditSnapshot));
       
@@ -609,9 +640,9 @@ export class AiScriptService {
       console.log('\n🔧 STEP 10: FINAL VALIDATION CHECK');
       console.log('═'.repeat(50));
       console.log('FINAL DATA CHECK:', {
-        critical: auditSnapshot.issueDistribution.critical,
         high: auditSnapshot.issueDistribution.high,
         medium: auditSnapshot.issueDistribution.medium,
+        low: auditSnapshot.issueDistribution.low,
         total: auditSnapshot.issueDistribution.total,
         technicalChecks: technicalHighlights.criticalIssues.length
       });
@@ -620,15 +651,14 @@ export class AiScriptService {
       // Validate real data is present
       if (auditSnapshot.issueDistribution.total === 0) {
         console.warn('⚠️ WARNING: Total issues = 0 - check if API returned data');
-      } else if (auditSnapshot.issueDistribution.critical > 0 || auditSnapshot.issueDistribution.high > 0) {
+      } else if (auditSnapshot.issueDistribution.high > 0 || auditSnapshot.issueDistribution.medium > 0) {
         console.log('✅ SUCCESS: Real data is present in snapshot');
       }
       
-      if (auditSnapshot.issueDistribution.critical === 0) {
-        console.error("❌ DATA LOSS DETECTED");
-        console.error("Expected critical > 0 or high > 0, got critical:", auditSnapshot.issueDistribution.critical, "high:", auditSnapshot.issueDistribution.high);
+      if (auditSnapshot.issueDistribution.high === 0 && auditSnapshot.issueDistribution.medium === 0 && auditSnapshot.issueDistribution.low === 0) {
+        console.warn("⚠️ No issues found - this may be expected for clean sites");
       } else {
-        console.log("✅ Data validation PASSED - critical issues:", auditSnapshot.issueDistribution.critical);
+        console.log("✅ Data validation PASSED - issues found:", auditSnapshot.issueDistribution.total);
       }
 
       return auditSnapshot;
@@ -705,7 +735,6 @@ export class AiScriptService {
 
       const issueDistribution = {
         total: this.get(auditData, "issueDistribution.total", 0),
-        critical: this.get(auditData, "issueDistribution.critical", 0),
         high: this.get(auditData, "issueDistribution.high", 0),
         medium: this.get(auditData, "issueDistribution.medium", 0),
         low: this.get(auditData, "issueDistribution.low", 0),
@@ -714,7 +743,6 @@ export class AiScriptService {
 
       // 🔍 STEP 4: FIX SCRIPT INPUT DATA - Use issueDistribution (not individual counts)
       const topIssues = {
-        critical: this.get(auditData, "topIssues.critical", []),
         high: this.get(auditData, "topIssues.high", []),
         medium: this.get(auditData, "topIssues.medium", []),
         low: this.get(auditData, "topIssues.low", [])
@@ -743,15 +771,14 @@ export class AiScriptService {
       
       // 🔧 STEP 6: ADD VALIDATION CHECK (CORRECTED - allow critical=0)
       // Only warn if TOTAL is zero, which indicates real data loss
-      // Critical can be 0 legitimately - not all audits have critical issues
-      const totalIssues = issueDistribution.critical + issueDistribution.high + issueDistribution.medium + issueDistribution.low;
+      const totalIssues = issueDistribution.high + issueDistribution.medium + issueDistribution.low;
       
       if (totalIssues === 0) {
         console.warn('⚠️ WARNING: Zero total issues detected - check if API returned data');
-      } else if (issueDistribution.critical === 0) {
-        console.log('✅ No critical issues found, but real issues exist: high=' + issueDistribution.high + ', medium=' + issueDistribution.medium + ', low=' + issueDistribution.low);
+      } else if (issueDistribution.high > 0 || issueDistribution.medium > 0 || issueDistribution.low > 0) {
+        console.log('✅ Real issues exist: high=' + issueDistribution.high + ', medium=' + issueDistribution.medium + ', low=' + issueDistribution.low);
       } else {
-        console.log('✅ Full issue data present: critical=' + issueDistribution.critical + ', high=' + issueDistribution.high + ', medium=' + issueDistribution.medium);
+        console.log('✅ Issue data present: total=' + totalIssues);
       }
 
       // ✅ GUARANTEED SAFE RETURN STRUCTURE WITH FIXES
@@ -908,10 +935,10 @@ Mobile PageSpeed: ${pm?.mobileScore ?? 0}/100
 Desktop PageSpeed: ${pm?.desktopScore ?? 0}/100
 
 [KEY FINDINGS]
-Our audit identified ${issueDistribution.critical} critical, ${issueDistribution.high} high-severity, ${issueDistribution.medium} medium, and ${issueDistribution.low} low-priority issues, for a total of ${issueDistribution.total} issues.
+Our audit identified ${issueDistribution.high} high-severity, ${issueDistribution.medium} medium, and ${issueDistribution.low} low-priority issues, for a total of ${issueDistribution.total} issues.
 
-Critical areas needing attention (sample):
-${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No critical issues identified'}
+High-priority areas needing attention (sample):
+${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No high-severity issues identified'}
 
 These issues are affecting your search visibility and user experience.
 Addressing them will have the most significant impact on your rankings.
@@ -965,7 +992,7 @@ Website: ${url}
 - SEO Health: ${scores?.seo || 0}/100
 - AI Visibility: ${scores?.aiVisibility || 0}/100
 
-⚠️ KEY ISSUES (${issueDistribution?.total || 0} total — ${issueDistribution?.critical || 0} critical, ${issueDistribution?.high || 0} high, ${issueDistribution?.medium || 0} medium, ${issueDistribution?.low || 0} low/info):
+⚠️ KEY ISSUES (${issueDistribution?.total || 0} total — ${issueDistribution?.high || 0} high, ${issueDistribution?.medium || 0} medium, ${issueDistribution?.low || 0} low/info):
 High-priority examples:
 ${(topIssues.high || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No high-severity samples'}
 ${(topIssues.medium || []).slice(0, 3).map((issue, i) => `${i + 1}. ${AiScriptService.formatIssueLabel(issue)}`).join('\n') || '- No medium samples'}

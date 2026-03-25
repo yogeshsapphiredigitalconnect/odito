@@ -58,7 +58,7 @@ export const FinalRecommendationSlide: React.FC<Props> = ({
           </div>
 
           {/* Priority rows */}
-          {data.top_priorities.map((p, i) => {
+          {(data?.top_priorities || []).map((p, i) => {
             const delay = 18 + i * 13;
             const op = interpolate(frame, [delay, delay + 20], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const tx = interpolate(frame, [delay, delay + 20], [-28, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -103,7 +103,7 @@ export const FinalRecommendationSlide: React.FC<Props> = ({
           {/* Next steps */}
           <div style={{ opacity: childOpacity(5), marginTop: 16 }}>
             <div style={{ fontFamily: "sans-serif", fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Week 1 Schedule</div>
-            {data.next_steps.map((step, i) => (
+            {(data?.next_steps || []).map((step, i) => (
               <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 8 }}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${brandColor}20`, border: `1px solid ${brandColor}35`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", fontWeight: 700, fontSize: 12, color: brandColor, flexShrink: 0, marginTop: 2 }}>
                   {i + 1}
@@ -124,10 +124,10 @@ export const FinalRecommendationSlide: React.FC<Props> = ({
           <div style={{ opacity: childOpacity(1), marginBottom: 30 }}>
             <div style={{ fontFamily: "sans-serif", fontSize: 14, fontWeight: 700, color: "#00f5a0", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 18 }}>📈 Projected After Fixes</div>
             {projected.map((p, i) => {
-              const currentAnim = Math.round(interpolate(frame, [15 + i * 8, 55 + i * 8], [0, p.current], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
-              const targetAnim  = Math.round(interpolate(frame, [35 + i * 8, 80 + i * 8], [p.current, p.target],  { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
-              const barNow    = interpolate(frame, [15 + i * 8, 55 + i * 8], [0, p.current], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-              const barTarget = interpolate(frame, [35 + i * 8, 80 + i * 8], [p.current, p.target], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+              const currentAnim = Math.round(interpolate(frame, [15 + i * 8, 55 + i * 8], [0, Number(p.current) || 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+              const targetAnim  = Math.round(interpolate(frame, [35 + i * 8, 80 + i * 8], [Number(p.current) || 0, Number(p.target) || 0],  { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+              const barNow    = interpolate(frame, [15 + i * 8, 55 + i * 8], [0, Number(p.current) || 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+              const barTarget = interpolate(frame, [35 + i * 8, 80 + i * 8], [Number(p.current) || 0, Number(p.target) || 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
               return (
                 <div key={p.label} style={{ marginBottom: 20 }}>

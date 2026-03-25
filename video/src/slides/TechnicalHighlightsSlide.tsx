@@ -8,22 +8,24 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    criticalIssues?: Array<{
-      title: string;
-      severity?: string;
-      pages?: number;
-      count?: number;
-      recommendation?: string;
-    }>;
-    topRecommendations?: Array<{
-      title: string;
-      severity?: string;
-      pages?: number;
-      count?: number;
-      recommendation?: string;
-    }>;
-    scores?: {
-      technical: number;
+    auditSnapshot: {
+      technicalHighlights: {
+        criticalIssues?: Array<{
+          name: string;
+          status: string;
+          detail: string;
+          affected_pages: number;
+        }>;
+        topRecommendations?: Array<{
+          name: string;
+          status: string;
+          detail: string;
+          affected_pages: number;
+        }>;
+      };
+      scores?: {
+        technical: number;
+      };
     };
   };
   narration: SlideNarration;
@@ -48,8 +50,8 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const criticalIssues = data?.criticalIssues || [];
-  const recommendations = data?.topRecommendations || [];
+  const criticalIssues = data?.auditSnapshot?.technicalHighlights?.criticalIssues || [];
+  const recommendations = data?.auditSnapshot?.technicalHighlights?.topRecommendations || [];
 
   // Safety checks - ensure we have arrays
   if (!Array.isArray(criticalIssues)) {
@@ -59,22 +61,8 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
     console.warn("TechnicalHighlightsSlide: data.topRecommendations is not an array, using fallback");
   }
 
-  // Fallback data if none provided
-  const fallbackCriticalIssues = [
-    "XML Sitemap Missing",
-    "Robots.txt Configuration",
-    "Canonical Tag Implementation"
-  ];
-
-  const fallbackRecommendations = [
-    "Implement HTTPS Everywhere",
-    "Optimize Crawl Budget",
-    "Add Structured Data Markup",
-    "Improve Page Load Speed"
-  ];
-
-  const issuesToShow = criticalIssues.length > 0 ? criticalIssues : fallbackCriticalIssues;
-  const recommendationsToShow = recommendations.length > 0 ? recommendations : fallbackRecommendations;
+  const issuesToShow = criticalIssues.length > 0 ? criticalIssues : [];
+  const recommendationsToShow = recommendations.length > 0 ? recommendations : [];
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -121,10 +109,10 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
               🔧 Technical Health
             </div>
             <GaugeScore 
-              score={data.scores?.technical || 75} 
+              score={data?.auditSnapshot?.scores?.technical || 75} 
               label="Tech Score" 
               size={170} 
-              color={(data.scores?.technical || 75) >= 80 ? "#00f5a0" : (data.scores?.technical || 75) >= 60 ? "#ffb703" : "#ff3860"} 
+              color={(data?.auditSnapshot?.scores?.technical || 75) >= 80 ? "#00f5a0" : (data?.auditSnapshot?.scores?.technical || 75) >= 60 ? "#ffb703" : "#ff3860"} 
               startFrame={12} 
             />
           </div>
@@ -134,7 +122,6 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
               Critical Issues ({issuesToShow.length})
             </div>
             {issuesToShow.slice(0, 3).map((issue, i) => {
-            const issueTitle = typeof issue === 'string' ? issue : issue.title;
             const itemDelay = 25 + i * 8;
               const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 15], [0, 1], {
                 extrapolateLeft: "clamp",
@@ -157,7 +144,7 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
                 >
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff3860", flexShrink: 0 }} />
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", fontFamily: "sans-serif" }}>
-                    {issueTitle}
+                    {issue.name}
                   </span>
                 </div>
               );
@@ -176,11 +163,20 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
             </div>
           </div>
 
-          {recommendationsToShow.map((recommendation, i) => {
-            const recommendationTitle = typeof recommendation === 'string' ? recommendation : recommendation.title;
+          {recommendationsToShow.map((item, i) => {
             const delay = 18 + i * 10;
             const op = interpolate(frame, [delay, delay + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const tx = interpolate(frame, [delay, delay + 18], [20, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            
+            // Map status to severity label
+            const getSeverityLabel = (status: string) => {
+              switch(status) {
+                case 'FAIL': return 'Critical';
+                case 'WARN': return 'High';
+                case 'PASS': return 'Medium';
+                default: return 'Medium';
+              }
+            };
 
             return (
               <div
@@ -202,16 +198,13 @@ export const TechnicalHighlightsSlide: React.FC<Props> = ({
                   {i + 1}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: "sans-serif", fontWeight: 700, fontSize: 20, color: "#eef2ff", marginBottom: 4 }}>{recommendationTitle}</div>
+                  <div style={{ fontFamily: "sans-serif", fontWeight: 700, fontSize: 20, color: "#eef2ff", marginBottom: 4 }}>{item.name}</div>
                   <div style={{ fontFamily: "sans-serif", fontSize: 14, color: "rgba(255,255,255,0.45)" }}>
-                    {i === 0 && "Essential for security and search rankings"}
-                    {i === 1 && "Improve crawling efficiency and index coverage"}
-                    {i === 2 && "Enhance search result appearance and CTR"}
-                    {i === 3 && "Direct impact on user experience and rankings"}
+                    {item.detail}
                   </div>
                 </div>
                 <div style={{ fontFamily: "sans-serif", fontSize: 13, fontWeight: 700, padding: "5px 12px", background: "rgba(255,183,3,0.12)", color: "#ffb703", borderRadius: 8, flexShrink: 0 }}>
-                  {i === 0 ? "Critical" : i === 1 ? "High" : "Medium"}
+                  {getSeverityLabel(item.status)}
                 </div>
               </div>
             );

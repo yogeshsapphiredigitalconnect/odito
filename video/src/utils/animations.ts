@@ -1,8 +1,9 @@
-import { interpolate, spring, Easing } from "remotion";
+import { spring, Easing } from "remotion";
+import { debugInterpolate } from "../debugInterpolate";
 
 // Smooth count-up for score numbers
 export const countUp = (frame: number, target: number, startFrame = 0, duration = 45) =>
-  Math.round(interpolate(frame, [startFrame, startFrame + duration], [0, target], {
+  Math.round(debugInterpolate(frame, [startFrame, startFrame + duration], [0, Number(target) || 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.cubic),
@@ -14,7 +15,7 @@ export const popIn = (frame: number, delay = 0, fps = 30) =>
 
 // Soft fade in
 export const fadeIn = (frame: number, delay = 0, duration = 20) =>
-  interpolate(frame, [delay, delay + duration], [0, 1], {
+  debugInterpolate(frame, [delay, delay + duration], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -22,7 +23,7 @@ export const fadeIn = (frame: number, delay = 0, duration = 20) =>
 // Slide up + fade
 export const slideUp = (frame: number, delay = 0, distance = 30) => ({
   opacity: fadeIn(frame, delay),
-  transform: `translateY(${interpolate(frame, [delay, delay + 25], [distance, 0], {
+  transform: `translateY(${debugInterpolate(frame, [delay, delay + 25], [distance, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.cubic),
@@ -32,7 +33,7 @@ export const slideUp = (frame: number, delay = 0, distance = 30) => ({
 // Slide in from left
 export const slideLeft = (frame: number, delay = 0, distance = 60) => ({
   opacity: fadeIn(frame, delay),
-  transform: `translateX(${interpolate(frame, [delay, delay + 30], [-distance, 0], {
+  transform: `translateX(${debugInterpolate(frame, [delay, delay + 30], [-distance, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.exp),
@@ -42,7 +43,7 @@ export const slideLeft = (frame: number, delay = 0, distance = 60) => ({
 // SVG circle progress (returns strokeDashoffset)
 export const circleProgress = (frame: number, radius: number, score: number, delay = 0, duration = 60) => {
   const circumference = 2 * Math.PI * radius;
-  const progress = interpolate(frame, [delay, delay + duration], [0, score / 100], {
+  const progress = debugInterpolate(frame, [delay, delay + duration], [0, (Number(score) || 0) / 100], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.cubic),
@@ -57,7 +58,7 @@ export const scoreColor = (score: number) =>
 // Slide in from right
 export const slideRight = (frame: number, delay = 0, distance = 60) => ({
   opacity: fadeIn(frame, delay),
-  transform: `translateX(${interpolate(frame, [delay, delay + 30], [distance, 0], {
+  transform: `translateX(${debugInterpolate(frame, [delay, delay + 30], [distance, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.exp),

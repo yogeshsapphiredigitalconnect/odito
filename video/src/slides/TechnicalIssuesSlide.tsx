@@ -67,7 +67,7 @@ export const TechnicalIssuesSlide: React.FC<Props> = ({ data, narration, brandCo
             </div>
           </div>
 
-          {data.checks.map((check, i) => {
+          {(data?.checks || []).map((check, i) => {
             const delay = 18 + i * 10;
             const op = interpolate(frame, [delay, delay + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const tx = interpolate(frame, [delay, delay + 18], [24, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });

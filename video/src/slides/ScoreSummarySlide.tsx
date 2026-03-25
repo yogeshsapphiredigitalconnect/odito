@@ -1,6 +1,7 @@
 // remotion/slides/ScoreSummarySlide.tsx
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { debugInterpolate } from "../debugInterpolate";
 import { SlideNarration } from "../types";
 import { LogoHeader } from "../components_new/LogoHeader";
 import { GaugeScore } from "../components_new/GaugeScore";
@@ -47,7 +48,7 @@ export const ScoreSummarySlide: React.FC<Props> = ({
           width: 900,
           height: 900,
           borderRadius: "50%",
-          background: `radial-gradient(circle, ${brandColor}${Math.round(interpolate(frame, [0, 60, 120], [0, 0.15, 0.08], { extrapolateRight: "clamp" }) * 255).toString(16).padStart(2, "0")}, transparent 70%)`,
+          background: `radial-gradient(circle, ${brandColor}${Math.round(debugInterpolate(frame, [0, 60], [0, 0.15], { extrapolateRight: "clamp" }) * 255).toString(16).padStart(2, "0")}, transparent 70%)`,
           pointerEvents: "none",
         }}
       />

@@ -1,35 +1,32 @@
 {
-  "audioUrls": [
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-1.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-2.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-3.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-4.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-5.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-6.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-7.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-8.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-9.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-10.mp3",
-    "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-11.mp3"
-  ],
   "projectId": "69bd4440b9f78e5bd946750b",
-  "structuredSlides": [
+  "slidesWithAudio": [
     {
       "id": 1,
       "type": "projectOverview",
       "title": "Sapphiredigitalconnect-Com",
       "subtitle": "https://www.sapphiredigitalconnect.com/",
-      "narration": "Welcome to your comprehensive SEO audit for Sapphiredigitalconnect-Com. This analysis provides insights into your website's performance and areas for improvement.",
+      "narration": "Welcome to your comprehensive SEO audit for Sapphiredigitalconnect-Com. We analyzed 20 pages of your website to generate this report.",
       "data": {
         "projectName": "Sapphiredigitalconnect-Com",
         "url": "https://www.sapphiredigitalconnect.com/",
+        "pagesCrawled": 20,
         "scores": {
           "overall": 50,
           "performance": 52,
           "seo": 50,
           "aiVisibility": 46
+        },
+        "issueDistribution": {
+          "high": 521,
+          "medium": 185,
+          "low": 142,
+          "total": 848
         }
-      }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-1.mp3",
+      "duration": 7.662585,
+      "durationInFrames": 230
     },
     {
       "id": 2,
@@ -45,64 +42,72 @@
           "aiVisibility": 46
         },
         "overall": 50
-      }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-2.mp3",
+      "duration": 8.173424,
+      "durationInFrames": 245
     },
     {
       "id": 3,
       "type": "issueDistribution",
       "title": "Issue Distribution",
       "subtitle": "848 Total Issues",
-      "narration": "We found a total of 848 issues across your website. Critical issues: 0, high: 521, medium: 185, low: 142.",
+      "narration": "We found a total of 848 issues, including 521 high, 185 medium, and 142 low priority issues.",
       "data": {
         "issueDistribution": {
-          "critical": 0,
           "high": 521,
           "medium": 185,
           "low": 142,
           "total": 848
         },
         "total": 848
-      }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-3.mp3",
+      "duration": 9.613061,
+      "durationInFrames": 288
     },
     {
       "id": 4,
       "type": "highIssues",
       "title": "High Priority Issues",
-      "subtitle": "521 High Issues",
-      "narration": "Your website has 521 high-priority issues that require immediate attention. These issues are significantly impacting your search rankings and user experience.",
+      "subtitle": "3 High Issues",
+      "narration": "Your website has 521 high-priority issues. Showing the top 3 most important issues that need attention.",
       "data": {
         "issues": [
           {
-            "issue": "h4 uses generic phrase: services",
+            "issue": "og:image is missing",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "og:title is missing",
+            "issue": "3 accessibility violation(s) found",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "og:type is missing",
+            "issue": "Schema URL does not match page URL",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           }
         ],
-        "count": 521
-      }
+        "count": 3
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-4.mp3",
+      "duration": 6.873107,
+      "durationInFrames": 206
     },
     {
       "id": 5,
       "type": "mediumIssues",
       "title": "Medium Priority Issues",
-      "subtitle": "185 Medium Issues",
-      "narration": "There are 185 medium-priority issues that should be addressed. While not critical, these issues provide opportunities for steady improvement.",
+      "subtitle": "2 Medium Issues",
+      "narration": "Your website has 185 medium-priority issues. Showing the top 2 most important issues that need attention.",
       "data": {
         "issues": [
           {
@@ -113,22 +118,25 @@
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           },
           {
-            "issue": "h4 is all lowercase: menu",
+            "issue": "H4 length is 4 chars (6–60)",
             "severity": "medium",
             "pages": 20,
             "count": 20,
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           }
         ],
-        "count": 185
-      }
+        "count": 2
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-5.mp3",
+      "duration": 7.569705,
+      "durationInFrames": 227
     },
     {
       "id": 6,
       "type": "lowIssues",
       "title": "Low Priority Issues",
-      "subtitle": "142 Low Issues",
-      "narration": "We identified 142 low-priority issues. These minor optimizations can be addressed during routine maintenance for incremental improvements.",
+      "subtitle": "1 Low Issues",
+      "narration": "Your website has 142 low-priority issues. Showing the top 1 most important issues that need attention.",
       "data": {
         "issues": [
           {
@@ -139,15 +147,18 @@
             "recommendation": "Consider fixing when time permits - minor SEO improvement opportunity"
           }
         ],
-        "count": 142
-      }
+        "count": 1
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-6.mp3",
+      "duration": 7.383946,
+      "durationInFrames": 222
     },
     {
       "id": 7,
       "type": "technicalHighlights",
       "title": "Technical Highlights",
       "subtitle": "Technical SEO Overview",
-      "narration": "From a technical perspective, your website's infrastructure shows areas for improvement. Technical SEO forms the foundation for all other optimization efforts.",
+      "narration": "From a technical perspective, your website shows a mix of strengths and issues. Key areas such as Security Headers need attention, while several other aspects are properly configured.",
       "data": {
         "technicalHighlights": {
           "checks": [
@@ -264,207 +275,57 @@
               "affected_pages": 0
             }
           ]
-        },
-        "checks": [
-          {
-            "name": "SSL Certificate",
-            "status": "PASS",
-            "detail": "SSL certificate is valid and properly configured",
-            "affected_pages": 0
-          },
-          {
-            "name": "Security Headers",
-            "status": "FAIL",
-            "detail": "20 pages missing critical security headers",
-            "affected_pages": 20
-          },
-          {
-            "name": "Canonical Tags",
-            "status": "PASS",
-            "detail": "Canonical tags properly configured",
-            "affected_pages": 0
-          },
-          {
-            "name": "Robots.txt",
-            "status": "PASS",
-            "detail": "Robots.txt is accessible and properly configured",
-            "affected_pages": 0
-          },
-          {
-            "name": "Noindex on Key Pages",
-            "status": "PASS",
-            "detail": "All important pages are indexable",
-            "affected_pages": 0
-          },
-          {
-            "name": "H1 Tags",
-            "status": "WARN",
-            "detail": "1 pages missing H1, 1 with multiple H1s",
-            "affected_pages": 2
-          },
-          {
-            "name": "Structured Data / Schema",
-            "status": "PASS",
-            "detail": "20 pages with valid structured data",
-            "affected_pages": 0
-          },
-          {
-            "name": "Mobile Friendliness",
-            "status": "PASS",
-            "detail": "Mobile-friendly configuration detected",
-            "affected_pages": 0
-          },
-          {
-            "name": "Broken Links (404)",
-            "status": "PASS",
-            "detail": "No broken links detected",
-            "affected_pages": 0
-          },
-          {
-            "name": "XML Sitemap",
-            "status": "PASS",
-            "detail": "XML sitemap accessible with 2 URLs",
-            "affected_pages": 0
-          },
-          {
-            "name": "Redirect Chains",
-            "status": "WARN",
-            "detail": "Redirect chain detected with 2 hops",
-            "affected_pages": 1
-          },
-          {
-            "name": "OG / Social Tags",
-            "status": "WARN",
-            "detail": "2 pages missing Open Graph tags",
-            "affected_pages": 2
-          }
-        ]
-      }
+        }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-7.mp3",
+      "duration": 9.98458,
+      "durationInFrames": 300
     },
     {
       "id": 8,
-      "type": "criticalTechnicalIssue",
-      "title": "Critical Technical Issue",
-      "subtitle": "Security Headers Analysis",
-      "narration": "A critical security issue has been detected. Security headers are missing, which exposes your website to potential security vulnerabilities and affects user trust.",
-      "data": {
-        "criticalIssues": [
-          {
-            "name": "Security Headers",
-            "status": "FAIL",
-            "detail": "20 pages missing critical security headers",
-            "affected_pages": 20
-          }
-        ],
-        "securityHeaders": [
-          {
-            "name": "Security Headers",
-            "status": "FAIL",
-            "detail": "20 pages missing critical security headers",
-            "affected_pages": 20
-          }
-        ]
-      }
-    },
-    {
-      "id": 9,
       "type": "performanceSummary",
       "title": "Performance Summary",
       "subtitle": "Performance Score: 52",
-      "narration": "Your website performance shows room for improvement. Mobile users experience a score of 40, while desktop scores 64.",
+      "narration": "Your website performance score is 52. Mobile performance is 40, while desktop performance is 64, indicating areas for improvement.",
       "data": {
-        "performanceMetrics": {
-          "pageSpeed": 52,
-          "mobileScore": 40,
-          "desktopScore": 64,
-          "metrics": [
-            {
-              "metric": "Largest Contentful Paint",
-              "mobile": "5.1 s",
-              "desktop": "5.1 s"
-            },
-            {
-              "metric": "Total Blocking Time",
-              "mobile": "1,960 ms",
-              "desktop": "1,960 ms"
-            },
-            {
-              "metric": "First Contentful Paint",
-              "mobile": "4.4 s",
-              "desktop": "4.4 s"
-            },
-            {
-              "metric": "Cumulative Layout Shift",
-              "mobile": "0.002",
-              "desktop": "0.002"
-            }
-          ],
-          "desktopMetrics": [
-            {
-              "metric": "Largest Contentful Paint",
-              "mobile": "1.4 s",
-              "desktop": "1.4 s"
-            },
-            {
-              "metric": "Total Blocking Time",
-              "mobile": "420 ms",
-              "desktop": "420 ms"
-            },
-            {
-              "metric": "First Contentful Paint",
-              "mobile": "1.0 s",
-              "desktop": "1.0 s"
-            },
-            {
-              "metric": "Cumulative Layout Shift",
-              "mobile": "0.116",
-              "desktop": "0.116"
-            }
-          ]
-        },
+        "pageSpeed": 52,
         "mobileScore": 40,
         "desktopScore": 64
-      }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-8.mp3",
+      "duration": 8.823583,
+      "durationInFrames": 265
     },
     {
-      "id": 10,
+      "id": 9,
       "type": "coreWebVitals",
       "title": "Core Web Vitals",
       "subtitle": "User Experience Metrics",
-      "narration": "Core Web Vitals measure user experience loading performance, interactivity, and visual stability. These metrics directly impact your search rankings and user satisfaction.",
+      "narration": "Core Web Vitals show that on mobile, Largest Contentful Paint is 5.1 s and Total Blocking Time is 1,960 ms. On desktop, LCP is 1.4 s and TBT is 420 ms, reflecting differences in performance across devices.",
       "data": {
-        "metrics": [
-          {
-            "metric": "Largest Contentful Paint",
-            "mobile": "5.1 s",
-            "desktop": "5.1 s"
-          },
-          {
-            "metric": "Total Blocking Time",
-            "mobile": "1,960 ms",
-            "desktop": "1,960 ms"
-          },
-          {
-            "metric": "First Contentful Paint",
-            "mobile": "4.4 s",
-            "desktop": "4.4 s"
-          },
-          {
-            "metric": "Cumulative Layout Shift",
-            "mobile": "0.002",
-            "desktop": "0.002"
-          }
-        ],
-        "lcp": "N/A",
-        "tbt": "N/A"
-      }
+        "mobile": {
+          "lcp": "5.1 s",
+          "tbt": "1,960 ms",
+          "fcp": "4.4 s",
+          "cls": "0.002"
+        },
+        "desktop": {
+          "lcp": "1.4 s",
+          "tbt": "420 ms",
+          "fcp": "1.0 s",
+          "cls": "0.116"
+        }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-9.mp3",
+      "duration": 17.461406,
+      "durationInFrames": 524
     },
     {
-      "id": 11,
+      "id": 10,
       "type": "aiAnalysis",
       "title": "AI Visibility Analysis",
       "subtitle": "AI Score: 46",
-      "narration": "Your AI visibility score is 46, indicating how well your content is optimized for AI-powered search systems. Schema markup implementations: 0.",
+      "narration": "Your AI visibility score is 46. Currently, your website has 0 schema implementations, indicating opportunities to improve AI search optimization.",
       "data": {
         "aiAnalysis": {
           "score": 46,
@@ -473,256 +334,13 @@
         },
         "score": 46,
         "schemaMarkupCount": 0
-      }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-10.mp3",
+      "duration": 9.798821,
+      "durationInFrames": 294
     }
   ],
-  "auditSnapshot": {
-    "projectName": "Sapphiredigitalconnect-Com",
-    "url": "https://www.sapphiredigitalconnect.com/",
-    "scores": {
-      "overall": 50,
-      "performance": 52,
-      "seo": 50,
-      "aiVisibility": 46
-    },
-    "issueDistribution": {
-      "critical": 0,
-      "high": 521,
-      "medium": 185,
-      "low": 142,
-      "total": 848
-    },
-    "topIssues": {
-      "critical": [],
-      "high": [
-        {
-          "issue": "h4 uses generic phrase: services",
-          "severity": "high",
-          "pages": 20,
-          "count": 20,
-          "recommendation": "Address within 7 days - high priority for SEO improvement"
-        },
-        {
-          "issue": "og:title is missing",
-          "severity": "high",
-          "pages": 20,
-          "count": 20,
-          "recommendation": "Address within 7 days - high priority for SEO improvement"
-        },
-        {
-          "issue": "og:type is missing",
-          "severity": "high",
-          "pages": 20,
-          "count": 20,
-          "recommendation": "Address within 7 days - high priority for SEO improvement"
-        }
-      ],
-      "medium": [
-        {
-          "issue": "7 image(s) missing role attribute",
-          "severity": "medium",
-          "pages": 20,
-          "count": 20,
-          "recommendation": "Plan to fix within 30 days - moderate SEO impact"
-        },
-        {
-          "issue": "h4 is all lowercase: menu",
-          "severity": "medium",
-          "pages": 20,
-          "count": 20,
-          "recommendation": "Plan to fix within 30 days - moderate SEO impact"
-        }
-      ],
-      "low": [
-        {
-          "issue": "Theme color meta tag is missing",
-          "severity": "low",
-          "pages": 20,
-          "count": 20,
-          "recommendation": "Consider fixing when time permits - minor SEO improvement opportunity"
-        }
-      ]
-    },
-    "technicalHighlights": {
-      "checks": [
-        {
-          "name": "SSL Certificate",
-          "status": "PASS",
-          "detail": "SSL certificate is valid and properly configured",
-          "affected_pages": 0
-        },
-        {
-          "name": "Security Headers",
-          "status": "FAIL",
-          "detail": "20 pages missing critical security headers",
-          "affected_pages": 20
-        },
-        {
-          "name": "Canonical Tags",
-          "status": "PASS",
-          "detail": "Canonical tags properly configured",
-          "affected_pages": 0
-        },
-        {
-          "name": "Robots.txt",
-          "status": "PASS",
-          "detail": "Robots.txt is accessible and properly configured",
-          "affected_pages": 0
-        },
-        {
-          "name": "Noindex on Key Pages",
-          "status": "PASS",
-          "detail": "All important pages are indexable",
-          "affected_pages": 0
-        },
-        {
-          "name": "H1 Tags",
-          "status": "WARN",
-          "detail": "1 pages missing H1, 1 with multiple H1s",
-          "affected_pages": 2
-        },
-        {
-          "name": "Structured Data / Schema",
-          "status": "PASS",
-          "detail": "20 pages with valid structured data",
-          "affected_pages": 0
-        },
-        {
-          "name": "Mobile Friendliness",
-          "status": "PASS",
-          "detail": "Mobile-friendly configuration detected",
-          "affected_pages": 0
-        },
-        {
-          "name": "Broken Links (404)",
-          "status": "PASS",
-          "detail": "No broken links detected",
-          "affected_pages": 0
-        },
-        {
-          "name": "XML Sitemap",
-          "status": "PASS",
-          "detail": "XML sitemap accessible with 2 URLs",
-          "affected_pages": 0
-        },
-        {
-          "name": "Redirect Chains",
-          "status": "WARN",
-          "detail": "Redirect chain detected with 2 hops",
-          "affected_pages": 1
-        },
-        {
-          "name": "OG / Social Tags",
-          "status": "WARN",
-          "detail": "2 pages missing Open Graph tags",
-          "affected_pages": 2
-        }
-      ],
-      "criticalIssues": [
-        {
-          "name": "Security Headers",
-          "status": "FAIL",
-          "detail": "20 pages missing critical security headers",
-          "affected_pages": 20
-        }
-      ],
-      "topRecommendations": [
-        {
-          "name": "SSL Certificate",
-          "status": "PASS",
-          "detail": "SSL certificate is valid and properly configured",
-          "affected_pages": 0
-        },
-        {
-          "name": "Security Headers",
-          "status": "FAIL",
-          "detail": "20 pages missing critical security headers",
-          "affected_pages": 20
-        },
-        {
-          "name": "Canonical Tags",
-          "status": "PASS",
-          "detail": "Canonical tags properly configured",
-          "affected_pages": 0
-        },
-        {
-          "name": "Robots.txt",
-          "status": "PASS",
-          "detail": "Robots.txt is accessible and properly configured",
-          "affected_pages": 0
-        },
-        {
-          "name": "Noindex on Key Pages",
-          "status": "PASS",
-          "detail": "All important pages are indexable",
-          "affected_pages": 0
-        }
-      ]
-    },
-    "performanceMetrics": {
-      "pageSpeed": 52,
-      "mobileScore": 40,
-      "desktopScore": 64,
-      "metrics": [
-        {
-          "metric": "Largest Contentful Paint",
-          "mobile": "5.1 s",
-          "desktop": "5.1 s"
-        },
-        {
-          "metric": "Total Blocking Time",
-          "mobile": "1,960 ms",
-          "desktop": "1,960 ms"
-        },
-        {
-          "metric": "First Contentful Paint",
-          "mobile": "4.4 s",
-          "desktop": "4.4 s"
-        },
-        {
-          "metric": "Cumulative Layout Shift",
-          "mobile": "0.002",
-          "desktop": "0.002"
-        }
-      ],
-      "desktopMetrics": [
-        {
-          "metric": "Largest Contentful Paint",
-          "mobile": "1.4 s",
-          "desktop": "1.4 s"
-        },
-        {
-          "metric": "Total Blocking Time",
-          "mobile": "420 ms",
-          "desktop": "420 ms"
-        },
-        {
-          "metric": "First Contentful Paint",
-          "mobile": "1.0 s",
-          "desktop": "1.0 s"
-        },
-        {
-          "metric": "Cumulative Layout Shift",
-          "mobile": "0.116",
-          "desktop": "0.116"
-        }
-      ]
-    },
-    "keywordData": {
-      "totalKeywords": 0,
-      "topRankings": [],
-      "opportunities": []
-    },
-    "aiAnalysis": {
-      "score": 46,
-      "schemaMarkupCount": 0,
-      "hasKnowledgeGraph": false
-    },
-    "recommendations": [],
-    "metadata": {
-      "source": "UnifiedJsonService",
-      "generatedAt": "2026-03-24T12:54:49.166Z",
-      "dataQuality": "real"
-    }
-  }
+  "fps": 30,
+  "durationInFrames": 2800,
+  "totalDuration": 93.344218
 }

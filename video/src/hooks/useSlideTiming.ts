@@ -47,7 +47,7 @@ export function useSlideTiming() {
   // Score counter: animate from 0 to target over 45 frames starting at frame 10
   const scoreCounter = (target: number, startFrame = 10) =>
     Math.round(
-      interpolate(frame, [startFrame, startFrame + 45], [0, target], {
+      interpolate(frame, [startFrame, startFrame + 45], [0, Number(target) || 0], {
         extrapolateLeft: "clamp",
         extrapolateRight: "clamp",
       })

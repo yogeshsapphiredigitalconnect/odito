@@ -159,7 +159,7 @@ class AudioService {
       console.log(`[AUDIO_SERVICE] 🎵 Audio duration will be calculated based on text length and speech rate`);
       
       // Return PUBLIC URL for Remotion compatibility
-      return `/audio/${projectId}.mp3`;
+      return `http://localhost:5000/audio/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[AUDIO_SERVICE] ❌ Audio generation failed for ${projectId}:`, error.message);
@@ -489,7 +489,7 @@ class AudioService {
    */
   getAudioUrl(projectId) {
     if (this.audioExists(projectId)) {
-      return `/audio/${projectId}.mp3`;
+      return `http://localhost:5000/audio/${projectId}.mp3`;
     }
     return null;
   }
@@ -611,11 +611,152 @@ class AudioService {
       console.log(`[AUDIO_SERVICE] ✅ Valid silent audio created: ${outputPath} (${stats.size} bytes, ${durationSeconds} seconds)`);
       
       // Return PUBLIC URL for Remotion compatibility
-      return `/audio/${projectId}.mp3`;
+      return `http://localhost:5000/audio/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[AUDIO_SERVICE] ❌ Failed to create silent audio:`, error.message);
       throw new Error(`Silent audio generation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate separate audio files for each slide
+   * @param {Array} slides - Array of slide objects with narration
+   * @param {string} projectId - Project ID
+   * @returns {Promise<Array>} Array of audio file paths with durations
+   */
+  async generatePerSlideAudio(slides, projectId) {
+    console.log(`[AUDIO_SERVICE] 🎙️ Generating separate audio for ${slides.length} slides`);
+    
+    try {
+      const audioFiles = [];
+      
+      for (let i = 0; i < slides.length; i++) {
+        const slide = slides[i];
+        const slideIndex = i + 1;
+        
+        console.log(`[AUDIO_SERVICE] 🎬 Processing slide ${slideIndex}: ${slide.title}`);
+        console.log(`[AUDIO_SERVICE] 📝 Narration: "${slide.narration.substring(0, 100)}..."`);
+        
+        // Generate unique filename for each slide
+        const slideProjectId = `${projectId}-slide-${slideIndex}`;
+        
+        // Check if slide audio already exists
+        if (this.audioExists(slideProjectId)) {
+          console.log(`[AUDIO_SERVICE] Using existing audio for slide ${slideIndex}`);
+          const audioPath = `http://localhost:5000/audio/${slideProjectId}.mp3`;
+          const duration = await this.getAudioDuration(audioPath);
+          audioFiles.push({
+            slideIndex,
+            audioPath,
+            duration,
+            slideId: slide.id
+          });
+          continue;
+        }
+        
+        // Clean and validate narration text
+        const cleanedText = this.cleanTextForTTS(slide.narration);
+        if (!cleanedText || cleanedText.trim().length === 0) {
+          throw new Error(`No valid narration text for slide ${slideIndex}`);
+        }
+        
+        // Apply rate limiting between slide audio generation
+        await this.applyRateLimit();
+        
+        let audioBuffer;
+        let providerUsed = 'Unknown';
+        
+        // Try ElevenLabs first
+        try {
+          console.log(`[AUDIO_SERVICE] 🎙️ Attempting ElevenLabs TTS for slide ${slideIndex}...`);
+          audioBuffer = await this.generateWithRetry(
+            () => this.generateElevenLabsAudio(cleanedText),
+            'ElevenLabs'
+          );
+          providerUsed = 'ElevenLabs';
+        } catch (elevenLabsError) {
+          console.error(`[AUDIO_SERVICE] ❌ ElevenLabs failed for slide ${slideIndex}: ${elevenLabsError.message}`);
+          
+          if (this.FALLBACK_ENABLED && this.OPENAI_API_KEY) {
+            try {
+              console.log(`[AUDIO_SERVICE] Switching to fallback provider: OpenAI for slide ${slideIndex}`);
+              audioBuffer = await this.generateWithRetry(
+                () => this.generateOpenAIAudio(cleanedText),
+                'OpenAI'
+              );
+              providerUsed = 'OpenAI';
+            } catch (openAIError) {
+              console.error(`[AUDIO_SERVICE] ❌ OpenAI fallback also failed for slide ${slideIndex}: ${openAIError.message}`);
+              throw new Error(`All TTS providers failed for slide ${slideIndex}. ElevenLabs: ${elevenLabsError.message}. OpenAI: ${openAIError.message}`);
+            }
+          } else {
+            throw new Error(`ElevenLabs failed for slide ${slideIndex} and fallback is disabled: ${elevenLabsError.message}`);
+          }
+        }
+
+        // Save slide audio file
+        const outputPath = path.join(this.OUTPUT_DIR, `${slideProjectId}.mp3`);
+        fs.writeFileSync(outputPath, audioBuffer);
+        
+        // Cache the generated audio
+        this.cacheAudio(cleanedText, audioBuffer);
+        
+        console.log(`[AUDIO_SERVICE] ✅ Slide ${slideIndex} audio saved using ${providerUsed}: ${outputPath}`);
+        
+        // Get audio duration
+        const audioPath = `http://localhost:5000/audio/${slideProjectId}.mp3`;
+        const duration = await this.getAudioDuration(audioPath);
+        
+        audioFiles.push({
+          slideIndex,
+          audioPath,
+          duration,
+          slideId: slide.id,
+          providerUsed
+        });
+      }
+      
+      console.log(`[AUDIO_SERVICE] ✅ Generated ${audioFiles.length} separate audio files`);
+      return audioFiles;
+      
+    } catch (error) {
+      console.error(`[AUDIO_SERVICE] ❌ Per-slide audio generation failed:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get audio duration using ffprobe
+   * @param {string} audioPath - Path to audio file
+   * @returns {Promise<number>} Duration in seconds
+   */
+  async getAudioDuration(audioPath) {
+    try {
+      // Convert web path to local file path
+      const filename = path.basename(audioPath);
+      const localPath = path.join(this.OUTPUT_DIR, filename);
+      
+      if (!fs.existsSync(localPath)) {
+        throw new Error(`Audio file not found: ${localPath}`);
+      }
+      
+      // Use ffprobe to get duration
+      const command = `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${localPath}"`;
+      const output = execSync(command, { encoding: 'utf8' }).trim();
+      
+      const duration = parseFloat(output);
+      if (isNaN(duration) || duration <= 0) {
+        throw new Error(`Invalid duration: ${output}`);
+      }
+      
+      console.log(`[AUDIO_SERVICE] 🎵 Audio duration for ${filename}: ${duration.toFixed(2)} seconds`);
+      return duration;
+      
+    } catch (error) {
+      console.error(`[AUDIO_SERVICE] ❌ Failed to get audio duration for ${audioPath}:`, error.message);
+      // Fallback to estimated duration based on text length
+      return 4.0; // Default 4 seconds per slide
     }
   }
 

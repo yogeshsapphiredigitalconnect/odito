@@ -6,24 +6,22 @@ export interface SlideNarration {
 }
 
 export interface OverviewData {
+  projectName: string;
+  url: string;
+  pagesCrawled: number;
   scores: {
-    seo_health: number;
-    ai_visibility: number;
+    seo: number;
+    aiVisibility: number;
     performance: number;
     authority: number;
   };
-  issues_summary: {
-    critical: number;
-    warning: number;
-    info: number;
-    passed: number;
+  issueDistribution: {
+    total: number;
+    high: number;
+    medium: number;
+    low: number;
   };
-  site: {
-    name: string;
-    domain: string;
-  };
-  pages_crawled: number;
-  audit_date: string;
+  audit_date?: string;
 }
 
 export interface PageSpeedData {

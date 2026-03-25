@@ -7,13 +7,15 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 
 interface Props {
   data: {
-    issues: Array<{
-      title: string;
-      affected_count?: number;
-      severity?: string;
-      impact?: string;
-    }>;
-    count?: number;
+    topIssues: {
+      low: Array<{
+        issue: string;
+        severity: string;
+        pages: number;
+        count: number;
+        recommendation: string;
+      }>;
+    };
   };
   narration: SlideNarration;
   brandColor?: string;
@@ -37,27 +39,15 @@ export const LowIssuesSlide: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { opacity, childOpacity, childY } = useSlideTiming();
 
-  const lowIssues = data?.issues || [];
+  const lowIssues = data?.topIssues?.low || [];
 
   // Safety check - ensure we have an array
   if (!Array.isArray(lowIssues)) {
-    console.warn("LowIssuesSlide: data.issues is not an array, using fallback");
+    console.warn("LowIssuesSlide: data.topIssues.low is not an array, using fallback");
     return null;
   }
 
-  // Fallback issues if none provided
-  const fallbackIssues = [
-    "Social Media Meta Tags",
-    "Breadcrumb Navigation",
-    "Pagination Optimization",
-    "External Link Management",
-    "Language Declaration",
-    "Favicon Implementation",
-    "Print Stylesheet",
-    "RSS Feed Availability"
-  ];
-
-  const issuesToShow = lowIssues.length > 0 ? lowIssues : fallbackIssues.slice(0, 8);
+  const issuesToShow = lowIssues.length > 0 ? lowIssues : [];
 
   return (
     <AbsoluteFill style={{ background: "#030912" }}>
@@ -148,8 +138,7 @@ export const LowIssuesSlide: React.FC<Props> = ({
             gap: 16,
           }}
         >
-          {issuesToShow.map((issue, i) => {
-            const issueTitle = typeof issue === 'string' ? issue : issue.title;
+          {issuesToShow.map((item, i) => {
             const itemDelay = 10 + i * 5;
             const itemOpacity = interpolate(frame, [itemDelay, itemDelay + 15], [0, 1], {
               extrapolateLeft: "clamp",
@@ -204,7 +193,7 @@ export const LowIssuesSlide: React.FC<Props> = ({
                       lineHeight: 1.3,
                     }}
                   >
-                    {issueTitle}
+                    {item.issue}
                   </div>
                   <div
                     style={{
@@ -213,7 +202,7 @@ export const LowIssuesSlide: React.FC<Props> = ({
                       fontFamily: "sans-serif",
                     }}
                   >
-                    Minor enhancement
+                    {item.recommendation}
                   </div>
                 </div>
               </div>

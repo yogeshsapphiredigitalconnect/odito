@@ -69,7 +69,7 @@ export const KeywordSlide: React.FC<Props> = ({ data, narration, brandColor = "#
             ))}
           </div>
 
-          {data.opportunities.map((kw, i) => {
+          {(data?.opportunities || []).map((kw, i) => {
             const delay = 25 + i * 14;
             const op   = interpolate(frame, [delay, delay + 20], [0, 1],  { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const ty   = interpolate(frame, [delay, delay + 20], [20, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -78,7 +78,7 @@ export const KeywordSlide: React.FC<Props> = ({ data, narration, brandColor = "#
             const oppLabel = OPP_LABEL[kw.opportunity_tag] || kw.opportunity_tag;
 
             // Animate position bar (inverted — lower is better, show 100 - pos out of 100)
-            const barFill = interpolate(frame, [delay + 5, delay + 45], [0, Math.max(0, 100 - kw.google_position)], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            const barFill = interpolate(frame, [delay + 5, delay + 45], [0, Math.max(0, 100 - (Number(kw.google_position) || 0))], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const posColor = kw.google_position <= 3 ? "#00f5a0" : kw.google_position <= 10 ? "#00dfff" : kw.google_position <= 20 ? "#ffb703" : "#ff3860";
 
             return (

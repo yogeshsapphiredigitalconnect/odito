@@ -25,11 +25,9 @@ export const Title: React.FC<{
   const videoConfig = useVideoConfig();
   const frame = useCurrentFrame();
 
-  const words = titleText.split(" ");
-
   return (
     <h1 style={title}>
-      {words.map((t, i) => {
+          {(titleText?.split(" ") || []).map((t, i) => {
         const delay = i * 5;
 
         const scale = spring({

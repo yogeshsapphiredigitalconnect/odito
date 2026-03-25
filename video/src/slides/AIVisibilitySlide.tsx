@@ -74,7 +74,8 @@ export const AIVisibilitySlide: React.FC<Props> = ({ data, narration, brandColor
               <div key={s.label} style={{ flex: 1, padding: "14px 12px", background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: 12, textAlign: "center" }}>
                 <div style={{ fontFamily: "sans-serif", fontSize: 11, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{s.label}</div>
                 {(() => {
-                  const v = Math.round(interpolate(frame, [s.startFrame, s.startFrame + 40], [0, s.value], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+                  const safeValue = typeof s.value === "number" && !isNaN(s.value) ? s.value : 0;
+                  const v = Math.round(interpolate(frame, [s.startFrame, s.startFrame + 40], [0, safeValue], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
                   return <div style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: 34, color: s.color }}>{v}</div>;
                 })()}
               </div>
@@ -97,9 +98,9 @@ export const AIVisibilitySlide: React.FC<Props> = ({ data, narration, brandColor
             <div style={{ fontFamily: "sans-serif", fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 16 }}>
               LLM Citation Rate
             </div>
-            {data.llm_citations.map((citation, i) => {
-              const pct = citation.growth;
-              const barW = interpolate(frame, [20 + i * 10, 60 + i * 10], [0, pct], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            {(data?.llm_citations || []).map((citation, i) => {
+              const safeGrowth = typeof citation.growth === "number" && !isNaN(citation.growth) ? citation.growth : 0;
+              const barW = interpolate(frame, [20 + i * 10, 60 + i * 10], [0, safeGrowth], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
               const op = interpolate(frame, [18 + i * 10, 33 + i * 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
               return (
                 <div key={citation.platform} style={{ opacity: op, display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
@@ -122,7 +123,7 @@ export const AIVisibilitySlide: React.FC<Props> = ({ data, narration, brandColor
               Entity Coverage
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
-              {data.entity_map.map((e, i) => {
+              {(data?.entity_map || []).map((e, i) => {
                 const color = ENTITY_COLOR[e.status];
                 const icon = ENTITY_ICON[e.status];
                 const op = interpolate(frame, [40 + i * 5, 55 + i * 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
