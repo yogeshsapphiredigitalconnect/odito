@@ -1,7 +1,7 @@
 import { AbsoluteFill, Sequence, interpolate, useCurrentFrame, Audio } from "remotion";
 import { theme } from "./theme";
 
-// Import all 10 required slides (matching worker output)
+// Import all 14 required slides (matching worker output)
 import { OverviewSlide } from "./slides/OverviewSlide";
 import { ScoreSummarySlide } from "./slides/ScoreSummarySlide";
 import { IssueDistributionSlide } from "./slides/IssueDistributionSlide";
@@ -12,6 +12,9 @@ import { TechnicalHighlightsSlide } from "./slides/TechnicalHighlightsSlide";
 import { PerformanceSummarySlide } from "./slides/PerformanceSummarySlide";
 import { PageSpeedSlide } from "./slides/PageSpeedSlide";
 import { AIAnalysisSlide } from "./slides/AIAnalysisSlide";
+import { AIScoreBreakdownSlide } from "./slides/AIScoreBreakdownSlide";
+import { AIDetailedMetricsSlide } from "./slides/AIDetailedMetricsSlide";
+import { AITopIssuesSlide } from "./slides/AITopIssuesSlide";
 
 export const AuditVideo = (props: Record<string, unknown>) => {
   let { 
@@ -42,19 +45,19 @@ export const AuditVideo = (props: Record<string, unknown>) => {
   
   console.log("🎬 REMOTION: Total slides:", slidesWithAudio.length);
   
-  if (slidesWithAudio.length !== 10) {
-    console.error("❌ REMOTION: Invalid slides count - expected 10, got:", slidesWithAudio.length);
+  if (slidesWithAudio.length !== 13) {
+    console.error("❌ REMOTION: Invalid slides count - expected 13, got:", slidesWithAudio.length);
     // Return fallback UI instead of null
     return (
       <AbsoluteFill style={{ background: "#030912", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
         <div style={{ fontSize: 48, fontWeight: "bold", marginBottom: 20 }}>⚠️ Slide Count Mismatch</div>
-        <div style={{ fontSize: 24, opacity: 0.7 }}>Expected 10 slides, got {slidesWithAudio.length}</div>
+        <div style={{ fontSize: 24, opacity: 0.7 }}>Expected 13 slides, got {slidesWithAudio.length}</div>
         <div style={{ fontSize: 16, opacity: 0.5, marginTop: 10 }}>Check worker slide generation</div>
       </AbsoluteFill>
     );
   }
   
-  console.log("✅ REMOTION: All 10 slides with audio validated successfully");
+  console.log("✅ REMOTION: All 14 slides with audio validated successfully");
   
   // Calculate timing based on actual audio durations
   let currentFrame = 0;
@@ -329,6 +332,79 @@ export const AuditVideo = (props: Record<string, unknown>) => {
           );
         })()}
       </Sequence>
+
+      {/* SLIDE 11: AI CATEGORY BREAKDOWN with per-slide audio */}
+      <Sequence from={slideTiming[10].from} durationInFrames={slideTiming[10].dur}>
+        {(() => {
+          const slide = slidesWithAudio[10];
+          console.log('🎵 REMOTION: Rendering Slide 11 with audio:', slide.audio);
+          return (
+            <>
+              <Audio 
+                src={slide.audio} 
+                volume={1}
+                startFrom={0}
+                endAt={slideTiming[10].dur}
+              />
+              <AIScoreBreakdownSlide
+                data={slide.data || { categories: {} }}
+                narration={slide.narration || ''}
+                brandColor="#7730ed"
+                agencyName="AuditIQ"
+              />
+            </>
+          );
+        })()}
+      </Sequence>
+
+      {/* SLIDE 12: AI DETAILED METRICS with per-slide audio */}
+      <Sequence from={slideTiming[11].from} durationInFrames={slideTiming[11].dur}>
+        {(() => {
+          const slide = slidesWithAudio[11];
+          console.log('🎵 REMOTION: Rendering Slide 12 with audio:', slide.audio);
+          return (
+            <>
+              <Audio 
+                src={slide.audio} 
+                volume={1}
+                startFrom={0}
+                endAt={slideTiming[11].dur}
+              />
+              <AIDetailedMetricsSlide
+                data={slide.data || { detailedMetrics: {} }}
+                narration={slide.narration || ''}
+                brandColor="#7730ed"
+                agencyName="AuditIQ"
+              />
+            </>
+          );
+        })()}
+      </Sequence>
+
+      {/* SLIDE 13: AI TOP ISSUES with per-slide audio */}
+      <Sequence from={slideTiming[12].from} durationInFrames={slideTiming[12].dur}>
+        {(() => {
+          const slide = slidesWithAudio[12];
+          console.log('🎵 REMOTION: Rendering Slide 13 with audio:', slide.audio);
+          return (
+            <>
+              <Audio 
+                src={slide.audio} 
+                volume={1}
+                startFrom={0}
+                endAt={slideTiming[12].dur}
+              />
+              <AITopIssuesSlide
+                data={slide.data || { topIssues: [] }}
+                narration={slide.narration || ''}
+                brandColor="#7730ed"
+                agencyName="AuditIQ"
+              />
+            </>
+          );
+        })()}
+      </Sequence>
+
 
     </AbsoluteFill>
   );

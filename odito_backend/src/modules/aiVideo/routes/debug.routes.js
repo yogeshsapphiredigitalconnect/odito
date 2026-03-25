@@ -154,7 +154,7 @@ router.get('/test-mapping/:projectId', async (req, res) => {
     
     // Test buildAuditSnapshot
     console.log('[DEBUG] Testing buildAuditSnapshot...');
-    const auditSnapshot = AiScriptService.buildAuditSnapshot(auditData);
+    const auditSnapshot = await AiScriptService.buildAuditSnapshot(auditData);
     
     // Test buildPromptData
     console.log('[DEBUG] Testing buildPromptData...');

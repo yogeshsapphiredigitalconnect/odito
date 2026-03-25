@@ -4,6 +4,8 @@ import { NarrationGeneratorService } from './narrationGenerator.service.js';
 import { GroqService } from '../../../services/groq.service.js';
 import { GeminiService } from '../../../services/gemini.service.js';
 import SeoProject from '../../app_user/model/SeoProject.js';
+import { Page19Service } from '../../pdf/service/page19Service.js';
+import { Page22Service } from '../../pdf/service/page22Service.js';
 
 /**
  * AI Script Service
@@ -122,7 +124,7 @@ export class AiScriptService {
 
       // Step 4: Build audit snapshot from REAL DATA
       console.log(`[SCRIPT_GEN] Building audit snapshot from unified service data...`);
-      const auditSnapshot = this.buildAuditSnapshot(auditData);
+      const auditSnapshot = await this.buildAuditSnapshot(auditData);
       console.log('[SCRIPT_GEN] auditSnapshot.scores:', auditSnapshot.scores);
       
       // 🔧 STEP 8: VERIFY FIX WITH TEST SCRIPT OUTPUT
@@ -345,11 +347,68 @@ export class AiScriptService {
    * @param {Object} auditData - Structured audit data from AiDataService
    * @returns {Object} Audit snapshot for storage with REAL DATA
    */
-  static buildAuditSnapshot(auditData) {
+  static async buildAuditSnapshot(auditData) {
     try {
       console.log('[AUDIT_SNAPSHOT] Building snapshot from real audit data');
       
-      // 🔍 STEP 1: LOG FULL API RESPONSE (CRITICAL)
+      // Extract projectId from auditData for Page19/Page22 services
+      const projectId = auditData.project?.id || auditData.projectId || auditData.metadata?.projectId;
+      console.log('[AUDIT_SNAPSHOT] ProjectId for Page19/Page22:', projectId);
+      console.log('[AUDIT_SNAPSHOT] auditData.project keys:', Object.keys(auditData.project || {}));
+      console.log('[AUDIT_SNAPSHOT] auditData keys:', Object.keys(auditData));
+      console.log('[AUDIT_SNAPSHOT] auditData.metadata:', auditData.metadata);
+      
+      // � STEP 1.5: FETCH PAGE19 AND PAGE22 DATA FOR ENHANCED AI ANALYSIS
+      console.log('\n🔧 STEP 1.5: FETCHING PAGE19 AND PAGE22 DATA');
+      console.log('-'.repeat(50));
+      
+      let page19Data = null;
+      let page22Data = null;
+      
+      if (projectId) {
+        try {
+          console.log('[AUDIT_SNAPSHOT] Fetching Page19 data...');
+          const page19Result = await Page19Service.getPage19Data(projectId);
+          console.log('[AUDIT_SNAPSHOT] Page19 full response:', JSON.stringify(page19Result, null, 2));
+          if (page19Result?.success) {
+            page19Data = page19Result.data;
+            console.log('[AUDIT_SNAPSHOT] ✅ Page19 data fetched:', Object.keys(page19Data));
+            console.log('[AUDIT_SNAPSHOT] Page19 sample values:', {
+              aiReadiness: page19Data.aiReadiness,
+              geoScore: page19Data.geoScore,
+              aeoScore: page19Data.aeoScore,
+              summary: page19Data.summary
+            });
+          } else {
+            console.warn('[AUDIT_SNAPSHOT] ⚠️ Page19 service failed:', page19Result?.error?.message);
+          }
+        } catch (error) {
+          console.warn('[AUDIT_SNAPSHOT] ⚠️ Page19 service error:', error.message);
+        }
+        
+        try {
+          console.log('[AUDIT_SNAPSHOT] Fetching Page22 data...');
+          const page22Result = await Page22Service.getPage22Data(projectId);
+          console.log('[AUDIT_SNAPSHOT] Page22 full response:', JSON.stringify(page22Result, null, 2));
+          if (page22Result?.success) {
+            page22Data = page22Result.data;
+            console.log('[AUDIT_SNAPSHOT] ✅ Page22 data fetched:', Object.keys(page22Data));
+            console.log('[AUDIT_SNAPSHOT] Page22 sample values:', {
+              signals: page22Data.signals,
+              checklistCount: page22Data.checklist?.length,
+              signalsKeys: page22Data.signals ? Object.keys(page22Data.signals) : 'no signals'
+            });
+          } else {
+            console.warn('[AUDIT_SNAPSHOT] ⚠️ Page22 service failed:', page22Result?.error?.message);
+          }
+        } catch (error) {
+          console.warn('[AUDIT_SNAPSHOT] ⚠️ Page22 service error:', error.message);
+        }
+      } else {
+        console.warn('[AUDIT_SNAPSHOT] ⚠️ No projectId found, skipping Page19/Page22 services');
+      }
+      
+      // � STEP 1: LOG FULL API RESPONSE (CRITICAL)
       console.log('FULL API RESPONSE:');
       console.log(JSON.stringify(auditData, null, 2));
       
@@ -587,12 +646,92 @@ export class AiScriptService {
           opportunities: opportunities
         },
         
-        // AI visibility insights
-        aiAnalysis: {
-          score: Math.round(scores.aiVisibility || aiVisibilityScore),
-          schemaMarkupCount: schemaMarkup.length,
-          hasKnowledgeGraph: !!(aiObj.knowledgeGraph?.exists)
-        },
+        // 🔧 STEP 8.5: BUILD ENHANCED AI ANALYSIS WITH PAGE19/PAGE22 DATA
+        aiAnalysis: (() => {
+          console.log('\n🔧 STEP 8.5: BUILDING ENHANCED AI ANALYSIS');
+          console.log('-'.repeat(50));
+          console.log('[AUDIT_SNAPSHOT] page19Data exists:', !!page19Data);
+          console.log('[AUDIT_SNAPSHOT] page22Data exists:', !!page22Data);
+          console.log('[AUDIT_SNAPSHOT] page19Data type:', typeof page19Data);
+          console.log('[AUDIT_SNAPSHOT] page22Data type:', typeof page22Data);
+          console.log('[AUDIT_SNAPSHOT] Condition (page19Data && page22Data):', !!(page19Data && page22Data));
+          
+          if (page19Data && page22Data) {
+            // Build comprehensive aiAnalysis with Page19 and Page22 data
+            console.log('[AUDIT_SNAPSHOT] ✅ Building full AI analysis with Page19+Page22 data');
+            
+            const enhancedAiAnalysis = {
+              score: page19Data.aiReadiness || Math.round(scores.aiVisibility || aiVisibilityScore),
+              
+              categories: {
+                aiImpact: page19Data.geoScore || 0,
+                citationProbability: page19Data.aiCitation || 0,
+                llmReadiness: page19Data.topScore || 0,
+                aeoScore: page19Data.aeoScore || 0,
+                topicalAuthority: page19Data.aiTopicalAuthority || 0,
+                voiceIntent: page19Data.voiceIntent || 0
+              },
+              
+              detailedMetrics: {
+                schemaCoverage: page22Data.signals?.schemaCoverage || 0,
+                faqOptimization: page22Data.signals?.faqOptimization || 0,
+                conversationalScore: page22Data.signals?.conversationalScore || 0,
+                aiSnippetProbability: page22Data.signals?.aiSnippetProbability || 0,
+                aiCitationRate: page22Data.signals?.aiCitationRate || 0,
+                knowledgeGraph: page22Data.signals?.knowledgeGraph || 0
+              },
+              
+              checklist: page22Data.checklist || [],
+              summary: page19Data.summary || ""
+            };
+            
+            // Add hasKnowledgeGraph based on detailedMetrics.knowledgeGraph
+            enhancedAiAnalysis.hasKnowledgeGraph = enhancedAiAnalysis.detailedMetrics.knowledgeGraph > 0;
+            
+            console.log('[AUDIT_SNAPSHOT] ✅ Enhanced AI analysis created:', {
+              score: enhancedAiAnalysis.score,
+              categoriesCount: Object.keys(enhancedAiAnalysis.categories).length,
+              detailedMetricsCount: Object.keys(enhancedAiAnalysis.detailedMetrics).length,
+              checklistItems: enhancedAiAnalysis.checklist.length,
+              hasSummary: !!enhancedAiAnalysis.summary,
+              knowledgeGraphScore: enhancedAiAnalysis.detailedMetrics.knowledgeGraph,
+              hasKnowledgeGraph: enhancedAiAnalysis.hasKnowledgeGraph
+            });
+            
+            return enhancedAiAnalysis;
+            
+          } else {
+            // Fallback to existing minimal aiAnalysis
+            console.log('[AUDIT_SNAPSHOT] ⚠️ Using fallback AI analysis (Page19/Page22 data unavailable)');
+            
+            return {
+              score: Math.round(scores.aiVisibility || aiVisibilityScore),
+              
+              // Add empty structures for backward compatibility
+              categories: {
+                aiImpact: 0,
+                citationProbability: 0,
+                llmReadiness: 0,
+                aeoScore: 0,
+                topicalAuthority: 0,
+                voiceIntent: 0
+              },
+              detailedMetrics: {
+                schemaCoverage: 0,
+                faqOptimization: 0,
+                conversationalScore: 0,
+                aiSnippetProbability: 0,
+                aiCitationRate: 0,
+                knowledgeGraph: 0
+              },
+              checklist: [],
+              summary: "AI analysis data unavailable - using fallback",
+              
+              // Add hasKnowledgeGraph based on detailedMetrics.knowledgeGraph
+              hasKnowledgeGraph: false
+            };
+          }
+        })(),
         
         // 🔧 STEP 4: FIX RECOMMENDATIONS (IMPORTANT)
         // Convert objects to readable text
@@ -817,7 +956,6 @@ export class AiScriptService {
         },
         aiVisibility: {
           score: Math.round(scores.aiVisibility || aiObj.visibility || 0),
-          schemaMarkupCount: schemaMarkup.length,
           hasKnowledgeGraph: !!(aiObj.knowledgeGraph?.exists)
         },
         // 🔧 STEP 4: FIX RECOMMENDATIONS - Use formatted recommendations
@@ -864,7 +1002,6 @@ export class AiScriptService {
         },
         aiVisibility: {
           score: 0,
-          schemaMarkupCount: 0,
           hasKnowledgeGraph: false
         },
         topRecommendations: []
@@ -1015,7 +1152,6 @@ Top Rankings: ${(keywordData?.topRankings || []).join(', ') || 'No ranking data'
 
 🤖 AI VISIBILITY:
 AI Discovery Score: ${aiVisibility?.score || 0}
-Schema Markup Implementation: ${aiVisibility?.schemaMarkupCount || 0} types
 Knowledge Graph: ${aiVisibility?.hasKnowledgeGraph ? 'Present' : 'Not present'}
 
 💡 TOP RECOMMENDATIONS:

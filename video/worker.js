@@ -133,16 +133,16 @@ class VideoWorker {
           hasAuditSnapshot: !!auditSnapshot
         });
         
-        // Step 1: Generate 10 structured slides using auditSnapshot only
-        console.log(`[VIDEO_WORKER] Generating 10 structured slides from audit data...`);
+        // Step 1: Generate 13 structured slides using auditSnapshot only
+        console.log(`[VIDEO_WORKER] Generating 13 structured slides from audit data...`);
         const structuredSlides = this.generateStructuredSlides(audit);
         
         if (!structuredSlides || structuredSlides.length === 0) {
           throw new Error(`Slides generation failed - no slides created`);
         }
         
-        if (structuredSlides.length !== 10) {
-          throw new Error(`Failed to generate exactly 10 slides. Got ${structuredSlides?.length || 0} slides`);
+        if (structuredSlides.length !== 13) {
+          throw new Error(`Failed to generate exactly 13 slides. Got ${structuredSlides?.length || 0} slides`);
         }
         
         console.log(`[VIDEO_WORKER] ✅ Created ${structuredSlides.length} structured slides`);
@@ -208,7 +208,12 @@ class VideoWorker {
             retryCount,
             slidesGenerated: structuredSlides.length,
             audioFilesGenerated: audioFiles.length,
-            providerUsed: 'per_slide_audio_generation'
+            providerUsed: 'per_slide_audio_generation',
+            slideBreakdown: {
+              originalSlides: 9,
+              newAiSlides: 3,
+              totalSlides: structuredSlides.length
+            }
           }
         });
         
@@ -301,13 +306,13 @@ class VideoWorker {
   }
 
   /**
-   * Generate 10 structured slides using auditSnapshot data only
+   * Generate 9 structured slides using auditSnapshot data only
    * @param {Object} audit - Audit data snapshot
-   * @returns {Array} Array of 10 structured slide objects
+   * @returns {Array} Array of 9 structured slide objects
    */
   generateStructuredSlides(audit) {
     try {
-      console.log(`[VIDEO_WORKER] 🎬 Generating 10 structured slides from audit data`);
+      console.log(`[VIDEO_WORKER] 🎬 Generating 9 structured slides from audit data`);
       console.log(`[VIDEO_WORKER] ✅ audit available:`, !!audit);
       
       // Safety checks
@@ -344,7 +349,7 @@ class VideoWorker {
       
       console.log(`[VIDEO_WORKER] 📈 Extracted data - Project: ${projectName}, Overall Score: ${scores.overall}`);
       
-      // Create exactly 10 structured slides with clean data mapping
+      // Create exactly 9 structured slides with clean data mapping
       const slides = [
         {
           id: 1,
@@ -451,43 +456,303 @@ class VideoWorker {
           subtitle: "User Experience Metrics",
           narration: this.generateCoreWebVitalsNarration(coreWebVitals),
           data: coreWebVitals
-        },
-        {
-          id: 10,
-          type: "aiAnalysis",
-          title: "AI Visibility Analysis",
-          subtitle: `AI Score: ${aiAnalysis.score || 0}`,
-          narration: `Your AI visibility score is ${aiAnalysis.score || 0}. Currently, your website has ${aiAnalysis.schemaMarkupCount || 0} schema implementations, indicating opportunities to improve AI search optimization.`,
-          data: {
-            aiAnalysis,
-            score: aiAnalysis.score || 0,
-            schemaMarkupCount: aiAnalysis.schemaMarkupCount || 0
-          }
         }
       ];
+
+      // Add 4 NEW AI Analysis slides (10-13) - NO aiRecommendations slide
+      const newAiSlides = this.generateAISlides(aiAnalysis, scores);
+      
+      // Combine existing slides with new AI slides
+      const allSlides = [...slides, ...newAiSlides];
       
       // DEBUG LOG: Final slides data before returning
-      console.log("FINAL SLIDES DATA:", JSON.stringify(slides, null, 2));
+      console.log("FINAL SLIDES DATA:", JSON.stringify(allSlides, null, 2));
       
-      // Validate we have exactly 10 slides
-      if (slides.length !== 10) {
-        throw new Error(`Expected 10 slides, got ${slides.length}`);
+      // Validate we have exactly 13 slides (9 original + 4 AI slides)
+      if (allSlides.length !== 13) {
+        throw new Error(`Expected 13 slides (9 original + 4 AI), got ${allSlides.length}`);
       }
       
       // Validate each slide has required fields
-      slides.forEach((slide, index) => {
+      allSlides.forEach((slide, index) => {
         if (!slide.id || !slide.type || !slide.narration) {
           throw new Error(`Slide ${index + 1} missing required fields`);
         }
       });
       
-      console.log(`[VIDEO_WORKER] ✅ Successfully created ${slides.length} structured slides`);
-      return slides;
+      console.log(`[VIDEO_WORKER] ✅ Successfully created ${allSlides.length} structured slides (including 3 new AI slides)`);
+      return allSlides;
       
     } catch (error) {
       console.error(`[VIDEO_WORKER] ❌ Error generating structured slides:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Generate 4 new AI Analysis slides (10-13) from aiAnalysis data
+   * @param {Object} aiAnalysis - AI analysis data from auditSnapshot
+   * @param {Object} scores - Scores object containing aiVisibility
+   * @returns {Array} Array of 4 AI slide objects
+   */
+  generateAISlides(aiAnalysis, scores) {
+    try {
+      console.log(`[VIDEO_WORKER] 🤖 Generating 3 AI Analysis slides from aiAnalysis data`);
+      
+      // Safety checks for aiAnalysis data
+      if (!aiAnalysis || typeof aiAnalysis !== 'object') {
+        console.warn(`[VIDEO_WORKER] ⚠️ aiAnalysis data missing or invalid, using fallback values`);
+        aiAnalysis = {
+          score: 0,
+          summary: "AI analysis data unavailable",
+          hasKnowledgeGraph: false,
+          categories: {},
+          detailedMetrics: {},
+          checklist: []
+        };
+      }
+      
+      const categories = aiAnalysis.categories || {};
+      const detailedMetrics = aiAnalysis.detailedMetrics || {};
+      const checklist = aiAnalysis.checklist || [];
+      
+      // SLIDE 10: AI Analysis Overview (clean)
+      const slide10 = {
+        id: 10,
+        type: "aiAnalysis",
+        title: "AI Analysis Overview",
+        subtitle: "AI Search Readiness Summary",
+        narration: this.generateAIOverviewNarration(scores.aiVisibility || 0, aiAnalysis.hasKnowledgeGraph || false),
+        data: {
+          score: scores.aiVisibility || 0,
+          summary: aiAnalysis.summary || "AI analysis data unavailable",
+          hasKnowledgeGraph: aiAnalysis.hasKnowledgeGraph || false
+        }
+      };
+      
+      // SLIDE 11: AI Category Breakdown
+      const slide11 = {
+        id: 11,
+        type: "aiCategoryBreakdown",
+        title: "AI Category Breakdown",
+        subtitle: "AI Performance Distribution",
+        narration: this.generateAICategoryNarration(categories),
+        data: {
+          categories: {
+            aiImpact: categories.aiImpact || 0,
+            citationProbability: categories.citationProbability || 0,
+            llmReadiness: categories.llmReadiness || 0,
+            aeoScore: categories.aeoScore || 0,
+            topicalAuthority: categories.topicalAuthority || 0,
+            voiceIntent: categories.voiceIntent || 0
+          }
+        }
+      };
+      
+      // SLIDE 12: AI Detailed Metrics
+      const slide12 = {
+        id: 12,
+        type: "aiDetailedMetrics",
+        title: "AI Detailed Metrics",
+        subtitle: "Technical AI Readiness",
+        narration: this.generateAIDetailedMetricsNarration(detailedMetrics),
+        data: {
+          detailedMetrics: {
+            schemaCoverage: detailedMetrics.schemaCoverage || 0,
+            faqOptimization: detailedMetrics.faqOptimization || 0,
+            conversationalScore: detailedMetrics.conversationalScore || 0,
+            aiSnippetProbability: detailedMetrics.aiSnippetProbability || 0,
+            aiCitationRate: detailedMetrics.aiCitationRate || 0,
+            knowledgeGraph: detailedMetrics.knowledgeGraph || 0
+          }
+        }
+      };
+      
+      // SLIDE 13: AI Top Issues - ONLY pass filtered topIssues, not full checklist
+      const slide13 = {
+        id: 13,
+        type: "aiTopIssues",
+        title: "AI Top Issues",
+        subtitle: "Critical AI Optimization Areas",
+        narration: this.generateAITopIssuesNarration(checklist),
+        data: {
+          topIssues: this.extractTopIssues(checklist) // Only 3 items, not full checklist
+        }
+      };
+      
+      const aiSlides = [slide10, slide11, slide12, slide13];
+      
+      console.log(`[VIDEO_WORKER] ✅ Generated ${aiSlides.length} AI Analysis slides (slides 10-13)`);
+      aiSlides.forEach((slide, index) => {
+        console.log(`[VIDEO_WORKER]   AI Slide ${slide.id}: ${slide.title} (${slide.type})`);
+      });
+      
+      return aiSlides;
+      
+    } catch (error) {
+      console.error(`[VIDEO_WORKER] ❌ Error generating AI slides:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate narration for AI Analysis Overview slide - SHORT AND CLEAN
+   * @param {number} aiVisibilityScore - AI visibility score
+   * @param {boolean} hasKnowledgeGraph - Whether knowledge graph is established
+   * @returns {string} Short, clean narration text
+   */
+  generateAIOverviewNarration(aiVisibilityScore, hasKnowledgeGraph) {
+    const score = aiVisibilityScore || 0;
+    
+    if (score >= 70) {
+      return `Your AI visibility score is ${score}. Your brand has strong presence in AI-generated search results.`;
+    } else if (score >= 50) {
+      return `Your AI visibility score is ${score}. Your brand has moderate presence in AI-generated search results.`;
+    } else {
+      return `Your AI visibility score is ${score}. Your brand has limited presence in AI-generated search results.`;
+    }
+  }
+
+  /**
+   * Generate narration for AI Category Breakdown slide - SUMMARY STYLE
+   * @param {Object} categories - AI category scores
+   * @returns {string} Short, clean narration text
+   */
+  generateAICategoryNarration(categories) {
+    const scores = Object.values(categories).filter(s => s > 0);
+    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 50;
+    
+    if (avgScore >= 70) {
+      return "Your AI performance shows strong results across key categories, indicating solid optimization for AI search visibility.";
+    } else if (avgScore >= 50) {
+      return "Your AI performance varies across key categories, with moderate optimization overall.";
+    } else {
+      return "Your AI performance needs attention across multiple categories to improve search visibility.";
+    }
+  }
+
+  /**
+   * Generate narration for AI Detailed Metrics slide - SHORT AND CLEAN
+   * @param {Object} detailedMetrics - AI detailed metrics scores
+   * @returns {string} Short, clean narration text
+   */
+  generateAIDetailedMetricsNarration(detailedMetrics) {
+    return "Your technical AI readiness shows improvement opportunities in schema, FAQs, and content structure.";
+  }
+
+  /**
+   * Generate narration for AI Top Issues slide - SHORT BULLET STYLE
+   * @param {Array} checklist - AI checklist data
+   * @returns {string} Short narration text (12-15 seconds)
+   */
+  generateAITopIssuesNarration(checklist) {
+    const topIssues = this.extractTopIssues(checklist);
+    
+    if (topIssues.length === 0) {
+      return "Your AI optimization shows no critical issues.";
+    }
+    
+    // Create short, punchy narration - max 2-3 sentences
+    const issueTypes = topIssues.slice(0, 3).map(issue => {
+      const title = issue.title.toLowerCase();
+      if (title.includes('schema') || title.includes('structured')) return 'weak structured data';
+      if (title.includes('content') || title.includes('conversational')) return 'poor content structure';
+      if (title.includes('citation') || title.includes('authority')) return 'missing citation signals';
+      if (title.includes('entity') || title.includes('knowledge')) return 'unclear entity information';
+      if (title.includes('faq')) return 'limited FAQ content';
+      return 'AI optimization gaps';
+    });
+    
+    const uniqueIssues = [...new Set(issueTypes)].slice(0, 3);
+    const issuesText = uniqueIssues.join(', ');
+    
+    return `These are the top 3 critical issues impacting your AI visibility.`;
+  }
+
+  /**
+   * Extract top 3 most critical AI issues from checklist
+   * @param {Array} checklist - AI checklist data
+   * @returns {Array} Top 3 critical issues with clean titles
+   */
+  extractTopIssues(checklist) {
+    if (!Array.isArray(checklist) || checklist.length === 0) {
+      return [];
+    }
+    
+    // Parse real scores from titles and sort by score (lowest first = most critical)
+    const sortedIssues = [...checklist]
+      .map(issue => {
+        const title = issue.title || issue.description || issue.item || 'Unknown issue';
+        
+        // Extract real score from title like "Rule step_by_step_content scored 20.0"
+        const scoreMatch = title.match(/scored\s+(\d+(?:\.\d+)?)/);
+        const realScore = scoreMatch ? parseFloat(scoreMatch[1]) : (issue.score || issue.score_value || 0);
+        
+        // Clean up the title - remove "Rule xxx scored YY:" prefix
+        let cleanTitle = title.replace(/^Rule\s+\w+\s+scored\s+\d+(?:\.\d+)?\s*:?\s*/i, '').trim();
+        
+        // If title is empty after cleaning, use a default based on the original title
+        if (!cleanTitle) {
+          if (title.includes('faq_section_5_to_10_questions')) {
+            cleanTitle = 'FAQ section missing (5–10 questions)';
+          } else if (title.includes('schema')) {
+            cleanTitle = 'Schema not implemented';
+          } else if (title.includes('google_maps_embed')) {
+            cleanTitle = 'No Google Maps embed';
+          } else if (title.includes('entity') || title.includes('knowledge')) {
+            cleanTitle = 'Entity information unclear';
+          } else if (title.includes('citation')) {
+            cleanTitle = 'Missing citation signals';
+          } else if (title.includes('conversational') || title.includes('content')) {
+            cleanTitle = 'Poor content structure';
+          } else {
+            cleanTitle = 'AI optimization issue';
+          }
+        } else {
+          // Convert rule names to readable titles
+          if (cleanTitle.includes('faq_section_5_to_10_questions')) {
+            cleanTitle = 'FAQ section missing (5–10 questions)';
+          } else if (cleanTitle.includes('schema')) {
+            cleanTitle = 'Schema not implemented';
+          } else if (cleanTitle.includes('google_maps_embed')) {
+            cleanTitle = 'No Google Maps embed';
+          } else if (cleanTitle.includes('entity') || cleanTitle.includes('knowledge')) {
+            cleanTitle = 'Entity information unclear';
+          } else if (cleanTitle.includes('citation')) {
+            cleanTitle = 'Missing citation signals';
+          } else if (cleanTitle.includes('conversational') || cleanTitle.includes('content')) {
+            cleanTitle = 'Poor content structure';
+          }
+        }
+        
+        return {
+          title: cleanTitle,
+          score: realScore,
+          status: issue.status || 'unknown',
+          category: this.deriveCategory(cleanTitle)
+        };
+      })
+      .sort((a, b) => a.score - b.score) // Lowest score first = most critical
+      .slice(0, 3); // EXACTLY 3 items
+    
+    return sortedIssues;
+  }
+
+  /**
+   * Derive category from issue title
+   * @param {string} title - Issue title
+   * @returns {string} Derived category
+   */
+  deriveCategory(title) {
+    const lowerTitle = title.toLowerCase();
+    
+    if (lowerTitle.includes('schema') || lowerTitle.includes('structured')) return 'schema';
+    if (lowerTitle.includes('faq') || lowerTitle.includes('question')) return 'faq';
+    if (lowerTitle.includes('entity') || lowerTitle.includes('knowledge')) return 'entity';
+    if (lowerTitle.includes('citation') || lowerTitle.includes('authority')) return 'citation';
+    if (lowerTitle.includes('conversational') || lowerTitle.includes('content')) return 'content';
+    
+    return 'general';
   }
 
   /**
@@ -686,7 +951,7 @@ class VideoWorker {
         throw new Error(response.data?.message || 'Failed to fetch video data');
       }
       
-      console.log(`[VIDEO_WORKER] ✅ Video data fetched successfully`);
+      console.log("[VIDEO_WORKER] ✅ All 13 slides with audio validated successfully");
       return response.data.data;
       
     } catch (error) {

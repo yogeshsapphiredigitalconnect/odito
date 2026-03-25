@@ -25,8 +25,8 @@
         }
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-1.mp3",
-      "duration": 7.662585,
-      "durationInFrames": 230
+      "duration": 8.219864,
+      "durationInFrames": 247
     },
     {
       "id": 2,
@@ -44,8 +44,8 @@
         "overall": 50
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-2.mp3",
-      "duration": 8.173424,
-      "durationInFrames": 245
+      "duration": 8.452063,
+      "durationInFrames": 254
     },
     {
       "id": 3,
@@ -63,8 +63,8 @@
         "total": 848
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-3.mp3",
-      "duration": 9.613061,
-      "durationInFrames": 288
+      "duration": 9.798821,
+      "durationInFrames": 294
     },
     {
       "id": 4,
@@ -75,21 +75,21 @@
       "data": {
         "issues": [
           {
-            "issue": "Focus trap detected during keyboard navigation",
+            "issue": "og:description is missing",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "h4 uses generic phrase: services",
+            "issue": "5 image(s) use legacy formats",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "og:image is missing",
+            "issue": "2 image(s) missing width/height",
             "severity": "high",
             "pages": 20,
             "count": 20,
@@ -100,8 +100,8 @@
         "totalHigh": 521
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-4.mp3",
-      "duration": 6.873107,
-      "durationInFrames": 206
+      "duration": 7.058866,
+      "durationInFrames": 212
     },
     {
       "id": 5,
@@ -130,8 +130,8 @@
         "totalMedium": 185
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-5.mp3",
-      "duration": 7.569705,
-      "durationInFrames": 227
+      "duration": 7.244626,
+      "durationInFrames": 217
     },
     {
       "id": 6,
@@ -153,8 +153,8 @@
         "totalLow": 142
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-6.mp3",
-      "duration": 7.383946,
-      "durationInFrames": 222
+      "duration": 7.291066,
+      "durationInFrames": 219
     },
     {
       "id": 7,
@@ -295,8 +295,8 @@
         }
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-7.mp3",
-      "duration": 9.98458,
-      "durationInFrames": 300
+      "duration": 10.681179,
+      "durationInFrames": 320
     },
     {
       "id": 8,
@@ -310,8 +310,8 @@
         "desktopScore": 64
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-8.mp3",
-      "duration": 8.823583,
-      "durationInFrames": 265
+      "duration": 9.659501,
+      "durationInFrames": 290
     },
     {
       "id": 9,
@@ -336,30 +336,98 @@
         }
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-9.mp3",
-      "duration": 17.461406,
-      "durationInFrames": 524
+      "duration": 17.322086,
+      "durationInFrames": 520
     },
     {
       "id": 10,
       "type": "aiAnalysis",
-      "title": "AI Visibility Analysis",
-      "subtitle": "AI Score: 46",
-      "narration": "Your AI visibility score is 46. Currently, your website has 0 schema implementations, indicating opportunities to improve AI search optimization.",
+      "title": "AI Analysis Overview",
+      "subtitle": "AI Search Readiness Summary",
+      "narration": "Your AI visibility score is 46. Your brand has limited presence in AI-generated search results.",
       "data": {
-        "aiAnalysis": {
-          "score": 46,
-          "schemaMarkupCount": 0,
-          "hasKnowledgeGraph": false
-        },
         "score": 46,
-        "schemaMarkupCount": 0
+        "summary": "Moderate AI visibility. Your brand has limited presence in AI-generated search results.",
+        "hasKnowledgeGraph": true
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-10.mp3",
-      "duration": 9.798821,
-      "durationInFrames": 294
+      "duration": 6.408707,
+      "durationInFrames": 192
+    },
+    {
+      "id": 11,
+      "type": "aiCategoryBreakdown",
+      "title": "AI Category Breakdown",
+      "subtitle": "AI Performance Distribution",
+      "narration": "Your AI performance needs attention across multiple categories to improve search visibility.",
+      "data": {
+        "categories": {
+          "aiImpact": 75,
+          "citationProbability": 50,
+          "llmReadiness": 46,
+          "aeoScore": 40,
+          "topicalAuthority": 25,
+          "voiceIntent": 37
+        }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-11.mp3",
+      "duration": 5.20127,
+      "durationInFrames": 156
+    },
+    {
+      "id": 12,
+      "type": "aiDetailedMetrics",
+      "title": "AI Detailed Metrics",
+      "subtitle": "Technical AI Readiness",
+      "narration": "Your technical AI readiness shows improvement opportunities in schema, FAQs, and content structure.",
+      "data": {
+        "detailedMetrics": {
+          "schemaCoverage": 34,
+          "faqOptimization": 40,
+          "conversationalScore": 56,
+          "aiSnippetProbability": 50,
+          "aiCitationRate": 50,
+          "knowledgeGraph": 34
+        }
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-12.mp3",
+      "duration": 5.665669,
+      "durationInFrames": 170
+    },
+    {
+      "id": 13,
+      "type": "aiTopIssues",
+      "title": "AI Top Issues",
+      "subtitle": "Critical AI Optimization Areas",
+      "narration": "These are the top 3 critical issues impacting your AI visibility.",
+      "data": {
+        "topIssues": [
+          {
+            "title": "Schema not implemented",
+            "score": 0,
+            "status": "info",
+            "category": "schema"
+          },
+          {
+            "title": "Entity information unclear",
+            "score": 0,
+            "status": "info",
+            "category": "entity"
+          },
+          {
+            "title": "AI optimization issue",
+            "score": 0,
+            "status": "info",
+            "category": "general"
+          }
+        ]
+      },
+      "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-13.mp3",
+      "duration": 4.040272,
+      "durationInFrames": 121
     }
   ],
   "fps": 30,
-  "durationInFrames": 2800,
-  "totalDuration": 93.344218
+  "durationInFrames": 3211,
+  "totalDuration": 107.04399000000001
 }

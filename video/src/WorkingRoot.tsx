@@ -26,8 +26,8 @@ export const RemotionRoot: React.FC = () => {
         id="AuditVideo"
         component={WorkingVideo}
         // durationInFrames will be set dynamically from worker input
-        // Use a reasonable default for development (44 seconds = 1320 frames)
-        durationInFrames={1320}
+        // Use a reasonable default for development (61.6 seconds = 1848 frames)
+        durationInFrames={1848}
         fps={30}
         width={1920}
         height={1080}
@@ -35,8 +35,8 @@ export const RemotionRoot: React.FC = () => {
           audioUrl: '',
           projectId: '',
           slidesWithAudio: [],      // ✅ FIXED: Correct key matching worker
-          durationInFrames: 1320,   // Dynamic duration from worker
-          totalDuration: 44         // Dynamic total duration in seconds from worker
+          durationInFrames: 1848,   // Dynamic duration from worker
+          totalDuration: 61.6       // Dynamic total duration in seconds from worker
         }}
       />
     </>
