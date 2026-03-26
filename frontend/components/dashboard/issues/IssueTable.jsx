@@ -2,7 +2,9 @@ import ProgressBar from "@/components/ui/ProgressBar"
 
 function SevBadge({ sev }) {
   const dot = sev === "high" ? "● "
-    : sev === "medium" ? "◆ " : "▸ "
+    : sev === "medium" ? "◆ "
+    : sev === "low" ? "▸ "
+    : sev === "info" ? "▸ " : ""
   return (
     <span className={`sev-badge ${sev}`}>
       {dot}{sev.toUpperCase()}
@@ -12,9 +14,16 @@ function SevBadge({ sev }) {
 
 function DifficultyPill({ difficulty }) {
   const d = (difficulty || "medium").toLowerCase()
-  const cls = d === "easy" ? "green" : d === "medium" ? "cyan" : "violet"
-  const label = d.charAt(0).toUpperCase() + d.slice(1)
-  return <span className={`glow-pill ${cls}`}>{label}</span>
+  
+  // Use same dots and CSS class as severity badges
+  const dot = d === "hard" ? "● "
+    : d === "medium" ? "◆ " : "▸ "
+  
+  return (
+    <span className={`sev-badge ${d === "hard" ? "high" : d === "medium" ? "medium" : "low"}`}>
+      {dot}{d.charAt(0).toUpperCase() + d.slice(1)}
+    </span>
+  )
 }
 
 export default function IssueTable({ issues = [], selected, onSelect }) {

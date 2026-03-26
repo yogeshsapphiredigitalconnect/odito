@@ -635,11 +635,6 @@
   font-size: 11px; 
   font-weight: 600; 
 }
-.glow-pill.cyan { 
-  background: rgba(0,229,255,0.1); 
-  color: var(--cyan); 
-  border: 1px solid rgba(0,229,255,0.2); 
-}
 
 /* ── Task buttons ── */
 .task-btn { 
@@ -694,6 +689,10 @@
   background: rgba(16,255,160,0.1); color: var(--green);
   border: 1px solid rgba(16,255,160,0.2);
 }
+.sev-badge.info {
+  background: rgba(16,255,160,0.1); color: var(--green);
+  border: 1px solid rgba(16,255,160,0.2);
+}
 .glow-pill {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 10px; border-radius: 20px;
@@ -710,6 +709,14 @@
 .glow-pill.green {
   background: rgba(16,255,160,0.1); color: var(--green);
   border: 1px solid rgba(16,255,160,0.2);
+}
+.glow-pill.amber {
+  background: rgba(255,187,51,0.12); color: var(--amber);
+  border: 1px solid rgba(255,187,51,0.25);
+}
+.glow-pill.red {
+  background: rgba(255,69,96,0.15); color: var(--red);
+  border: 1px solid rgba(255,69,96,0.25);
 }
 .ai-card {
   background: linear-gradient(135deg,

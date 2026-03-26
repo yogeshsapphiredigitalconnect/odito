@@ -426,12 +426,6 @@ export default function TechCheckDetailView({ check, onBack, onOpenUrl }) {
 
         <span style={{ fontSize: 12, color: "var(--t2)", fontWeight: 500 }}>{currentCheck.name}</span>
 
-        <span className={`badge ${currentCheck.status}`}>
-
-          {currentCheck.status === "critical" ? "● CRITICAL" : currentCheck.status === "warning" ? "◆ WARNING" : "✔ PASSED"}
-
-        </span>
-
       </div>
 
 

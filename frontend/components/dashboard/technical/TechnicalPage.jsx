@@ -7,23 +7,16 @@ import StatusBreakdown from "@/components/dashboard/technical/StatusBreakdown"
 import TechCheckDetailView from "@/components/dashboard/technical/TechCheckDetailView"
 import PageDetailView from "@/app/onpage/components/PageDetailView"
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import apiService from '@/lib/apiService'
 
 export default function TechnicalPage() {
   const { activeProject } = useProject()
-  const [hasError, setHasError] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
   const [selectedCheck, setSelectedCheck] = useState(null)
   const [selectedUrl, setSelectedUrl] = useState(null)
   const [pageData, setPageData] = useState(null)
   const [pageDetailsLoading, setPageDetailsLoading] = useState(false)
   const [pageDetailsError, setPageDetailsError] = useState(null)
-
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1)
-    setHasError(false)
-  }
 
   const handleUrlSelect = async (url) => {
     setSelectedUrl(url)
@@ -114,15 +107,7 @@ export default function TechnicalPage() {
         <div className="flex items-center justify-between">
           <div>
             {selectedCheck ? (
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setSelectedCheck(null)}
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  ← Technical Checks
-                </button>
-                <span className="text-gray-600">›</span>
-                <span className="text-white text-sm font-medium">{selectedCheck.name}</span>
+              <div>
               </div>
             ) : (
               <>
@@ -135,13 +120,6 @@ export default function TechnicalPage() {
               </>
             )}
           </div>
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -166,10 +144,9 @@ export default function TechnicalPage() {
           alignItems: "start"
         }}>
           <CheckList 
-            key={`checklist-${refreshKey}`} 
             onSelectCheck={setSelectedCheck}
           />
-          <StatusBreakdown key={`status-${refreshKey}`} />
+          <StatusBreakdown />
         </div>
       )}
     </div>

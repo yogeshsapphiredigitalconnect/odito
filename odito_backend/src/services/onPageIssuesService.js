@@ -86,7 +86,30 @@ export async function getOnPageIssues(projectId) {
   // 4. Enrich each issue
   const issues = rawIssues.map((issue) => {
     const meta = ISSUE_METADATA[issue.issue_code];
-    const difficulty = meta ? meta.difficulty : DEFAULT_DIFFICULTY;
+    let difficulty;
+    
+    // Use metadata difficulty if available, otherwise map from severity
+    if (meta && meta.difficulty) {
+      difficulty = meta.difficulty;
+    } else {
+      // Map severity to difficulty when metadata is not available
+      switch (issue.severity?.toLowerCase()) {
+        case 'high':
+        case 'critical':
+          difficulty = 'hard';
+          break;
+        case 'medium':
+        case 'warning':
+          difficulty = 'medium';
+          break;
+        case 'low':
+        case 'info':
+          difficulty = 'easy';
+          break;
+        default:
+          difficulty = DEFAULT_DIFFICULTY;
+      }
+    }
 
     const impact_percentage =
       totalPages > 0
@@ -98,7 +121,7 @@ export async function getOnPageIssues(projectId) {
         ? issue.ai_confidence
         : AI_CONFIDENCE_FALLBACK[issue.severity] || AI_CONFIDENCE_FALLBACK.medium;
 
-    return {
+    const enrichedIssue = {
       issue_code: issue.issue_code,
       issue_message: issue.issue_message,
       severity: issue.severity,
@@ -110,6 +133,8 @@ export async function getOnPageIssues(projectId) {
       ai_confidence,
       sample_pages: issue.sample_pages,
     };
+
+    return enrichedIssue;
   });
 
   return {

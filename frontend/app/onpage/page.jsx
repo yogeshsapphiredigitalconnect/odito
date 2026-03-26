@@ -3,6 +3,7 @@
 
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -26,15 +27,14 @@ export default function OnPagePage() {
 
   const { activeProject, isLoading: projectLoading } = useProject()
 
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
 
 
   const [issues, setIssues] = useState([])
 
   const [summary, setSummary] = useState(null)
-
-  const [selected, setSelected] = useState(null)
-
-  const [selectedIssue, setSelectedIssue] = useState(null)
 
   const [selectedUrl, setSelectedUrl] = useState(null)
 
@@ -44,34 +44,28 @@ export default function OnPagePage() {
 
   const [error, setError] = useState(null)
 
+  // Derive selected issue from URL
+  const issueCode = searchParams.get('issue')
+  const selectedIssue = issueCode ? issues.find(issue => issue.issue_code === issueCode) : null
+  const selected = selectedIssue ? issues.findIndex(issue => issue.issue_code === issueCode) : null
+
 
 
   const handleIssueSelect = (index) => {
-
+    const issue = issues[index]
     if (selected === index) {
-
-      setSelected(null)
-
-      setSelectedIssue(null)
-
+      // Navigate back to list view
+      router.push('/onpage')
     } else {
-
-      setSelected(index)
-
-      setSelectedIssue(issues[index])
-
+      // Navigate to issue detail view
+      router.push(`/onpage?issue=${issue.issue_code}`)
     }
-
   }
 
 
 
   const handleBack = () => {
-
-    setSelected(null)
-
-    setSelectedIssue(null)
-
+    router.push('/onpage')
   }
 
 
