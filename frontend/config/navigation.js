@@ -26,11 +26,7 @@ export const navigation = {
       url: "/keywords",
       icon: "key"
     },
-    {
-      title: "Off-Page & Links",
-      url: "/off-page-links",
-      icon: "link"
-    }
+    
   ],
 
   // AI INTELLIGENCE section
