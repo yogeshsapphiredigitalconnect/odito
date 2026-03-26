@@ -20,6 +20,7 @@ import {
   getProjectIssues,
   getProjectIssuesByPage,
   getPageIssues,
+  getOnPageIssues,
   getGoogleVisibilityStatus,
   connectGoogleVisibility,
   disconnectGoogleVisibility,
@@ -58,7 +59,7 @@ router.get('/projects/:id/dashboard', validateProjectAccess(), getProjectDashboa
 router.get('/projects/:id/issues', validateProjectAccess(), getProjectIssues);
 router.get('/projects/:id/issues-by-page', validateProjectAccess(), getProjectIssuesByPage);
 router.get('/projects/:id/page-issues', validateProjectAccess(), getPageIssues);
-router.get('/projects/:id/onpage-issues', validateProjectAccess(), getProjectIssues);
+router.get('/projects/:id/onpage-issues', validateProjectAccess(), getOnPageIssues);
 router.get('/projects/:id/onpage-issues/:issueCode', validateProjectAccess(), getIssueUrls);
 router.get('/projects/:id/technical-checks', validateProjectAccess(), getTechnicalChecks);
 router.get('/projects/:id/technical-checks/:checkId', validateProjectAccess(), getTechnicalCheckDetail);

@@ -88,7 +88,6 @@ export class TechnicalRepository {
           },
           totalInternalLinks: { $sum: '$internal_links_count' },
           totalExternalLinks: { $sum: '$external_links_count' },
-          brokenLinks: { $sum: '$broken_links_count' },
           avgLoadTime: { $avg: '$load_time' },
           minLoadTime: { $min: '$load_time' },
           maxLoadTime: { $max: '$load_time' }
@@ -197,13 +196,6 @@ export class TechnicalRepository {
         status: this.getMobileStatus(pageAggregations),
         score: this.getMobileScore(pageAggregations),
         impact: 'high'
-      },
-      {
-        id: 'broken_links',
-        name: 'Broken Links',
-        status: this.getBrokenLinksStatus(pageAggregations),
-        score: this.getBrokenLinksScore(pageAggregations),
-        impact: 'medium'
       }
     ];
 
@@ -259,9 +251,6 @@ export class TechnicalRepository {
           break;
         case 'mobile_friendliness':
           detail = await this.getMobileDetail(db, projectId);
-          break;
-        case 'broken_links':
-          detail = await this.getBrokenLinksDetail(db, projectId);
           break;
         default:
           throw new Error(`Unknown check ID: ${checkId}`);
@@ -434,8 +423,7 @@ export class TechnicalRepository {
       structured_data: 'Add structured data markup to enhance search results',
       social_tags: 'Implement Open Graph and Twitter Card tags',
       security_headers: 'Configure security headers for better protection',
-      mobile_friendliness: 'Optimize pages for mobile devices',
-      broken_links: 'Fix or remove broken internal and external links'
+      mobile_friendliness: 'Optimize pages for mobile devices'
     };
     
     return suggestions[checkId] || 'Review and fix identified issues';
@@ -473,10 +461,6 @@ export class TechnicalRepository {
 
   static async getMobileDetail(db, projectId) {
     return { checkId: 'mobile_friendliness', affectedPages: [] };
-  }
-
-  static async getBrokenLinksDetail(db, projectId) {
-    return { checkId: 'broken_links', affectedPages: [] };
   }
 
   /**

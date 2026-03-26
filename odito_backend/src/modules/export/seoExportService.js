@@ -55,8 +55,7 @@ async function getIssueImpactSummary(projectIdObj) {
     CANONICAL_MISSING: "Missing Canonical Tag",
     STRUCTURED_DATA_MISSING: "Missing Structured Data",
     PAGE_SPEED_SLOW: "Slow Page Speed",
-    MOBILE_FRIENDLY_ISSUES: "Mobile Compatibility Issues",
-    BROKEN_LINKS: "Broken Internal Links"
+    MOBILE_FRIENDLY_ISSUES: "Mobile Compatibility Issues"
   };
   
   try {

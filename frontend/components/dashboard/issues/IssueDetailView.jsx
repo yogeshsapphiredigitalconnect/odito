@@ -53,6 +53,12 @@ export default function IssueDetailView({ issue, onBack, onOpenUrl }) {
       try {
         // Try to get issue_code from real data first, otherwise use mock mapping
         let issueCode = issue.issue_code
+        console.log('🔍 Original issue object:', issue)
+        console.log('📋 Issue fields:', Object.keys(issue))
+        console.log('🏷️ Issue issue_code:', issue.issue_code)
+        console.log('🏷️ Issue issue:', issue.issue)
+        console.log('🏷️ Issue issue_message:', issue.issue_message)
+        
         if (!issueCode) {
           // Map mock issue titles to issue codes (you may need to expand this)
           const codeMap = {
@@ -66,12 +72,28 @@ export default function IssueDetailView({ issue, onBack, onOpenUrl }) {
             "Multiple title tags": "multiple_titles"
           }
           issueCode = codeMap[issue.issue] || issue.issue
+          console.log('🔄 Mapped issueCode:', issueCode)
         }
 
         if (issueCode) {
-          const response = await apiService.getIssueUrls(activeProject._id, issueCode)
-          if (response.success) {
-            setUrls(response.data)
+          console.log('🔍 Fetching URLs for issueCode:', issueCode)
+          
+          // Check if issue already has full affected_urls from main API
+          if (issue.affected_urls && Array.isArray(issue.affected_urls)) {
+            console.log('✅ Using affected_urls from issue data:', issue.affected_urls.length, 'URLs')
+            console.log('🔢 Verification - pages_affected:', issue.pages_affected, 'vs affected_urls.length:', issue.affected_urls.length)
+            console.log('📊 Match check:', issue.pages_affected === issue.affected_urls.length ? '✅ MATCH' : '❌ MISMATCH')
+            setUrls(issue.affected_urls)
+          } else {
+            // Fallback to separate API call
+            const response = await apiService.getIssueUrls(activeProject._id, issueCode)
+            console.log('📊 Issue URLs API Response:', response)
+            console.log('📋 Response data:', response.data)
+            console.log('📈 URLs length:', response.data?.length || 0)
+            if (response.success) {
+              setUrls(response.data)
+              console.log('✅ URLs set successfully:', response.data)
+            }
           }
         }
       } catch (err) {

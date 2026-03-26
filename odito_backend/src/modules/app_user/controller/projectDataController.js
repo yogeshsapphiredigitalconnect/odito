@@ -324,3 +324,15 @@ export const getIssueUrls = async (req, res) => {
     return res.status(500).json(ResponseUtil.error('Failed to get issue URLs', 500));
   }
 };
+
+// Get on-page issues (aggregated by issue_code)
+// Uses the onPageIssuesService to get aggregated issues with summary metrics
+export const getOnPageIssues = async (req, res) => {
+  try {
+    const result = await getOnPageIssuesService(req.project._id.toString());
+    return res.json(ResponseUtil.success(result, 'On-page issues retrieved successfully'));
+  } catch (error) {
+    LoggerUtil.error('Error getting on-page issues', error, { projectId: req.params.id });
+    return res.status(500).json(ResponseUtil.error('Failed to get on-page issues', 500));
+  }
+};

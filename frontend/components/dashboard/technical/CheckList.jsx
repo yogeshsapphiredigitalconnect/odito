@@ -115,21 +115,6 @@ const CHECKS_LOOKUP = {
     before: "",
     after: ""
   },
-  "Broken Links (404)": {
-    impact: 9,
-    difficulty: "Medium",
-    icon: "💔",
-    aiPrompt: "I have these broken links: [source page → broken URL]. Suggest replacement URLs and write redirect rules.",
-    what: "Pages contain internal links pointing to URLs that return 404 errors, creating dead ends for users and crawlers.",
-    whatToDo: "Update links to correct destinations, set 301 redirects, or remove broken links.",
-    diySteps: [
-      { title: "Export broken links", desc: "Screaming Frog → Response Codes → 4XX → export with source page column." },
-      { title: "Decide fix per link", desc: "Page moved → update href or add 301 redirect. Page deleted → redirect or remove." },
-      { title: "Add 301 redirects", desc: "Apache: Redirect 301 /old-path /new-path. Nginx: rewrite rule with permanent." }
-    ],
-    before: "<a href=\"/resources/old-guide\">Read our SEO guide</a>",
-    after: "<a href=\"/resources/seo-guide-2025\">Read our SEO guide</a>"
-  },
   "XML Sitemap": {
     impact: 0,
     difficulty: "N/A",
@@ -140,21 +125,6 @@ const CHECKS_LOOKUP = {
     diySteps: [],
     before: "",
     after: ""
-  },
-  "Redirect Chains": {
-    impact: 5,
-    difficulty: "Medium",
-    icon: "↩",
-    aiPrompt: "I have these redirect chains: [list chains]. Write redirect rules to eliminate intermediate hops.",
-    what: "Links go through redirect chains rather than pointing directly to final destinations.",
-    whatToDo: "Update internal links to point directly to final destination URLs.",
-    diySteps: [
-      { title: "Find all redirect chains", desc: "Screaming Frog → Redirects tab → filter 'Redirect Chains'." },
-      { title: "Update internal links", desc: "Change links to point directly to final destination URLs." },
-      { title: "Convert 302 to 301", desc: "Change temporary redirects to permanent where appropriate." }
-    ],
-    before: "<a href=\"/old-blog\">Read our blog</a>",
-    after: "<a href=\"/resources/blog\">Read our blog</a>"
   },
   "OG / Social Tags": {
     impact: 3,
@@ -197,6 +167,7 @@ function StatusDot({ status }) {
 export default function CheckList({ onSelectCheck }) {
   const { activeProject } = useProject()
   const [checks, setChecks] = useState([])
+  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState("all")
@@ -210,6 +181,9 @@ export default function CheckList({ onSelectCheck }) {
         const response = await apiService.getTechnicalChecks(activeProject._id)
         
         if (response.success) {
+          // Store summary from backend response
+          setSummary(response.data.summary || null)
+          
           const enrichedChecks = (response.data.checks || []).map(check => {
             const lookup = CHECKS_LOOKUP[check.name] || {}
             const statusMap = {
@@ -235,6 +209,13 @@ export default function CheckList({ onSelectCheck }) {
             }
           })
           setChecks(enrichedChecks)
+          
+          // Debug logging for backend healthScore
+          console.log('🔧 Backend Technical Health Score Response:', {
+            summary: response.data.summary,
+            healthScore: response.data.summary?.healthScore,
+            backendCalculation: `Backend calculated: ${response.data.summary?.healthScore}%`
+          })
         } else {
           setError(response?.message || 'Failed to load technical checks')
         }
@@ -254,11 +235,26 @@ export default function CheckList({ onSelectCheck }) {
     return check.status === filter
   })
 
-  const critical = checks.filter(c => c.status === "critical" || c.status === "Critical")
-  const warnings = checks.filter(c => c.status === "warning" || c.status === "Warning") 
-  const passed = checks.filter(c => c.status === "passed" || c.status === "OK")
-  const healthScore = checks.length > 0 ? Math.round((passed.length / checks.length) * 100) : 0
-  const totalCriticalImpact = critical.reduce((sum, c) => sum + (c.impact || 0), 0)
+  // Use backend summary values instead of calculating in frontend
+  const critical = summary?.critical ?? 0
+  const warnings = summary?.warnings ?? 0 
+  const passed = summary?.passed ?? 0
+  const total = summary?.total ?? checks.length
+  const healthScore = summary?.healthScore ?? 0
+  
+  console.log('🔧 Using Backend Summary Values:', {
+    backendSummary: summary,
+    critical,
+    warnings,
+    passed,
+    total,
+    healthScore,
+    source: 'Backend API response summary'
+  })
+  
+  // Keep this calculation as it needs impact values from check objects
+  const criticalChecks = checks.filter(c => c.status === "critical" || c.status === "Critical")
+  const totalCriticalImpact = criticalChecks.reduce((sum, c) => sum + (c.impact || 0), 0)
 
   if (loading) {
     return (
@@ -309,28 +305,28 @@ export default function CheckList({ onSelectCheck }) {
       <div className="summary-bar">
         <div className="sum-tile">
           <div className="sum-tile-val" style={{ color: "var(--t)" }}>
-            {checks.length}
+            {total}
           </div>
           <div className="sum-tile-lbl">Total Checks</div>
           <div className="sum-tile-sub">across 8 categories</div>
         </div>
         <div className="sum-tile">
           <div className="sum-tile-val" style={{ color: "var(--red)" }}>
-            {critical.length}
+            {critical}
           </div>
           <div className="sum-tile-lbl">Critical</div>
           <div className="sum-tile-sub">need immediate fix</div>
         </div>
         <div className="sum-tile">
           <div className="sum-tile-val" style={{ color: "var(--amber)" }}>
-            {warnings.length}
+            {warnings}
           </div>
           <div className="sum-tile-lbl">Warnings</div>
           <div className="sum-tile-sub">should be addressed</div>
         </div>
         <div className="sum-tile">
           <div className="sum-tile-val" style={{ color: "var(--green)" }}>
-            {passed.length}
+            {passed}
           </div>
           <div className="sum-tile-lbl">Passed</div>
           <div className="sum-tile-sub">no action needed</div>
@@ -393,33 +389,31 @@ export default function CheckList({ onSelectCheck }) {
               Technical Health
             </div>
             <div style={{ fontSize: 12, color: "var(--t3)" }}>
-              {passed.length} passed · {warnings.length} warnings · {critical.length} critical
+              {passed} passed · {warnings} warnings · {critical} critical
             </div>
           </div>
         </div>
         <div className="aria-card">
           <div className="aria-label">✦ ARIA — Priority Analysis</div>
           <div style={{ fontSize: 12.5, lineHeight: 1.6, color: "var(--t2)" }}>
-            <strong style={{ color: "var(--red)" }}>{critical.length} critical issues</strong> require immediate action — 
+            <strong style={{ color: "var(--red)" }}>{critical} critical issues</strong> require immediate action — 
             These fixes can recover an estimated 
             <strong style={{ color: "var(--cyan)" }}> +{totalCriticalImpact}% SEO potential</strong>. 
             Start with the <strong style={{ color: "var(--t)" }}>Noindex fix</strong> (Easy, 30 min) for the fastest ranking recovery.
           </div>
         </div>
       </div>
-
-      {/* Filter Tabs and Checks */}
       <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div className="section-head" style={{ margin: 0 }}>
           <div className="section-title">All Checks</div>
-          <div className="section-tag">{checks.length} TOTAL</div>
+          <div className="section-tag">{total} TOTAL</div>
         </div>
         <div className="tab-strip">
           {[
-            { id: "all", label: `All (${checks.length})` },
-            { id: "critical", label: `Critical (${critical.length})` },
-            { id: "warning", label: `Warnings (${warnings.length})` },
-            { id: "passed", label: `Passed (${passed.length})` }
+            { id: "all", label: `All (${total})` },
+            { id: "critical", label: `Critical (${critical})` },
+            { id: "warning", label: `Warnings (${warnings})` },
+            { id: "passed", label: `Passed (${passed})` }
           ].map(tab => (
             <div 
               key={tab.id}

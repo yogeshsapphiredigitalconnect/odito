@@ -4,6 +4,7 @@ import SeoProject from '../model/SeoProject.js';
 import { JobService } from '../../jobs/service/jobService.js';
 import { JOB_TYPES } from '../../jobs/constants/jobTypes.js';
 import Job from '../../jobs/model/Job.js';
+import { ProjectPerformanceService } from '../service/projectPerformance.service.js';
 import mongoose from 'mongoose';
 
 // Create a new SEO project
@@ -685,6 +686,24 @@ const getProjectDashboard = async (req, res) => {
       }
     };
 
+    // Get performance data
+    let performanceData = { performanceScore: 0 };
+    try {
+      console.log("Fetching performance data for project:", projectId);
+      const performanceResult = await ProjectPerformanceService.getProjectPerformance(project);
+      console.log("Performance service result:", performanceResult);
+      if (performanceResult.success) {
+        performanceData = {
+          mobileScore: performanceResult.data.summary.mobileScore,
+          desktopScore: performanceResult.data.summary.desktopScore,
+          performanceScore: performanceResult.data.summary.performanceScore
+        };
+        console.log("Final performance data:", performanceData);
+      }
+    } catch (error) {
+      LoggerUtil.warn('Failed to fetch performance data for dashboard', error);
+    }
+
     const dashboardData = {
       summary: {
         internalLinks: internalLinksCount,
@@ -692,6 +711,7 @@ const getProjectDashboard = async (req, res) => {
         socialLinks: socialLinksCount,
         totalUrlsFound: linkDiscoveryJob?.result_data?.totalUrlsFound || (internalLinksCount + externalLinksCount + socialLinksCount)
       },
+      performance: performanceData,
       crawlStatus
     };
 

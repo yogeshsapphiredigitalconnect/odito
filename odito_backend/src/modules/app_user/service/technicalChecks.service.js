@@ -65,26 +65,31 @@ export class TechnicalChecksService {
     // 8. Mobile Friendliness Check (Page-level)
     checks.push(this.getMobileFriendlinessCheck(pageAggregations));
 
-    // 9. Broken Links Check (Page-level)
-    checks.push(this.getBrokenLinksCheck(pageAggregations));
-
-    // 10. XML Sitemap Check (Domain-level)
+    // 9. XML Sitemap Check (Domain-level)
     checks.push(this.getXMLSitemapCheck(domainReport));
 
-    // 11. Redirect Chains Check (Domain-level)
-    checks.push(this.getRedirectChainsCheck(domainReport));
-
-    // 12. OG/Social Tags Check (Page-level)
+    // 10. OG/Social Tags Check (Page-level)
     checks.push(this.getSocialTagsCheck(pageAggregations));
 
-    // Generate summary
+    // Generate summary with healthScore calculation
+    const total = checks.length;
+    const passed = checks.filter(check => check.status === 'OK').length;
+    const warnings = checks.filter(check => check.status === 'Warning').length;
+    const critical = checks.filter(check => check.status === 'Critical').length;
+    
+    // Calculate healthScore using same logic as frontend
+    const healthScore = total > 0 ? Math.round((passed / total) * 100) : 0;
+    
     const summary = {
-      passing: checks.filter(check => check.status === 'OK').length,
-      warnings: checks.filter(check => check.status === 'Warning').length,
-      critical: checks.filter(check => check.status === 'Critical').length
+      total,
+      passed,
+      passing: passed, // Backward compatibility for StatusBreakdown component
+      warnings,
+      critical,
+      healthScore
     };
 
-    LoggerUtil.info('Technical checks summary', summary);
+    LoggerUtil.info('Technical checks summary with healthScore', summary);
 
     // Return EXACT same response structure as controller
     return {
@@ -151,10 +156,6 @@ export class TechnicalChecksService {
         checkDetail = this.getMobileFriendlinessCheck(pageAggregations);
         affectedPages = this.getMobileAffectedPages(pageAggregations.pageStats);
         break;
-      case 'broken_links':
-        checkDetail = this.getBrokenLinksCheck(pageAggregations);
-        affectedPages = this.getBrokenLinksAffectedPages(pageAggregations.pageStats);
-        break;
       case 'social_tags':
       case 'og_social_tags':
         checkDetail = this.getSocialTagsCheck(pageAggregations);
@@ -171,10 +172,6 @@ export class TechnicalChecksService {
       case 'xml_sitemap':
         checkDetail = this.getXMLSitemapCheck(domainReport);
         // XML Sitemap is domain-level, no specific pages
-        break;
-      case 'redirect_chains':
-        checkDetail = this.getRedirectChainsCheck(domainReport);
-        // Redirect chains are domain-level, no specific pages
         break;
       default:
         throw new NotFoundError('Technical check not found');
@@ -234,7 +231,6 @@ export class TechnicalChecksService {
     results.h1Stats = this.calculateH1Stats(pageStats);
     results.schemaStats = this.calculateSchemaStats(pageStats);
     results.mobileStats = this.calculateMobileStats(pageStats);
-    results.brokenLinksStats = this.calculateBrokenLinksStats(pageStats);
     results.securityHeadersStats = this.calculateSecurityHeadersStats(pageStats);
     results.socialTagsStats = this.calculateSocialTagsStats(pageStats);
 
@@ -456,32 +452,6 @@ export class TechnicalChecksService {
     };
   }
 
-  static getBrokenLinksCheck(pageAggregations) {
-    const stats = pageAggregations.brokenLinksStats;
-    
-    let status = 'OK';
-    let message = 'No broken links detected';
-    
-    if (stats.brokenLinksCount > 0) {
-      if (stats.brokenLinksCount > 10) {
-        status = 'Critical';
-        message = `${stats.brokenLinksCount} broken links found`;
-      } else {
-        status = 'Warning';
-        message = `${stats.brokenLinksCount} broken links found`;
-      }
-    }
-
-    return {
-      id: 'broken_links',
-      name: 'Broken Links (404)',
-      status,
-      severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
-      affected_pages: stats.pagesWithBrokenLinks,
-      message
-    };
-  }
-
   static getXMLSitemapCheck(domainReport) {
     const exists = domainReport?.sitemapExists;
     const status = domainReport?.sitemapStatus;
@@ -506,36 +476,6 @@ export class TechnicalChecksService {
       status: checkStatus,
       severity: checkStatus === 'Critical' ? 'high' : checkStatus === 'Warning' ? 'medium' : 'none',
       affected_pages: 0,
-      message
-    };
-  }
-
-  static getRedirectChainsCheck(domainReport) {
-    const redirectChain = domainReport?.redirectChain || [];
-    const hasHttpsRedirect = domainReport?.httpsRedirect;
-
-    let status = 'OK';
-    let message = 'No redirect chains detected';
-    let affectedPages = 0;
-
-    if (redirectChain.length > 1) {
-      status = 'Warning';
-      message = `Redirect chain detected with ${redirectChain.length} hops`;
-      affectedPages = redirectChain.length - 1;
-    }
-
-    if (!hasHttpsRedirect) {
-      status = 'Critical';
-      message = 'HTTPS redirect not properly configured';
-      affectedPages = 1;
-    }
-
-    return {
-      id: 'redirect_chains',
-      name: 'Redirect Chains',
-      status,
-      severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
-      affected_pages: affectedPages,
       message
     };
   }
@@ -625,20 +565,6 @@ export class TechnicalChecksService {
     }).length;
     
     return { pagesWithoutViewport };
-  }
-
-  static calculateBrokenLinksStats(pages) {
-    let brokenLinksCount = 0;
-    let pagesWithBrokenLinks = 0;
-    
-    pages.forEach(page => {
-      if (page.http_status_code >= 400) {
-        brokenLinksCount++;
-        pagesWithBrokenLinks++;
-      }
-    });
-    
-    return { brokenLinksCount, pagesWithBrokenLinks };
   }
 
   static calculateSecurityHeadersStats(pages) {
@@ -762,14 +688,6 @@ export class TechnicalChecksService {
       url: page.url,
       issue: 'Missing viewport meta tag',
       viewport: page.meta_tags?.viewport || []
-    }));
-  }
-
-  static getBrokenLinksAffectedPages(pageStats) {
-    return pageStats.filter(page => page.http_status_code >= 400).map(page => ({
-      url: page.url,
-      issue: `Page returns ${page.http_status_code} error`,
-      status_code: page.http_status_code
     }));
   }
 

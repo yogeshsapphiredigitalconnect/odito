@@ -32,7 +32,10 @@ export default function Dashboard() {
   const { activeProject } = useProject()
   const router = useRouter()
   const [projects, setProjects] = useState([])
+  const [selectedProject, setSelectedProject] = useState(null)
   const [project, setProject] = useState(null)
+  const [dashboardData, setDashboardData] = useState(null)
+  const [technicalHealth, setTechnicalHealth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [issueCounts, setIssueCounts] = useState(null)
@@ -60,6 +63,12 @@ export default function Dashboard() {
 
     // Fetch real issue counts from our aggregation
     fetchIssueCounts(activeProject._id)
+    
+    // Fetch dashboard data (includes performance)
+    fetchDashboardData(activeProject._id)
+    
+    // Fetch technical health score
+    fetchTechnicalHealth(activeProject._id)
   }, [activeProject])
 
   const fetchIssueCounts = async (projectId) => {
@@ -80,6 +89,46 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching issue counts:', error)
+    }
+  }
+
+  const fetchDashboardData = async (projectId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/app_user/projects/${projectId}/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          setDashboardData(result.data)
+        }
+      } else {
+        console.error("Dashboard API error:", response.status, response.statusText)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    }
+  }
+
+  const fetchTechnicalHealth = async (projectId) => {
+    try {
+      const response = await apiService.getTechnicalChecks(projectId)
+      if (response.success && response.data?.summary?.healthScore !== undefined) {
+        const healthScore = response.data.summary.healthScore
+        setTechnicalHealth(healthScore)
+        console.log('🔧 Dashboard Technical Health from backend:', {
+          projectId,
+          healthScore,
+          summary: response.data.summary
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching technical health:', error)
+      setTechnicalHealth(0)
     }
   }
 
@@ -162,8 +211,16 @@ export default function Dashboard() {
   // Map backend data to dashboard metrics
   const seoHealth = project ? Math.round(project.website_score || 0) : 0
   const aiVisibility = project ? (project.ai_visibility?.score || 0) : 0
-  const performance = 0 // Not implemented yet
-  const authority = 0 // Not implemented yet
+  const performance = dashboardData?.performance?.performanceScore || 0
+  const technicalHealthScore = technicalHealth // From backend API
+
+  console.log('🔧 Dashboard metrics for ScoreGrid:', {
+    seoHealth,
+    aiVisibility,
+    performance,
+    technicalHealthScore,
+    source: 'Backend API values'
+  })
 
   // SEO summary data - USE REAL AGGREGATION DATA
   const pagesCrawled = project ? (project.pages_crawled || 0) : 0
@@ -375,7 +432,7 @@ export default function Dashboard() {
             seoHealth={seoHealth}
             aiVisibility={aiVisibility}
             performance={performance}
-            authority={authority}
+            technicalHealth={technicalHealthScore}
           />
 
           {/* SECTION 2 - ARIA AI Explainer Card */}

@@ -27,9 +27,24 @@ export class ProjectPerformanceService {
     const projectIdObj = new ObjectId(projectId);
 
     // Get PageSpeed data from seo_domain_performance collection
+    console.log("Looking for PageSpeed data in seo_domain_performance for project:", projectId);
+    console.log("Project ID as ObjectId:", projectIdObj);
     const pagespeedData = await db.collection('seo_domain_performance').findOne({
       project_id: projectIdObj
     });
+    console.log("Found PageSpeed data:", pagespeedData ? "YES" : "NO");
+    if (pagespeedData) {
+      console.log("Mobile score:", pagespeedData.mobile?.performance_score);
+      console.log("Desktop score:", pagespeedData.desktop?.performance_score);
+    } else {
+      // Try to find all performance records to debug
+      const allRecords = await db.collection('seo_domain_performance').find({}).toArray();
+      console.log("All performance records in database:");
+      allRecords.forEach(record => {
+        console.log(`  - Project ID: ${record.project_id} (type: ${typeof record.project_id})`);
+        console.log(`    Matching our ID: ${record.project_id.toString() === projectIdObj.toString()}`);
+      });
+    }
 
     if (!pagespeedData) {
       return {
@@ -40,17 +55,34 @@ export class ProjectPerformanceService {
           summary: {
             mobileScore: 0,
             desktopScore: 0,
-            avgPerformance: 0
+            avgPerformance: 0,
+            performanceScore: 0
           },
           message: "No PageSpeed data available. Run a PageSpeed audit first."
         }
       };
     }
 
-    // Calculate summary (EXACT same logic)
+    // Calculate summary (EXACT same logic + NEW performanceScore)
     const mobileScore = pagespeedData.mobile?.performance_score || 0;
     const desktopScore = pagespeedData.desktop?.performance_score || 0;
     const avgPerformance = Math.round((mobileScore + desktopScore) / 2);
+    
+    // Calculate weighted performanceScore (70% mobile, 30% desktop)
+    let performanceScore;
+    if (mobileScore > 0 && desktopScore > 0) {
+      // Both scores available - use weighted formula
+      performanceScore = Math.round(mobileScore * 0.7 + desktopScore * 0.3);
+    } else if (mobileScore > 0) {
+      // Only mobile available
+      performanceScore = mobileScore;
+    } else if (desktopScore > 0) {
+      // Only desktop available
+      performanceScore = desktopScore;
+    } else {
+      // No scores available
+      performanceScore = 0;
+    }
 
     // Format data for frontend compatibility (EXACT same logic)
     const formatDeviceData = (deviceData) => {
@@ -106,7 +138,8 @@ export class ProjectPerformanceService {
         summary: {
           mobileScore,
           desktopScore,
-          avgPerformance
+          avgPerformance,
+          performanceScore
         }
       }
     };

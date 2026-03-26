@@ -22,10 +22,8 @@ export const ISSUE_METADATA = {
   // Medium fixes
   CANONICAL_MISSING: { difficulty: "medium" },
   CANONICAL_MISMATCH: { difficulty: "medium" },
-  BROKEN_LINKS: { difficulty: "medium" },
   INTERNAL_LINKS_NONE: { difficulty: "medium" },
   EXTERNAL_LINKS_NONE: { difficulty: "medium" },
-  REDIRECT_CHAIN: { difficulty: "medium" },
 
   // Hard fixes
   SCHEMA_MISSING: { difficulty: "hard" },

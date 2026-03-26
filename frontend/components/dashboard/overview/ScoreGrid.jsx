@@ -2,12 +2,12 @@
 
 import ScoreRing from "@/components/ui/ScoreRing";
 
-export default function ScoreGrid({ seoHealth = 0, aiVisibility = 0, performance = 0, authority = 0 }) {
+export default function ScoreGrid({ seoHealth = 0, aiVisibility = 0, performance = 0, technicalHealth = 0 }) {
   const scores = {
     seo: { val: seoHealth, prev: seoHealth - 6, label: "SEO Health", color: "#7c3aed", color2: "#a855f7" },
     ai: { val: aiVisibility, prev: aiVisibility - 6, label: "AI Visibility", color: "#00e5ff", color2: "#0ea5e9" },
     perf: { val: performance, prev: performance, label: "Performance", color: "#10ffa0", color2: "#059669" },
-    auth: { val: authority, prev: authority, label: "Authority", color: "#ffbb33", color2: "#f97316" },
+    tech: { val: technicalHealth, prev: technicalHealth, label: "Technical Health", color: "#ff6b6b", color2: "#ee5a24" },
   };
   
   return (
@@ -40,11 +40,6 @@ export default function ScoreGrid({ seoHealth = 0, aiVisibility = 0, performance
               </div>
             </div>
           </div>
-
-          <div className={`score-change ${s.val > s.prev ? "up" : "down"}`}>
-            {s.val > s.prev ? "▲" : "▼"} {Math.abs(s.val - s.prev)} pts
-          </div>
-          <div className="score-sub">vs last audit</div>
         </div>
       ))}
     </div>

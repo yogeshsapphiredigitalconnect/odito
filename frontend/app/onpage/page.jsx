@@ -230,6 +230,14 @@ export default function OnPagePage() {
 
       .then((res) => {
 
+        console.log('🔍 OnPage Issues API Response:', res)
+
+        console.log('📊 Response data structure:', res.data)
+
+        console.log('📈 Issues count:', res.data.issues?.length || 0)
+
+        console.log('📋 Summary data:', res.data.summary)
+
         setIssues(res.data.issues || [])
 
         setSummary(res.data.summary || null)
@@ -345,13 +353,9 @@ export default function OnPagePage() {
                         <h1 className="text-2xl font-bold">On-Page SEO Issues</h1>
 
                         <p className="text-muted-foreground">
-
                           {summary
-
-                            ? `${summary.total_issue_types} issue types · ${summary.total_issues_found} total issues · ${summary.total_pages_analyzed} pages analyzed`
-
+                            ? `${summary.total_issue_types ?? 0} issue types · ${summary.total_issues_found ?? 0} total issues · ${summary.total_pages_analyzed ?? 0} pages analyzed`
                             : "View and manage on-page SEO issues"}
-
                         </p>
 
                       </div>
