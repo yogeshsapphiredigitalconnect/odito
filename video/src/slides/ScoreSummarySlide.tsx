@@ -10,7 +10,7 @@ import { useSlideTiming } from "../hooks/useSlideTiming";
 interface Props {
   data: {
     scores: {
-      overall: number;
+      technicalHealth: number;
       performance: number;
       seo: number;
       aiVisibility: number;
@@ -31,7 +31,7 @@ export const ScoreSummarySlide: React.FC<Props> = ({
   const { opacity, childOpacity, childY } = useSlideTiming();
 
   const scores = [
-    { score: data.scores.overall, label: "Overall", color: "#7730ed", delay: 10 },
+    { score: data.scores.technicalHealth, label: "Technical", color: "#7730ed", delay: 10 },
     { score: data.scores.performance, label: "Performance", color: "#00dfff", delay: 20 },
     { score: data.scores.seo, label: "SEO", color: "#00f5a0", delay: 30 },
     { score: data.scores.aiVisibility, label: "AI Visibility", color: "#c77dff", delay: 40 },
@@ -176,9 +176,9 @@ export const ScoreSummarySlide: React.FC<Props> = ({
               lineHeight: 1.5,
             }}
           >
-            Overall performance is <strong style={{ color: data.scores.overall >= 80 ? "#00f5a0" : data.scores.overall >= 60 ? "#ffb703" : "#ff3860" }}>
-              {data.scores.overall >= 80 ? "strong" : data.scores.overall >= 60 ? "moderate" : "developing"}
-            </strong> with key opportunities in{" "}
+            Overall performance is <strong style={{ color: data.scores.technicalHealth >= 80 ? "#00f5a0" : data.scores.technicalHealth >= 60 ? "#ffb703" : "#ff3860" }}>
+              {data.scores.technicalHealth >= 80 ? "strong" : data.scores.technicalHealth >= 60 ? "moderate" : "developing"}
+            </strong> with key opportunities in"{" "}
             {data.scores.performance < 70 && "performance optimization"}
             {data.scores.performance < 70 && data.scores.aiVisibility < 70 && " and "}
             {data.scores.aiVisibility < 70 && "AI visibility enhancement"}

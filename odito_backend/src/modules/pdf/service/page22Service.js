@@ -1,10 +1,9 @@
 /**
  * Page 22 Service - AI Content Readiness
- * Uses IDENTICAL data source AND transformation logic as Dashboard
+ * Uses IDENTICAL data source as Dashboard (RAW values - NO normalization)
  */
 
 import { getAISearchAuditAggregation, getAISearchAuditIssues } from '../../../services/aiSearchAuditAggregationService.js';
-import { getPage22Metrics } from '../../../services/aiScoreNormalizationService.js';
 import { validateProjectAccess } from '../../../middleware/auth.middleware.js';
 import mongoose from 'mongoose';
 
@@ -12,7 +11,7 @@ export class Page22Service {
   
   /**
    * Get Page 22 data - AI Content Readiness
-   * Uses IDENTICAL data source AND transformation logic as Dashboard
+   * Uses IDENTICAL data source as Dashboard (RAW values - NO normalization)
    * @param {string} projectId - Project ID
    * @returns {Promise<Object>} - Page 22 data for PDF
    */
@@ -49,10 +48,22 @@ export class Page22Service {
         };
       }
 
-      // Step 3: Apply IDENTICAL normalization logic as Dashboard
-      console.log("Applying Dashboard normalization logic...");
-      const signals = getPage22Metrics(rawAuditData);
-      console.log("NORMALIZED signals (IDENTICAL to Dashboard):", signals);
+      // Step 3: Use RAW values directly (same as Dashboard API - NO normalization)
+      console.log("Using RAW values directly (same as Dashboard API)...");
+      const signals = {
+        schemaCoverage: rawAuditData.schema_coverage,
+        faqOptimization: rawAuditData.faq_optimization,
+        conversationalScore: rawAuditData.conversational_score,
+        aiSnippetProbability: rawAuditData.ai_snippet_probability,
+        aiCitationRate: rawAuditData.ai_citation_rate,
+        knowledgeGraph: rawAuditData.knowledge_graph
+      };
+      console.log("RAW signals (IDENTICAL to Dashboard API):", signals);
+      
+      // 🔍 DEBUG: Show that we're using RAW values (no transformations)
+      console.log("🔍 USING RAW VALUES (NO NORMALIZATION):");
+      console.log("DASHBOARD API VALUES:", signals);
+      console.log("TRANSFORMATIONS: NONE - Direct from Dashboard API");
 
       // Step 4: Map checklist data (reuse exact issues from audit)
       const checklist = issues.map(issue => ({
@@ -62,17 +73,10 @@ export class Page22Service {
         recommendation: issue.message || `Address ${issue.category} issue affecting ${issue.pagesAffected} pages`
       }));
 
-      console.log("Page22 FINAL data (IDENTICAL to Dashboard):", { 
+      console.log("Page22 FINAL data (RAW - identical to Dashboard API):", { 
         signals, 
         checklistCount: checklist.length,
-        rawVsNormalized: {
-          raw: {
-            schema_coverage: rawAuditData.schema_coverage,
-            conversational_score: rawAuditData.conversational_score,
-            knowledge_graph: rawAuditData.knowledge_graph
-          },
-          normalized: signals
-        }
+        dataSource: "Dashboard API (RAW values - no normalization)"
       });
 
       return {
@@ -84,7 +88,7 @@ export class Page22Service {
             totalIssues: issues.length,
             pagesAnalyzed: rawAuditData.total_pages,
             generatedAt: new Date(),
-            note: "Values normalized using IDENTICAL Dashboard logic"
+            note: "RAW values from Dashboard API (no normalization applied)"
           }
         }
       };

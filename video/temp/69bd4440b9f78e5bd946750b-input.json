@@ -12,10 +12,11 @@
         "url": "https://www.sapphiredigitalconnect.com/",
         "pagesCrawled": 20,
         "scores": {
-          "overall": 50,
-          "performance": 52,
+          "overall": 53,
+          "performance": 47,
           "seo": 50,
-          "aiVisibility": 46
+          "aiVisibility": 46,
+          "technicalHealth": 70
         },
         "issueDistribution": {
           "high": 521,
@@ -32,16 +33,17 @@
       "id": 2,
       "type": "scoreSummary",
       "title": "Overall Score Analysis",
-      "subtitle": "Score: 50/100",
-      "narration": "Your overall performance score is 50 out of 100. Your SEO score is 50, performance is 52, and AI visibility is 46.",
+      "subtitle": "Score: 53/100",
+      "narration": "Your overall performance score is 53 out of 100. Your SEO score is 50, performance is 47, and AI visibility is 46.",
       "data": {
         "scores": {
-          "overall": 50,
-          "performance": 52,
+          "overall": 53,
+          "performance": 47,
           "seo": 50,
-          "aiVisibility": 46
+          "aiVisibility": 46,
+          "technicalHealth": 70
         },
-        "overall": 50
+        "overall": 53
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-2.mp3",
       "duration": 8.452063,
@@ -75,21 +77,21 @@
       "data": {
         "issues": [
           {
-            "issue": "og:description is missing",
+            "issue": "1 critical accessibility violation(s)",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "5 image(s) use legacy formats",
+            "issue": "h4 uses generic phrase: services",
             "severity": "high",
             "pages": 20,
             "count": 20,
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "2 image(s) missing width/height",
+            "issue": "og:image is missing",
             "severity": "high",
             "pages": 20,
             "count": 20,
@@ -107,12 +109,19 @@
       "id": 5,
       "type": "mediumIssues",
       "title": "Medium Priority Issues",
-      "subtitle": "Showing top 2 of 185 issues",
-      "narration": "Your website has 185 medium-priority issues. Showing the top 2 most important issues that need attention.",
+      "subtitle": "Showing top 3 of 185 issues",
+      "narration": "Your website has 185 medium-priority issues. Showing the top 3 most important issues that need attention.",
       "data": {
         "issues": [
           {
-            "issue": "3 duplicate image URL(s) on page",
+            "issue": "H4 length is 4 chars (6–60)",
+            "severity": "medium",
+            "pages": 20,
+            "count": 20,
+            "recommendation": "Plan to fix within 30 days - moderate SEO impact"
+          },
+          {
+            "issue": "7 image(s) missing role attribute",
             "severity": "medium",
             "pages": 20,
             "count": 20,
@@ -126,7 +135,7 @@
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           }
         ],
-        "count": 2,
+        "count": 3,
         "totalMedium": 185
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-5.mp3",
@@ -137,8 +146,8 @@
       "id": 6,
       "type": "lowIssues",
       "title": "Low Priority Issues",
-      "subtitle": "Showing top 1 of 142 issues",
-      "narration": "Your website has 142 low-priority issues. Showing the top 1 most important issues that need attention.",
+      "subtitle": "Showing top 2 of 142 issues",
+      "narration": "Your website has 142 low-priority issues. Showing the top 2 most important issues that need attention.",
       "data": {
         "issues": [
           {
@@ -147,9 +156,16 @@
             "pages": 20,
             "count": 20,
             "recommendation": "Consider fixing when time permits - minor SEO improvement opportunity"
+          },
+          {
+            "issue": "pin:description tag is missing",
+            "severity": "info",
+            "pages": 20,
+            "count": 20,
+            "recommendation": "Review and optimize this SEO element"
           }
         ],
-        "count": 1,
+        "count": 2,
         "totalLow": 142
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-6.mp3",
@@ -215,22 +231,10 @@
                 "affected_pages": 0
               },
               {
-                "name": "Broken Links (404)",
-                "status": "PASS",
-                "detail": "No broken links detected",
-                "affected_pages": 0
-              },
-              {
                 "name": "XML Sitemap",
                 "status": "PASS",
                 "detail": "XML sitemap accessible with 2 URLs",
                 "affected_pages": 0
-              },
-              {
-                "name": "Redirect Chains",
-                "status": "WARN",
-                "detail": "Redirect chain detected with 2 hops",
-                "affected_pages": 1
               },
               {
                 "name": "OG / Social Tags",
@@ -281,10 +285,11 @@
             ]
           },
           "scores": {
-            "overall": 50,
-            "performance": 52,
+            "overall": 53,
+            "performance": 47,
             "seo": 50,
-            "aiVisibility": 46
+            "aiVisibility": 46,
+            "technicalHealth": 70
           },
           "issueDistribution": {
             "high": 521,
@@ -302,10 +307,10 @@
       "id": 8,
       "type": "performanceSummary",
       "title": "Performance Summary",
-      "subtitle": "Performance Score: 52",
-      "narration": "Your website performance score is 52. Mobile performance is 40, while desktop performance is 64, indicating areas for improvement.",
+      "subtitle": "Performance Score: 47",
+      "narration": "Your website performance score is 47. Mobile performance is 40, while desktop performance is 64, indicating areas for improvement.",
       "data": {
-        "pageSpeed": 52,
+        "pageSpeed": 47,
         "mobileScore": 40,
         "desktopScore": 64
       },
@@ -382,12 +387,12 @@
       "narration": "Your technical AI readiness shows improvement opportunities in schema, FAQs, and content structure.",
       "data": {
         "detailedMetrics": {
-          "schemaCoverage": 34,
-          "faqOptimization": 40,
-          "conversationalScore": 56,
-          "aiSnippetProbability": 50,
-          "aiCitationRate": 50,
-          "knowledgeGraph": 34
+          "schemaCoverage": 60,
+          "faqOptimization": 39,
+          "conversationalScore": 38,
+          "aiSnippetProbability": 56,
+          "aiCitationRate": 43,
+          "knowledgeGraph": 45
         }
       },
       "audio": "http://localhost:5000/audio/69bd4440b9f78e5bd946750b-slide-12.mp3",
@@ -403,10 +408,10 @@
       "data": {
         "topIssues": [
           {
-            "title": "Schema not implemented",
+            "title": "AI optimization issue",
             "score": 0,
             "status": "info",
-            "category": "schema"
+            "category": "general"
           },
           {
             "title": "Entity information unclear",
@@ -415,10 +420,10 @@
             "category": "entity"
           },
           {
-            "title": "AI optimization issue",
-            "score": 0,
+            "title": "Entity information unclear",
+            "score": 20,
             "status": "info",
-            "category": "general"
+            "category": "entity"
           }
         ]
       },

@@ -10,6 +10,7 @@ export interface OverviewData {
   url: string;
   pagesCrawled: number;
   scores: {
+    overall: number;
     seo: number;
     aiVisibility: number;
     performance: number;

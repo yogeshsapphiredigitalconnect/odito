@@ -42,7 +42,7 @@ export class ExecutiveMapper {
         seoHealth: coverData?.scores?.seoHealth || 0,
         aiVisibility: coverData?.scores?.aiVisibility || 0,
         performance: coverData?.scores?.performance || 0,
-        authority: coverData?.scores?.authority || 0
+        technicalHealth: coverData?.scores?.technicalHealth || 0
       };
       
       console.log("EXECUTIVE MAPPER: Extracted scores:", scores);
@@ -256,7 +256,7 @@ export class ExecutiveMapper {
     return {
       success: true, // Return success to avoid API crashes
       data: {
-        scores: { seoHealth: 0, aiVisibility: 0, performance: 0, authority: 0 },
+        scores: { seoHealth: 0, aiVisibility: 0, performance: 0, technicalHealth: 0 },
         issues: { critical: 0, warnings: 0, informational: 0 },
         issueDistribution: { critical: 0, medium: 0, info: 0, total: 0 },
         topIssues: { high: [], medium: [], low: [] },

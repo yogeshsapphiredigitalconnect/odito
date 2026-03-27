@@ -146,8 +146,8 @@ export class UnifiedJsonService {
       const topIssues = {
         critical: topIssuesArray.filter(i => i.severity === 'critical').slice(0, 3),
         high: topIssuesArray.filter(i => i.severity === 'high').slice(0, 3),
-        medium: topIssuesArray.filter(i => i.severity === 'medium').slice(0, 2),
-        low: topIssuesArray.filter(i => i.severity === 'low' || i.severity === 'info').slice(0, 1)
+        medium: topIssuesArray.filter(i => i.severity === 'medium').slice(0, 3),
+        low: topIssuesArray.filter(i => i.severity === 'low' || i.severity === 'info').slice(0, 3)
       };
 
       // 🔧 STEP 5B: MAP PAGE 10 DATA - USE CHECKS (REAL DATA)
@@ -188,11 +188,20 @@ export class UnifiedJsonService {
 
       // Get scores from cover data (nested under data.scores)
       const s = coverResult.data?.scores || {};
+      const seo = Math.round(s.seoHealth || 0);
+      const performance = Math.round(s.performance || 0);
+      const aiVisibility = Math.round(s.aiVisibility || 0);
+      const technicalHealth = Math.round(s.technicalHealth || 0);
+      
+      // Calculate overall score as average of all 4 metrics (same as coverPageService)
+      const overall = Math.round((seo + performance + aiVisibility + technicalHealth) / 4);
+      
       const scores = {
-        overall: Math.round(s.overallScore || s.seoHealth || 0),
-        performance: Math.round(s.performance || 0),
-        seo: Math.round(s.seoHealth || 0),
-        aiVisibility: Math.round(s.aiVisibility || 0)
+        overall,
+        performance,
+        seo,
+        aiVisibility,
+        technicalHealth
       };
       console.log('UNIFIED scores from cover:', scores);
 
@@ -304,7 +313,7 @@ export class UnifiedJsonService {
             page10: {}
           },
           performance: { pageSpeed: 0, metrics: [] },
-          scores: { overall: 0, performance: 0, seo: 0, aiVisibility: 0 },
+          scores: { overall: 0, performance: 0, seo: 0, aiVisibility: 0, technicalHealth: 0 },
           recommendations: [],
           issues: { critical: 0, warnings: 0, informational: 0 },
           issueDistribution: { total: 0, critical: 0, medium: 0, info: 0 }

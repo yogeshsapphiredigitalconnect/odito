@@ -456,13 +456,21 @@ export class AiScriptService {
       console.log('✅ MAPPED issueDistribution FROM API:', issueDistribution);
 
       // Scores: unified uses scores.seo (alias of seoHealth); support legacy scores.seoHealth
+      // Extract individual scores first
+      const performance = Math.round(this.get(auditData, "scores.performance"));
+      const seo = Math.round(this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth")));
+      const aiVisibility = Math.round(this.get(auditData, "scores.aiVisibility"));
+      const technicalHealth = Math.round(this.get(auditData, "scores.technicalHealth"));
+      
+      // Calculate overall as average of all 4 metrics (same as unifiedJsonService)
+      const overall = Math.round((seo + performance + aiVisibility + technicalHealth) / 4);
+      
       const scores = {
-        overall: Math.round(
-          this.get(auditData, "scores.overall", this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth", this.get(auditData, "overallScore"))))
-        ),
-        performance: Math.round(this.get(auditData, "scores.performance")),
-        seo: Math.round(this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth"))),
-        aiVisibility: Math.round(this.get(auditData, "scores.aiVisibility"))
+        overall,
+        performance,
+        seo,
+        aiVisibility,
+        technicalHealth
       };
       
       console.log("MAPPED scores:", scores);
@@ -471,7 +479,20 @@ export class AiScriptService {
       const mobileScore = Number(perf.mobileScore) || 0;
       const desktopScore = Number(perf.desktopScore) || 0;
       const avgPerf = Number(perf.avgPerformance) || 0;
-      const pageSpeed = avgPerf || mobileScore || desktopScore || 0;
+      
+      // 🔧 FIX: Use the same performance score as scores.performance (from ProjectPerformanceService)
+      // This ensures consistency between scores.performance and performanceMetrics.pageSpeed
+      const finalPerformanceScore = Math.round(this.get(auditData, "scores.performance"));
+      const pageSpeed = finalPerformanceScore || avgPerf || mobileScore || desktopScore || 0;
+      
+      console.log('🔧 PERFORMANCE CONSISTENCY CHECK:', {
+        finalPerformanceScore,
+        pageSpeed,
+        avgPerf,
+        mobileScore,
+        desktopScore,
+        willMatch: finalPerformanceScore === pageSpeed
+      });
 
       const defaultVit = [
         { metric: 'Largest Contentful Paint', mobile: 'N/A', desktop: 'N/A' },
@@ -661,7 +682,7 @@ export class AiScriptService {
             console.log('[AUDIT_SNAPSHOT] ✅ Building full AI analysis with Page19+Page22 data');
             
             const enhancedAiAnalysis = {
-              score: page19Data.aiReadiness || Math.round(scores.aiVisibility || aiVisibilityScore),
+              score: Math.round(scores.aiVisibility), // 🔧 FIX: Use same source as scores.aiVisibility
               
               categories: {
                 aiImpact: page19Data.geoScore || 0,
@@ -681,7 +702,7 @@ export class AiScriptService {
                 knowledgeGraph: page22Data.signals?.knowledgeGraph || 0
               },
               
-              checklist: page22Data.checklist || [],
+              checklist: (page22Data.checklist || []).slice(0, 5), // 🔧 FIX: Limit to top 5 items
               summary: page19Data.summary || ""
             };
             
@@ -695,7 +716,12 @@ export class AiScriptService {
               checklistItems: enhancedAiAnalysis.checklist.length,
               hasSummary: !!enhancedAiAnalysis.summary,
               knowledgeGraphScore: enhancedAiAnalysis.detailedMetrics.knowledgeGraph,
-              hasKnowledgeGraph: enhancedAiAnalysis.hasKnowledgeGraph
+              hasKnowledgeGraph: enhancedAiAnalysis.hasKnowledgeGraph,
+              aiScoreConsistency: {
+                scoresAiVisibility: scores.aiVisibility,
+                aiAnalysisScore: enhancedAiAnalysis.score,
+                match: scores.aiVisibility === enhancedAiAnalysis.score
+              }
             });
             
             return enhancedAiAnalysis;
@@ -705,7 +731,7 @@ export class AiScriptService {
             console.log('[AUDIT_SNAPSHOT] ⚠️ Using fallback AI analysis (Page19/Page22 data unavailable)');
             
             return {
-              score: Math.round(scores.aiVisibility || aiVisibilityScore),
+              score: Math.round(scores.aiVisibility), // 🔧 FIX: Use same source as scores.aiVisibility
               
               // Add empty structures for backward compatibility
               categories: {
@@ -724,7 +750,7 @@ export class AiScriptService {
                 aiCitationRate: 0,
                 knowledgeGraph: 0
               },
-              checklist: [],
+              checklist: [], // 🔧 FIX: Empty checklist (no data available)
               summary: "AI analysis data unavailable - using fallback",
               
               // Add hasKnowledgeGraph based on detailedMetrics.knowledgeGraph
@@ -837,13 +863,21 @@ export class AiScriptService {
       }
 
       // 🔍 STEP 3: EXTRACT KEY METRICS - Use safe extraction
+      // Extract individual scores first
+      const performance = Math.round(this.get(auditData, "scores.performance"));
+      const seo = Math.round(this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth")));
+      const aiVisibility = Math.round(this.get(auditData, "scores.aiVisibility"));
+      const technicalHealth = Math.round(this.get(auditData, "scores.technicalHealth"));
+      
+      // Calculate overall as average of all 4 metrics (same as unifiedJsonService)
+      const overall = Math.round((seo + performance + aiVisibility + technicalHealth) / 4);
+      
       const scores = {
-        overall: Math.round(
-          this.get(auditData, "scores.overall", this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth", this.get(auditData, "overallScore"))))
-        ),
-        performance: Math.round(this.get(auditData, "scores.performance")),
-        seo: Math.round(this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth"))),
-        aiVisibility: Math.round(this.get(auditData, "scores.aiVisibility"))
+        overall,
+        performance,
+        seo,
+        aiVisibility,
+        technicalHealth
       };
 
       const perf = auditData.performance || {};
@@ -865,12 +899,18 @@ export class AiScriptService {
             }))
           : null;
       const promptPerfMetrics = {
-        pageSpeed: avgP || mScore || dScore || 0,
+        pageSpeed: Math.round(this.get(auditData, "scores.performance")) || avgP || mScore || dScore || 0,
         mobileScore: mScore,
         desktopScore: dScore,
         metrics: mapVitals(perf.mobileMetrics) || defaultVit,
         desktopMetrics: mapVitals(perf.desktopMetrics) || defaultVit
       };
+      
+      console.log('🔧 PROMPT DATA PERFORMANCE CONSISTENCY CHECK:', {
+        scoresPerformance: Math.round(this.get(auditData, "scores.performance")),
+        pageSpeed: promptPerfMetrics.pageSpeed,
+        willMatch: Math.round(this.get(auditData, "scores.performance")) === promptPerfMetrics.pageSpeed
+      });
 
       const issueDistribution = {
         total: this.get(auditData, "issueDistribution.total", 0),
@@ -921,18 +961,26 @@ export class AiScriptService {
       }
 
       // ✅ GUARANTEED SAFE RETURN STRUCTURE WITH FIXES
+      // Extract individual scores first (use different variable names to avoid redeclaration)
+      const perfScore = Math.round(this.get(auditData, "scores.performance"));
+      const seoScore = Math.round(this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth")));
+      const aiScore = Math.round(this.get(auditData, "scores.aiVisibility"));
+      const techScore = Math.round(this.get(auditData, "scores.technicalHealth"));
+      
+      // Calculate overall as average of all 4 metrics (same as unifiedJsonService)
+      const overallScore = Math.round((seoScore + perfScore + aiScore + techScore) / 4);
+      
       return {
         projectName: this.safe(auditData.project?.name, 'Website'),
         url: this.safe(auditData.project?.url, 'N/A'),
         
         // 🔧 STEP 3: FIX SCORES from unified service - Use same get() method as buildAuditSnapshot
         scores: {
-          overall: Math.round(
-            this.get(auditData, "scores.overall", this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth", this.get(auditData, "overallScore"))))
-          ),
-          performance: Math.round(this.get(auditData, "scores.performance")),
-          seo: Math.round(this.get(auditData, "scores.seo", this.get(auditData, "scores.seoHealth"))),
-          aiVisibility: Math.round(this.get(auditData, "scores.aiVisibility"))
+          overall: overallScore,
+          performance: perfScore,
+          seo: seoScore,
+          aiVisibility: aiScore,
+          technicalHealth: techScore
         },
         
         // 🔧 STEP 5: FIX SCRIPT INPUT DATA - Use issueDistribution
@@ -977,7 +1025,8 @@ export class AiScriptService {
           overall: 0,
           performance: 0,
           seo: 0,
-          aiVisibility: 0
+          aiVisibility: 0,
+          technicalHealth: 0
         },
         topIssues: {
           critical: [],
@@ -1028,7 +1077,19 @@ AI Score: ${auditSnapshot.scores.aiVisibility}
 Overall Score: ${auditSnapshot.scores.overall}
 Performance Score: ${auditSnapshot.scores.performance}
 SEO Score: ${auditSnapshot.scores.seo}
+Technical Health Score: ${auditSnapshot.scores.technicalHealth}
 
+Performance Consistency Check:
+- scores.performance: ${auditSnapshot.scores.performance}
+- performanceMetrics.pageSpeed: ${auditSnapshot.performanceMetrics?.pageSpeed}
+- Match: ${auditSnapshot.scores.performance === auditSnapshot.performanceMetrics?.pageSpeed ? '✅ YES' : '❌ NO'}
+
+AI Score Consistency Check:
+- scores.aiVisibility: ${auditSnapshot.scores.aiVisibility}
+- aiAnalysis.score: ${auditSnapshot.aiAnalysis?.score}
+- Match: ${auditSnapshot.scores.aiVisibility === auditSnapshot.aiAnalysis?.score ? '✅ YES' : '❌ NO'}
+
+Checklist Items: ${auditSnapshot.aiAnalysis?.checklist?.length || 0}
 Recommendations: ${auditSnapshot.recommendations.length}
 Sample Recommendation: ${auditSnapshot.recommendations[0] || 'None'}
     `.trim();
@@ -1065,8 +1126,9 @@ Your overall score is ${scores.overall} out of 100.
 This indicates ${overallAssessment} performance for search engine optimization.
 
 Performance Score: ${scores.performance}/100
-SEO Health: ${scores.seo}/100
-AI Discovery Score: ${scores.aiVisibility}/100
+SEO Score: ${scores.seo}/100
+AI Visibility Score: ${scores.aiVisibility}/100
+Technical Health Score: ${scores.technicalHealth}/100
 
 Mobile PageSpeed: ${pm?.mobileScore ?? 0}/100
 Desktop PageSpeed: ${pm?.desktopScore ?? 0}/100
@@ -1128,6 +1190,7 @@ Website: ${url}
 - Performance: ${scores?.performance || 0}/100
 - SEO Health: ${scores?.seo || 0}/100
 - AI Visibility: ${scores?.aiVisibility || 0}/100
+- Technical Health: ${scores?.technicalHealth || 0}/100
 
 ⚠️ KEY ISSUES (${issueDistribution?.total || 0} total — ${issueDistribution?.high || 0} high, ${issueDistribution?.medium || 0} medium, ${issueDistribution?.low || 0} low/info):
 High-priority examples:

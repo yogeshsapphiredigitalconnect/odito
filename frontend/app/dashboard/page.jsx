@@ -84,8 +84,7 @@ export default function Dashboard() {
         const result = await response.json()
         if (result.success && result.data?.issues) {
           setIssueCounts(result.data.issues)
-          console.log("Dashboard issue counts:", result.data.issues)
-        }
+                  }
       }
     } catch (error) {
       console.error('Error fetching issue counts:', error)
@@ -120,12 +119,7 @@ export default function Dashboard() {
       if (response.success && response.data?.summary?.healthScore !== undefined) {
         const healthScore = response.data.summary.healthScore
         setTechnicalHealth(healthScore)
-        console.log('🔧 Dashboard Technical Health from backend:', {
-          projectId,
-          healthScore,
-          summary: response.data.summary
-        })
-      }
+              }
     } catch (error) {
       console.error('Error fetching technical health:', error)
       setTechnicalHealth(0)
@@ -214,14 +208,7 @@ export default function Dashboard() {
   const performance = dashboardData?.performance?.performanceScore || 0
   const technicalHealthScore = technicalHealth // From backend API
 
-  console.log('🔧 Dashboard metrics for ScoreGrid:', {
-    seoHealth,
-    aiVisibility,
-    performance,
-    technicalHealthScore,
-    source: 'Backend API values'
-  })
-
+  
   // SEO summary data - USE REAL AGGREGATION DATA
   const pagesCrawled = project ? (project.pages_crawled || 0) : 0
   const totalIssues = issueCounts ? 

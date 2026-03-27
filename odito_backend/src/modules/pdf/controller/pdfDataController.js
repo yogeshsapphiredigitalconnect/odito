@@ -576,7 +576,7 @@ export class PDFDataController {
       res.status(500).json({
         success: true, // Return success to prevent frontend crashes
         data: {
-          scores: { seoHealth: 0, aiVisibility: 0, performance: 0, authority: 0 },
+          scores: { seoHealth: 0, aiVisibility: 0, performance: 0, technicalHealth: 0 },
           issues: { critical: 0, warnings: 0, informational: 0 },
           issueDistribution: { critical: 0, warnings: 0, info: 0, passed: 0 },
           aiAnalysis: `Executive summary temporarily unavailable due to system error: ${error.message}`,
@@ -858,7 +858,7 @@ export class PDFDataController {
 
   /**
    * Generate Page 22 - AI Content Readiness data
-   * Uses IDENTICAL data source AND transformation logic as Dashboard
+   * Uses RAW values from Dashboard API (no normalization)
    */
   static async getPage22Data(req, res) {
     try {
@@ -876,14 +876,14 @@ export class PDFDataController {
         });
       }
       
-      // Page22Service now uses SAME data source AND normalization as Dashboard
+      // Page22Service now uses RAW values from Dashboard API (no normalization)
       const result = await Page22Service.getPage22Data(projectId);
       
       if (!result.success) {
         return res.status(500).json(result);
       }
       
-      console.log("Page22 controller success - returning IDENTICAL normalized data as Dashboard");
+      console.log("Page22 controller success - returning RAW values identical to Dashboard API");
       res.json(result);
       
     } catch (error) {

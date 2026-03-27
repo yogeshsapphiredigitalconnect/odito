@@ -5,6 +5,8 @@
 
 import mongoose from 'mongoose';
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
+import { ProjectPerformanceService } from '../../app_user/service/projectPerformance.service.js';
+import { TechnicalChecksService } from '../../app_user/service/technicalChecks.service.js';
 
 export class CoverPageService {
   
@@ -69,9 +71,9 @@ export class CoverPageService {
         overallGrade: project.website_grade || 'N/A',
         scores: {
           performance: calculatedData.performance,
-          authority: calculatedData.authority,
           seoHealth: calculatedData.seoHealth,
-          aiVisibility: calculatedData.aiVisibility
+          aiVisibility: calculatedData.aiVisibility,
+          technicalHealth: calculatedData.technicalHealth
         },
         issues: {
           critical: issueStats.totalIssues,       // Total Issues → totalIssues
@@ -299,23 +301,30 @@ export class CoverPageService {
   static async calculateDerivedMetrics(project, issueStats, performanceMetrics, db, projectIdObj) {
     const clamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
 
+    // Get Performance score from the SAME service as Dashboard
     let performanceScore = 0;
     try {
-      if (db && projectIdObj) {
-        const ps = await db.collection('seo_domain_performance').findOne({ project_id: projectIdObj });
-        if (ps) {
-          const m = Number(ps.mobile?.performance_score) || 0;
-          const d = Number(ps.desktop?.performance_score) || 0;
-          if (m && d) performanceScore = Math.round((m + d) / 2);
-          else performanceScore = Math.round(m || d);
-        }
+      console.log("COVER: Getting performance from ProjectPerformanceService for project:", projectIdObj);
+      const performanceResult = await ProjectPerformanceService.getProjectPerformance(project);
+      if (performanceResult.success && performanceResult.data?.summary?.performanceScore !== undefined) {
+        performanceScore = performanceResult.data.summary.performanceScore;
+        console.log("COVER: Performance score from service:", performanceScore);
       }
     } catch (e) {
-      LoggerUtil.warn('CoverPageService: PageSpeed aggregate lookup failed', { message: e?.message });
+      LoggerUtil.warn('CoverPageService: ProjectPerformanceService call failed', { message: e?.message });
     }
 
-    if (!performanceScore && performanceMetrics?.crawlSuccessRate != null) {
-      performanceScore = clamp(performanceMetrics.crawlSuccessRate * 0.45);
+    // Get Technical Health from the SAME service as Dashboard
+    let technicalHealth = 0;
+    try {
+      console.log("COVER: Getting technical health from TechnicalChecksService for project:", projectIdObj);
+      const technicalResult = await TechnicalChecksService.getTechnicalChecks(project);
+      if (technicalResult.success && technicalResult.data?.summary?.healthScore !== undefined) {
+        technicalHealth = technicalResult.data.summary.healthScore;
+        console.log("COVER: Technical health from service:", technicalHealth);
+      }
+    } catch (e) {
+      LoggerUtil.warn('CoverPageService: TechnicalChecksService call failed', { message: e?.message });
     }
 
     const total = issueStats?.totalIssues || 0;
@@ -352,20 +361,13 @@ export class CoverPageService {
       LoggerUtil.warn('CoverPageService: aiVisibility adjustment failed', { message: e?.message });
     }
 
-    let authority = 0;
-    try {
-      authority = clamp(project?.domain_authority ?? project?.authority_score ?? 0);
-    } catch (e) {
-      authority = 0;
-    }
-
     const aiVis = clamp(aiVisibilityRaw);
-    const overallScore = Math.round((seoHealth + performanceScore + aiVis) / 3);
+    const overallScore = Math.round((seoHealth + performanceScore + technicalHealth + aiVis) / 4);
 
     return {
       seoHealth,
       performance: performanceScore,
-      authority,
+      technicalHealth,
       aiVisibility: aiVis,
       overallScore
     };

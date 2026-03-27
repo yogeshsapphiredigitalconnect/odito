@@ -71,6 +71,8 @@ export default function CoverPage({ projectId }) {
         }
 
         console.log('[COVER PAGE] Cover data loaded successfully:', result.data);
+        console.log('[COVER PAGE] Technical Health from backend:', result.data.scores?.technicalHealth);
+        console.log('[COVER PAGE] All scores:', result.data.scores);
         setCoverData(result.data);
       } catch (err) {
         console.error('[COVER PAGE] Error fetching cover page data:', err);
@@ -240,9 +242,9 @@ export default function CoverPage({ projectId }) {
               <div style={{ background: '#F9FAFB', borderRadius: 8, padding: 12, marginTop: 8 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
                   {[
-                    [coverData.scores.seoHealth, 'SEO Audit'], 
-                    [coverData.scores.aiVisibility, 'AI Visibility'], 
-                    [coverData.scores.performance, 'Performance']
+                    [coverData.scores.seoHealth || 0, 'SEO Audit'], 
+                    [coverData.scores.aiVisibility || 0, 'AI Visibility'], 
+                    [coverData.scores.technicalHealth || 0, 'Technical Health']
                   ].map(([v, l]) => (
                     <div key={l} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: 20, fontWeight: 800, color: '#4F6EF7', fontFamily: "'Syne', sans-serif" }}>{v}</div>
@@ -251,9 +253,9 @@ export default function CoverPage({ projectId }) {
                   ))}
                 </div>
                 {[
-                  ['SEO Health', coverData.scores.seoHealth, '#4F6EF7'], 
-                  ['AI Visibility', coverData.scores.aiVisibility, '#00D4FF'], 
-                  ['Performance', coverData.scores.performance, '#7B5CF0']
+                  ['SEO Health', coverData.scores.seoHealth || 0, '#4F6EF7'], 
+                  ['AI Visibility', coverData.scores.aiVisibility || 0, '#00D4FF'], 
+                  ['Technical Health', coverData.scores.technicalHealth || 0, '#7B5CF0']
                 ].map(([label, pct, color]) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontSize: 10, color: '#6B7280', width: 80 }}>{label}</span>
@@ -298,10 +300,10 @@ export default function CoverPage({ projectId }) {
             {/* 4 score cards */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { v: coverData.scores.performance, l: 'Performance', c: '#4F6EF7' },
-                { v: coverData.scores.authority, l: 'Authority', c: '#4F6EF7' },
-                { v: coverData.scores.seoHealth, l: 'SEO Health', c: '#4F6EF7' },
-                { v: coverData.scores.aiVisibility, l: 'AI Visibility', c: '#00D4FF' },
+                { v: coverData.scores.performance || 0, l: 'Performance', c: '#4F6EF7' },
+                { v: coverData.scores.technicalHealth || 0, l: 'Technical Health', c: '#4F6EF7' },
+                { v: coverData.scores.seoHealth || 0, l: 'SEO Health', c: '#4F6EF7' },
+                { v: coverData.scores.aiVisibility || 0, l: 'AI Visibility', c: '#00D4FF' },
               ].map(({ v, l, c }) => (
                 <div key={l} style={{
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(79,110,247,0.3)',

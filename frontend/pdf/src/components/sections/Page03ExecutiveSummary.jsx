@@ -99,6 +99,9 @@ export default function ExecutiveSummaryPage({ projectId }) {
 
   const { scores, issues, issueDistribution, aiAnalysis } = executiveData;
 
+  // DEBUG: Log scores to verify technicalHealth is present
+  console.log("FRONTEND SCORES:", scores);
+
   // Dynamic score colors based on actual values
   const getScoreColor = (score) => {
     if (score >= 80) return '#10B981';
@@ -127,7 +130,7 @@ export default function ExecutiveSummaryPage({ projectId }) {
             { v: scores.seoHealth || 0, l: 'SEO Health', c: getScoreColor(scores.seoHealth) },
             { v: scores.aiVisibility || 0, l: 'AI Visibility', c: getScoreColor(scores.aiVisibility) },
             { v: scores.performance || 0, l: 'Performance', c: getScoreColor(scores.performance) },
-            { v: scores.authority || 0, l: 'Authority', c: getScoreColor(scores.authority) },
+            { v: scores.technicalHealth || 0, l: 'Technical Health', c: getScoreColor(scores.technicalHealth) },
           ].map(({ v, l, c }) => (
             <div key={l} style={{ textAlign: 'center' }}>
               <DonutChart value={v} color={c} size={110} />

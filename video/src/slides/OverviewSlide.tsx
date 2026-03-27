@@ -37,13 +37,7 @@ export const OverviewSlide: React.FC<Props> = ({
     extrapolateRight: "clamp",
   });
 
-  const scores = [
-    { score: data.scores?.seo || 0,           label: "SEO Health",    color: "#00f5a0", delay: 10 },
-    { score: data.scores?.aiVisibility || 0,  label: "AI Visibility", color: "#c77dff", delay: 20 },
-    { score: data.scores?.performance || 0,   label: "Performance",   color: "#00dfff", delay: 30 },
-    { score: data.scores?.authority || 0,     label: "Authority",     color: "#ffb703", delay: 40 },
-  ];
-
+  
   // FIXED: Use auditSnapshot issueDistribution in correct order
   const issuePills = [
     { label: "Total",     count: data.issueDistribution?.total || 0,   color: "#ff3860" },
@@ -193,26 +187,23 @@ export const OverviewSlide: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* RIGHT: 4 Score rings */}
+        {/* RIGHT: One big Overall Score circle */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 32,
-            alignContent: "center",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flex: 1,
             opacity: childOpacity(1),
           }}
         >
-          {scores.map((s) => (
-            <GaugeScore
-              key={s.label}
-              score={s.score}
-              label={s.label}
-              size={210}
-              color={s.color}
-              startFrame={s.delay}
-            />
-          ))}
+          <GaugeScore
+            score={data.scores?.overall || 0}
+            label="OVERALL SCORE"
+            size={300}
+            color={brandColor}
+            startFrame={10}
+          />
         </div>
       </div>
 
