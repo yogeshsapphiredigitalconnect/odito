@@ -165,13 +165,13 @@ class ApiService {
 
 
 
-  async login(email, password) {
+  async login(email, password, rememberMe = false) {
 
     return this.request('/auth/login', {
 
       method: 'POST',
 
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, rememberMe }),
 
     });
 

@@ -35,7 +35,7 @@ router.get("/google/start", (req, res) => {
   res.redirect(url);
 });
 
-// STEP 2: Google callback
+// STEP 2: Google callback (GET - for traditional OAuth flow)
 router.get("/google/callback", async (req, res) => {
   console.log("BACKEND OAUTH - GET request received:", req.query);
   
@@ -290,6 +290,102 @@ router.get("/google/callback", async (req, res) => {
     
     // General error handling
     return res.status(400).json({
+      success: false,
+      message: 'Authentication failed',
+      error: err.message
+    });
+  }
+});
+
+// STEP 2b: Google callback (POST - for NextAuth JWT flow)
+router.post("/google/callback", async (req, res) => {
+  console.log("BACKEND OAUTH - POST request received (NextAuth flow):", req.body);
+  
+  try {
+    const { email, googleId, name, avatar, firstName, lastName } = req.body;
+
+    // Validate required fields
+    if (!email || !googleId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and Google ID are required'
+      });
+    }
+
+    console.log("BACKEND OAUTH - Processing NextAuth Google login for:", email);
+
+    // Find or create user
+    let user = await User.findOne({
+      oauthProvider: "google",
+      oauthProviderId: googleId
+    });
+
+    if (!user) {
+      user = await User.findOne({ email: email });
+
+      if (user) {
+        // Link existing account to Google
+        console.log("BACKEND OAUTH - Linking existing account to Google OAuth");
+        user.oauthProvider = "google";
+        user.oauthProviderId = googleId;
+        user.isEmailVerified = true;
+        if (avatar && !user.avatar) {
+          user.avatar = avatar;
+        }
+        if (firstName && !user.firstName) user.firstName = firstName;
+        if (lastName && !user.lastName) user.lastName = lastName;
+        await user.save();
+      } else {
+        // Create new user
+        console.log("BACKEND OAUTH - Creating new user from NextAuth Google OAuth");
+        user = await User.create({
+          email: email,
+          firstName: firstName || name?.split(' ')[0] || '',
+          lastName: lastName || name?.split(' ').slice(1).join(' ') || '',
+          avatar: avatar,
+          oauthProvider: "google",
+          oauthProviderId: googleId,
+          isEmailVerified: true,
+          roleId: 5
+        });
+      }
+    } else {
+      console.log("BACKEND OAUTH - Found existing Google OAuth user");
+    }
+
+    // Issue JWT token
+    const jwtToken = jwt.sign(
+      { id: user._id, roleId: user.roleId },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRY || "7d" }
+    );
+
+    console.log("BACKEND OAUTH - JWT issued for NextAuth user:", email);
+
+    // Return response consistent with existing auth API
+    return res.status(200).json({
+      success: true,
+      message: 'Google login successful',
+      data: {
+        token: jwtToken,
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatar: user.avatar,
+          roleId: user.roleId,
+          credits: formatCreditsForFrontend(user),
+          subscription: user.subscription,
+          isEmailVerified: user.isEmailVerified
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error("BACKEND OAUTH - NextAuth POST error:", err);
+    
+    return res.status(500).json({
       success: false,
       message: 'Authentication failed',
       error: err.message

@@ -10,30 +10,46 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated on app load
     const checkAuth = async () => {
       try {
+        console.log('🔐 Auth check starting...');
+        
         if (apiService.isAuthenticated()) {
+          console.log('🔑 Token found, validating with backend...');
           const response = await apiService.getProfile();
-          setUser(response.data);
+          
+          if (response.success && response.data) {
+            console.log('✅ User authenticated:', response.data.email);
+            setUser(response.data);
+          } else {
+            console.log('❌ Invalid profile response');
+            throw new Error('Invalid profile response');
+          }
+        } else {
+          console.log('🔓 No token found - user not logged in');
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
-        // Token might be expired, remove it
+        console.error('❌ Auth check failed:', error.message);
+        // Token might be expired or invalid - clean up
         apiService.removeToken();
+        setUser(null);
       } finally {
         setIsLoading(false);
+        setIsInitialized(true);
+        console.log('🏁 Auth check completed');
       }
     };
 
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
-      const result = await apiService.login(email, password);
+      const result = await apiService.login(email, password, rememberMe);
       apiService.setToken(result.data.token);
       setUser(result.data.user);
       return { success: true, user: result.data.user };
@@ -69,6 +85,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     isLoading,
+    isInitialized,
     isAuthenticated: !!user,
     login,
     register,

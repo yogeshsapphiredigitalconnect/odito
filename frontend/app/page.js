@@ -1,5 +1,10 @@
 import { Demo } from '@/components/landingpage/demo';
+import { PublicGuard } from "@/components/guards/AuthGuard";
 
 export default function Home() {
-  return <Demo />;
+  return (
+    <PublicGuard>
+      <Demo />
+    </PublicGuard>
+  );
 }

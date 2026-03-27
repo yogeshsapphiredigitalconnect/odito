@@ -168,6 +168,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mouseX, setMouseX] = useState(0);
@@ -309,7 +310,7 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, rememberMe);
       
       console.log("✅ Login successful!", result.user);
       
@@ -632,12 +633,16 @@ function LoginPage() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Checkbox id="remember" />
+                <Checkbox 
+                  id="remember" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked)}
+                />
                 <Label
                   htmlFor="remember"
                   className="text-sm font-normal cursor-pointer"
                 >
-                  Remember for 30 days
+                  Remember for 7 days
                 </Label>
               </div>
               <a

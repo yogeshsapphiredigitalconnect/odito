@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProjectProvider } from "@/contexts/ProjectContext";
 import { ThemeProvider } from "next-themes";
+import { GlobalAuthLoader } from "@/components/loading/GlobalAuthLoader";
 import GlobalPaymentModal from "@/components/modals/GlobalPaymentModal";
 
 const geistSans = Geist({
@@ -51,6 +52,7 @@ export default function RootLayout({ children }) {
         >
           <AuthProvider>
             <ProjectProvider>
+              <GlobalAuthLoader />
               {children}
               <GlobalPaymentModal />
             </ProjectProvider>

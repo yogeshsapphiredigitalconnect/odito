@@ -169,6 +169,7 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isAgreed, setIsAgreed] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mouseX, setMouseX] = useState(0);
@@ -328,6 +329,12 @@ function SignupPage() {
       return;
     }
 
+    if (!isAgreed) {
+      setError("You must accept the Terms of Service and Privacy Policy");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Split name into firstName and lastName
       const nameParts = name.trim().split(' ');
@@ -338,7 +345,8 @@ function SignupPage() {
         firstName,
         lastName,
         email,
-        password
+        password,
+        termsAccepted: isAgreed
       });
       
       console.log("✅ Registration successful!", result.user);
@@ -681,7 +689,11 @@ function SignupPage() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Checkbox id="terms" />
+              <Checkbox 
+                id="terms" 
+                checked={isAgreed}
+                onCheckedChange={(checked) => setIsAgreed(checked)}
+              />
               <Label
                 htmlFor="terms"
                 className="text-sm font-normal cursor-pointer"
@@ -700,7 +712,7 @@ function SignupPage() {
               type="submit" 
               className="w-full h-12 text-base font-medium" 
               size="lg" 
-              disabled={isLoading}
+              disabled={isLoading || !isAgreed}
             >
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>

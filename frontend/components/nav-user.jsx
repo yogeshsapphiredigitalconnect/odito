@@ -34,7 +34,8 @@ export function NavUser({
   user
 }) {
   const { isMobile } = useSidebar()
-  const { logout } = useAuth()
+  const { logout, isLoading, isAuthenticated } = useAuth()
+  
   const handleLogout = async () => {
     try {
       await logout()
@@ -42,6 +43,30 @@ export function NavUser({
     } catch (e) {
       console.error('Logout failed', e)
     }
+  }
+
+  // Show loading skeleton during auth check
+  if (isLoading) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+            <div className="animate-pulse flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-muted"></div>
+              <div className="flex flex-col gap-1">
+                <div className="h-4 w-24 rounded bg-muted"></div>
+                <div className="h-3 w-16 rounded bg-muted"></div>
+              </div>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  // Don't render if not authenticated
+  if (!isAuthenticated || !user) {
+    return null
   }
 
   // Get user initials for avatar fallback

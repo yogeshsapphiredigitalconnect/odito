@@ -30,8 +30,8 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const result = await login(email, password);
+    const { email, password, rememberMe = false } = req.body;
+    const result = await login(email, password, rememberMe);
     res.status(200).json({
       success: true,
       message: 'Login successful',

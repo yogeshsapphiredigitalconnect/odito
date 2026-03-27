@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProject } from '@/contexts/ProjectContext'
+import { AuthGuard } from '@/components/guards/AuthGuard'
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ScoreGrid from "@/components/dashboard/overview/ScoreGrid"
 import AISummaryCard from "@/components/dashboard/overview/AISummaryCard"
@@ -28,7 +29,15 @@ import SEOSummaryPanel from "@/components/dashboard/overview/SEOSummaryPanel"
 import AIVisibilityPanel from "@/components/dashboard/overview/AIVisibilityPanel"
 
 export default function Dashboard() {
-  const { user, logout, isLoading } = useAuth()
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+function DashboardContent() {
+  const { user, logout, isLoading, isInitialized } = useAuth()
   const { activeProject } = useProject()
   const router = useRouter()
   const [projects, setProjects] = useState([])
@@ -41,10 +50,12 @@ export default function Dashboard() {
   const [issueCounts, setIssueCounts] = useState(null)
 
   useEffect(() => {
-    if (user) {
+    // Only fetch projects when auth is complete and user is available
+    if (!isLoading && isInitialized && user) {
+      console.log('🚀 Dashboard: Auth complete, fetching projects...');
       fetchProjects()
     }
-  }, [user])
+  }, [user, isLoading, isInitialized])
 
   useEffect(() => {
     if (!activeProject) return
@@ -73,18 +84,13 @@ export default function Dashboard() {
 
   const fetchIssueCounts = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/executive`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await apiService.request(`/pdf/${projectId}/executive`);
 
-      if (response.ok) {
-        const result = await response.json()
+      if (response.success) {
+        const result = response.data;
         if (result.success && result.data?.issues) {
-          setIssueCounts(result.data.issues)
-                  }
+          setIssueCounts(result.data.issues);
+        }
       }
     } catch (error) {
       console.error('Error fetching issue counts:', error)
@@ -93,20 +99,12 @@ export default function Dashboard() {
 
   const fetchDashboardData = async (projectId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/app_user/projects/${projectId}/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await apiService.request(`/app_user/projects/${projectId}/dashboard`);
 
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) {
-          setDashboardData(result.data)
-        }
+      if (response.success) {
+        setDashboardData(response.data)
       } else {
-        console.error("Dashboard API error:", response.status, response.statusText)
+        console.error("Dashboard API error:", response.message)
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -398,7 +396,7 @@ export default function Dashboard() {
   }
 
   return (
-    <DashboardLayout user={user} onLogout={handleLogout}>
+    <DashboardLayout>
       <div className="flex-1 space-y-6 p-6">
         {/* Breadcrumb equivalent */}
         <div className="border-b pb-4">

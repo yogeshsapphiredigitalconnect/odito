@@ -70,14 +70,20 @@ const formatCreditsForFrontend = (user) => {
   }
 };
 
-const generateToken = (id) => {
+const generateToken = (id, rememberMe = false) => {
+  const expiry = rememberMe ? '7d' : '1d';
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRY,
+    expiresIn: expiry,
   });
 };
 
 const register = async (userData) => {
-  const { firstName, lastName, email, password, roleId = 5 } = userData;
+  const { firstName, lastName, email, password, roleId = 5, termsAccepted } = userData;
+
+  // Validate terms acceptance
+  if (!termsAccepted || termsAccepted !== true) {
+    throw new Error('You must accept the Terms of Service and Privacy Policy');
+  }
 
   // Normalize email to lowercase for case-insensitive comparison
   const normalizedEmail = email.toLowerCase().trim();
@@ -108,7 +114,7 @@ const register = async (userData) => {
     console.warn('Failed to send OTP email, but user was created');
   }
 
-  const token = generateToken(user._id);
+  const token = generateToken(user._id, false); // Registration always uses 1-day token
 
   return {
     user: {
@@ -218,7 +224,7 @@ const resendVerificationEmail = async (email) => {
   return await generateEmailOTP(email);
 };
 
-const login = async (email, password) => {
+const login = async (email, password, rememberMe = false) => {
   // Normalize email to lowercase for case-insensitive comparison
   const normalizedEmail = email.toLowerCase().trim();
   
@@ -241,7 +247,7 @@ const login = async (email, password) => {
   // Update last login using the new method
   await user.updateLastLogin();
 
-  const token = generateToken(user._id);
+  const token = generateToken(user._id, rememberMe);
 
   return {
     user: {

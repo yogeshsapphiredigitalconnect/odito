@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Mail, Sparkles, ArrowLeft, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { PublicGuard } from "@/components/guards/AuthGuard";
 
-export default function EmailVerification() {
+function EmailVerificationContent() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -239,5 +240,13 @@ export default function EmailVerification() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EmailVerification() {
+  return (
+    <PublicGuard>
+      <EmailVerificationContent />
+    </PublicGuard>
   );
 }
