@@ -11,6 +11,7 @@ interface Props {
       title: string;
       score: number;
       severity?: string;
+      recommendation?: string;
     }>;
   };
   narration: SlideNarration;
@@ -216,6 +217,23 @@ export const AITopIssuesSlide: React.FC<Props> = ({
                     {issue.title}
                   </div>
                   
+                  {/* Recommendation */}
+                  {issue.recommendation && (
+                    <p
+                      className="recommendation"
+                      style={{
+                        fontSize: 15,
+                        color: "rgba(255,255,255,0.5)",
+                        fontFamily: "sans-serif",
+                        lineHeight: 1.4,
+                        marginBottom: 12,
+                        fontStyle: "italic"
+                      }}
+                    >
+                      {issue.recommendation}
+                    </p>
+                  )}
+                  
                   {/* Severity Badge */}
                   <div
                     style={{
@@ -288,7 +306,7 @@ export const AITopIssuesSlide: React.FC<Props> = ({
               lineHeight: 1.5,
             }}
           >
-            🎯 <strong style={{ color: "#eef2ff" }}>Immediate Action Required:</strong> Addressing these top issues could improve AI visibility by 20-35%
+            🎯 <strong style={{ color: "#eef2ff" }}>Immediate Action Required:</strong> {displayIssues[0]?.recommendation || "Addressing these top issues could improve AI visibility by 20-35%"}
           </div>
         </div>
       </div>

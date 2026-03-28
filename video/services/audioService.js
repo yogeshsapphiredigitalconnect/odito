@@ -755,8 +755,36 @@ class AudioService {
       
     } catch (error) {
       console.error(`[AUDIO_SERVICE] ❌ Failed to get audio duration for ${audioPath}:`, error.message);
-      // Fallback to estimated duration based on text length
-      return 4.0; // Default 4 seconds per slide
+      // CRITICAL FIX: Calculate fallback duration based on text length instead of hardcoded 4 seconds
+      // Average speaking rate: 150 words per minute = 2.5 words per second
+      const fallbackDuration = Math.max(2.0, this.estimateDurationFromText(audioPath));
+      console.log(`[AUDIO_SERVICE] ⚠️ Using estimated duration: ${fallbackDuration.toFixed(2)} seconds`);
+      return fallbackDuration;
+    }
+  }
+
+  /**
+   * Estimate audio duration from text length
+   * @param {string} audioPath - Audio file path (contains slide index)
+   * @returns {number} Estimated duration in seconds
+   */
+  estimateDurationFromText(audioPath) {
+    // Extract slide index from filename to get corresponding text length
+    const filename = path.basename(audioPath, '.mp3');
+    const slideIndex = parseInt(filename.split('-slide-')[1]) || 1;
+    
+    // Average: 150 words per minute = 2.5 words per second
+    // Plus 1 second buffer for pauses
+    const avgWordsPerSecond = 2.5;
+    const bufferSeconds = 1.0;
+    
+    // Rough estimation based on slide type (AI slides tend to be longer)
+    if (slideIndex >= 10) {
+      // AI slides (10-13) have longer narration
+      return (45 / avgWordsPerSecond) + bufferSeconds; // ~19 seconds
+    } else {
+      // Regular slides (1-9) have shorter narration
+      return (25 / avgWordsPerSecond) + bufferSeconds; // ~11 seconds
     }
   }
 

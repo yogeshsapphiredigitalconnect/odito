@@ -699,6 +699,21 @@ export class PDFAggregationService {
       };
       
       console.log("ONPAGE COUNTS:", result);
+      
+      // DEBUG: Check raw severity distribution
+      const rawSeverities = await db.collection('seo_page_issues')
+        .aggregate([
+          { $match: { projectId } },
+          {
+            $group: {
+              _id: '$severity',
+              count: { $sum: 1 }
+            }
+          }
+        ]).toArray();
+      
+      console.log("ONPAGE RAW SEVERITY DISTRIBUTION:", rawSeverities);
+      
       return result;
       
     } catch (error) {

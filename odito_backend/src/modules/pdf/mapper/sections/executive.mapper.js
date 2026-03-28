@@ -69,6 +69,8 @@ export class ExecutiveMapper {
       };
       
       console.log("EXECUTIVE MAPPER: Final issues object:", issues);
+      console.log("EXECUTIVE MAPPER: Critical issues count:", issues.critical);
+      console.log("EXECUTIVE MAPPER: Raw counts from aggregation:", counts);
       
       // Step 5: Build issue distribution with correct structure
       const issueDistribution = {
@@ -252,6 +254,7 @@ export class ExecutiveMapper {
    */
   static getSafeFallback(errorReason = 'Unknown error') {
     console.log('EXECUTIVE MAPPER: Returning safe fallback due to:', errorReason);
+    console.log('EXECUTIVE MAPPER: SAFE FALLBACK - This will set critical to 0!');
     
     return {
       success: true, // Return success to avoid API crashes

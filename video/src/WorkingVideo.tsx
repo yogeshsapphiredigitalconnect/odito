@@ -15,6 +15,7 @@ import { AIAnalysisSlide } from "./slides/AIAnalysisSlide";
 import { AIScoreBreakdownSlide } from "./slides/AIScoreBreakdownSlide";
 import { AIDetailedMetricsSlide } from "./slides/AIDetailedMetricsSlide";
 import { AITopIssuesSlide } from "./slides/AITopIssuesSlide";
+import { CTAClosureSlide } from "./slides/CTAClosureSlide";
 
 export const AuditVideo = (props: Record<string, unknown>) => {
   let { 
@@ -26,38 +27,24 @@ export const AuditVideo = (props: Record<string, unknown>) => {
   console.log('🎬 REMOTION: AuditVideo component called');
   console.log('🎬 REMOTION: Props received:', props);
   console.log('🎬 REMOTION: Project ID:', projectId);
-  console.log('🎬 REMOTION: Slides with audio:', slidesWithAudio);
-  console.log('🎬 REMOTION: Slides count:', slidesWithAudio?.length || 0);
-  console.log('🎬 REMOTION: FPS:', fps);
   
   // CRITICAL: Validate slides with audio
-  if (!slidesWithAudio || !Array.isArray(slidesWithAudio)) {
-    console.error("❌ REMOTION: Invalid slidesWithAudio - expected array, got:", slidesWithAudio);
+  
+  console.log("🎬 REMOTION: Total slides:", slidesWithAudio.length);
+  
+  if (!slidesWithAudio || slidesWithAudio.length === 0) {
+    console.error("❌ REMOTION: Invalid slidesWithAudio - expected array with slides, got:", slidesWithAudio);
     // Return fallback UI instead of null
     return (
       <AbsoluteFill style={{ background: "#030912", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-        <div style={{ fontSize: 48, fontWeight: "bold", marginBottom: 20 }}>⚠️ Loading Video Data</div>
+        <div style={{ fontSize: 48, fontWeight: "bold", marginBottom: 20 }}>⚠️ No Slides Available</div>
         <div style={{ fontSize: 24, opacity: 0.7 }}>Waiting for slide data...</div>
         <div style={{ fontSize: 16, opacity: 0.5, marginTop: 10 }}>Props received: {JSON.stringify(props, null, 2)}</div>
       </AbsoluteFill>
     );
   }
   
-  console.log("🎬 REMOTION: Total slides:", slidesWithAudio.length);
-  
-  if (slidesWithAudio.length !== 13) {
-    console.error("❌ REMOTION: Invalid slides count - expected 13, got:", slidesWithAudio.length);
-    // Return fallback UI instead of null
-    return (
-      <AbsoluteFill style={{ background: "#030912", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-        <div style={{ fontSize: 48, fontWeight: "bold", marginBottom: 20 }}>⚠️ Slide Count Mismatch</div>
-        <div style={{ fontSize: 24, opacity: 0.7 }}>Expected 13 slides, got {slidesWithAudio.length}</div>
-        <div style={{ fontSize: 16, opacity: 0.5, marginTop: 10 }}>Check worker slide generation</div>
-      </AbsoluteFill>
-    );
-  }
-  
-  console.log("✅ REMOTION: All 14 slides with audio validated successfully");
+  console.log(`✅ REMOTION: All ${slidesWithAudio.length} slides with audio validated successfully`);
   
   // Calculate timing based on actual audio durations
   let currentFrame = 0;
@@ -404,6 +391,32 @@ export const AuditVideo = (props: Record<string, unknown>) => {
           );
         })()}
       </Sequence>
+
+      {/* SLIDE 14: CTA CLOSURE with per-slide audio */}
+      {slidesWithAudio[13] && (
+        <Sequence from={slideTiming[13].from} durationInFrames={slideTiming[13].dur}>
+          {(() => {
+            const slide = slidesWithAudio[13];
+            console.log('🎵 REMOTION: Rendering Slide 14 with audio:', slide.audio);
+            return (
+              <>
+                <Audio 
+                  src={slide.audio} 
+                  volume={1}
+                  startFrom={0}
+                  endAt={slideTiming[13].dur}
+                />
+                <CTAClosureSlide
+                  data={slide.data || { cards: [] }}
+                  narration={slide.narration || ''}
+                  brandColor="#7730ed"
+                  agencyName="AuditIQ"
+                />
+              </>
+            );
+          })()}
+        </Sequence>
+      )}
 
 
     </AbsoluteFill>

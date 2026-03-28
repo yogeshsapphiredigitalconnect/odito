@@ -47,100 +47,121 @@ function DashboardContent() {
   const [technicalHealth, setTechnicalHealth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [issueCounts, setIssueCounts] = useState(null)
+  const [issueCounts, setIssueCounts] = useState({
+    critical: 0,
+    warnings: 0,
+    informational: 0,
+    passed: 0
+  })
 
   useEffect(() => {
-    // Only fetch projects when auth is complete and user is available
-    if (!isLoading && isInitialized && user) {
-      console.log('🚀 Dashboard: Auth complete, fetching projects...');
-      fetchProjects()
-    }
-  }, [user, isLoading, isInitialized])
+  // Only fetch projects when auth is complete and user is available
+  if (!isLoading && isInitialized && user) {
+    fetchProjects();
+  }
+}, [user, isLoading, isInitialized]);
 
   useEffect(() => {
-    if (!activeProject) return
-    
-    // Fetch project data
-    apiService
-      .getProjectById(activeProject._id)
-      .then(res => {
-        if (res.success) {
-          setProject(res.data)
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching project data:', err)
-      })
-
-    // Fetch real issue counts from our aggregation
-    fetchIssueCounts(activeProject._id)
-    
-    // Fetch dashboard data (includes performance)
-    fetchDashboardData(activeProject._id)
-    
-    // Fetch technical health score
-    fetchTechnicalHealth(activeProject._id)
-  }, [activeProject])
-
-  const fetchIssueCounts = async (projectId) => {
+  if (!activeProject) return
+  
+  setLoading(true);
+  
+  // Fetch all data in parallel
+  const fetchData = async () => {
     try {
-      const response = await apiService.request(`/pdf/${projectId}/executive`);
+      await Promise.all([
+        fetchProjectData(activeProject._id),
+        fetchIssueCounts(activeProject._id),
+        fetchDashboardData(activeProject._id),
+        fetchTechnicalHealth(activeProject._id)
+      ]);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (response.success) {
-        const result = response.data;
-        if (result.success && result.data?.issues) {
-          setIssueCounts(result.data.issues);
-        }
+  fetchData();
+}, [activeProject])
+
+  const fetchProjectData = async (projectId) => {
+  try {
+    const res = await apiService.getProjectById(projectId);
+    if (res.success) {
+      setProject(res.data);
+    }
+  } catch (err) {
+    console.error('Error fetching project data:', err);
+  }
+};
+
+const fetchIssueCounts = async (projectId) => {
+  try {
+    const response = await apiService.request(`/pdf/${projectId}/executive`);
+
+    if (response && response.success && response.data) {
+      const executiveData = response.data;
+      
+      // Try multiple possible structures
+      let issues = null;
+      
+      if (executiveData.success && executiveData.data && executiveData.data.issues) {
+        issues = executiveData.data.issues;
+      } else if (executiveData.data && executiveData.data.issues) {
+        issues = executiveData.data.issues;
+      } else if (executiveData.issues) {
+        issues = executiveData.issues;
       }
-    } catch (error) {
-      console.error('Error fetching issue counts:', error)
-    }
-  }
-
-  const fetchDashboardData = async (projectId) => {
-    try {
-      const response = await apiService.request(`/app_user/projects/${projectId}/dashboard`);
-
-      if (response.success) {
-        setDashboardData(response.data)
-      } else {
-        console.error("Dashboard API error:", response.message)
+      
+      if (issues && typeof issues === 'object' && issues.critical !== undefined) {
+        setIssueCounts(issues);
       }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
     }
+  } catch (error) {
+    console.error('Error fetching issue counts:', error);
   }
+};
 
-  const fetchTechnicalHealth = async (projectId) => {
-    try {
-      const response = await apiService.getTechnicalChecks(projectId)
-      if (response.success && response.data?.summary?.healthScore !== undefined) {
-        const healthScore = response.data.summary.healthScore
-        setTechnicalHealth(healthScore)
-              }
-    } catch (error) {
-      console.error('Error fetching technical health:', error)
-      setTechnicalHealth(0)
+const fetchDashboardData = async (projectId) => {
+  try {
+    const response = await apiService.request(`/app_user/projects/${projectId}/dashboard`);
+    if (response.success) {
+      setDashboardData(response.data);
     }
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
   }
+};
+
+const fetchTechnicalHealth = async (projectId) => {
+  try {
+    const response = await apiService.getTechnicalChecks(projectId);
+    if (response.success && response.data?.summary?.healthScore !== undefined) {
+      setTechnicalHealth(response.data.summary.healthScore);
+    }
+  } catch (error) {
+    console.error('Error fetching technical health:', error);
+    setTechnicalHealth(0);
+  }
+};
 
   const fetchProjects = async () => {
-    try {
-      setLoading(true)
-      const response = await apiService.getProjects(1, 10)
-      
-      if (response.success) {
-        setProjects(response.data.projects || [])
-      } else {
-        setError(response?.message || 'Failed to load projects')
-      }
-    } catch (err) {
-      console.error('Error fetching projects:', err)
-      setError('Failed to load projects')
-    } finally {
-      setLoading(false)
+  try {
+    const response = await apiService.getProjects(1, 10);
+    
+    if (response.success) {
+      setProjects(response.data.projects || []);
+    } else {
+      setError(response?.message || 'Failed to load projects');
     }
+  } catch (err) {
+    console.error('Error fetching projects:', err);
+    setError('Failed to load projects');
+  } finally {
+    setLoading(false);
   }
+};
 
   const handleProjectAction = (action, projectId) => {
     switch (action) {

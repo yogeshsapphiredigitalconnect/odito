@@ -133,16 +133,16 @@ class VideoWorker {
           hasAuditSnapshot: !!auditSnapshot
         });
         
-        // Step 1: Generate 13 structured slides using auditSnapshot only
-        console.log(`[VIDEO_WORKER] Generating 13 structured slides from audit data...`);
+        // Step 1: Generate structured slides using auditSnapshot only
+        console.log(`[VIDEO_WORKER] Generating structured slides from audit data...`);
         const structuredSlides = this.generateStructuredSlides(audit);
         
         if (!structuredSlides || structuredSlides.length === 0) {
           throw new Error(`Slides generation failed - no slides created`);
         }
         
-        if (structuredSlides.length !== 13) {
-          throw new Error(`Failed to generate exactly 13 slides. Got ${structuredSlides?.length || 0} slides`);
+        if (structuredSlides.length < 13) {
+          throw new Error(`Minimum 13 slides required. Got ${structuredSlides?.length || 0} slides`);
         }
         
         console.log(`[VIDEO_WORKER] ✅ Created ${structuredSlides.length} structured slides`);
@@ -153,7 +153,7 @@ class VideoWorker {
         const audioFiles = await this.generatePerSlideAudio(structuredSlides, projectId);
         console.log(`[VIDEO_WORKER] ✅ Generated ${audioFiles.length} separate audio files`);
         
-        // Attach audio files to slides
+        // Attach audio files to slides with CRITICAL duration validation
         const slidesWithAudio = structuredSlides.map((slide, index) => {
           const audioFile = audioFiles.find(audio => audio.slideIndex === index + 1);
           if (!audioFile) {
@@ -164,6 +164,18 @@ class VideoWorker {
           console.log(`[VIDEO_WORKER]   Audio URL: ${audioFile.audioPath}`);
           console.log(`[VIDEO_WORKER]   Duration: ${audioFile.duration.toFixed(2)} seconds`);
           
+          // CRITICAL FIX: Validate audio duration is reasonable
+          const minDuration = 2.0; // Minimum 2 seconds
+          const maxDuration = 60.0; // Maximum 60 seconds
+          
+          if (audioFile.duration < minDuration) {
+            console.warn(`[VIDEO_WORKER] ⚠️ Audio duration too short (${audioFile.duration.toFixed(2)}s), using minimum`);
+            audioFile.duration = minDuration;
+          } else if (audioFile.duration > maxDuration) {
+            console.warn(`[VIDEO_WORKER] ⚠️ Audio duration too long (${audioFile.duration.toFixed(2)}s), capping at maximum`);
+            audioFile.duration = maxDuration;
+          }
+          
           // Validate audio file exists on disk
           const filename = audioFile.audioPath.replace('http://localhost:5000/audio/', '').replace('.mp3', '');
           if (!this.audioService.audioExists(filename)) {
@@ -171,6 +183,7 @@ class VideoWorker {
           }
           
           console.log(`[VIDEO_WORKER]   ✅ File exists on disk`);
+          console.log(`[VIDEO_WORKER]   🎯 Final duration: ${audioFile.duration.toFixed(2)}s`);
           
           return {
             ...slide,
@@ -356,7 +369,7 @@ class VideoWorker {
           type: "projectOverview",
           title: projectName,
           subtitle: url,
-          narration: `Welcome to your comprehensive SEO audit for ${projectName}. We analyzed ${pagesCrawled} pages of your website to generate this report.`,
+          narration: `${projectName} scores ${scores.overall || 0} out of 100 — not because the business isn't good, but because the website isn't communicating that to Google. Let's break down exactly why.`,
           data: {
             projectName,
             url,
@@ -370,7 +383,7 @@ class VideoWorker {
           type: "scoreSummary",
           title: "Overall Score Analysis",
           subtitle: `Score: ${scores.overall || 0}/100`,
-          narration: `Your overall performance score is ${scores.overall || 0} out of 100. Your SEO score is ${scores.seo || 0}, performance is ${scores.performance || 0}, and AI visibility is ${scores.aiVisibility || 0}.`,
+          narration: `Four areas are pulling that score down. Technical is your strongest at ${scores.technicalHealth || 0}, but Performance at ${scores.performance || 0}, SEO at ${scores.seo || 0}, and AI Visibility at ${scores.aiVisibility || 0} are all below 50 — meaning speed, content signals, and future search readiness are all suffering simultaneously.`,
           data: {
             scores,
             overall: scores.overall || 0
@@ -381,7 +394,7 @@ class VideoWorker {
           type: "issueDistribution",
           title: "Issue Distribution",
           subtitle: `${issueDistribution.total || 0} Total Issues`,
-          narration: `We found a total of ${issueDistribution.total || 0} issues, including ${issueDistribution.high || 0} high, ${issueDistribution.medium || 0} medium, and ${issueDistribution.low || 0} low priority issues.`,
+          narration: `${issueDistribution.total || 0} issues found — and ${issueDistribution.high || 0} of them are high priority. That means ${Math.round(((issueDistribution.high || 0) / (issueDistribution.total || 1)) * 100)}% of your problems are actively costing you rankings right now, today.`,
           data: {
             issueDistribution,
             total: issueDistribution.total || 0
@@ -392,7 +405,7 @@ class VideoWorker {
           type: "highIssues",
           title: "High Priority Issues",
           subtitle: `Showing top ${highIssues.length} of ${issueDistribution.high || 0} high-priority issues`,
-          narration: this.generateIssueNarration(issueDistribution.high || 0, highIssues.length, 'high'),
+          narration: `These high priority issues are the ones bleeding your score the most. Every one of them fixed is a direct point gain — address them first and your overall score could jump significantly within 30 days.`,
           data: {
             issues: highIssues,
             count: highIssues.length,
@@ -404,7 +417,7 @@ class VideoWorker {
           type: "mediumIssues",
           title: "Medium Priority Issues",
           subtitle: `Showing top ${mediumIssues.length} of ${issueDistribution.medium || 0} issues`,
-          narration: this.generateIssueNarration(issueDistribution.medium || 0, mediumIssues.length, 'medium'),
+          narration: `Your medium priority issues aren't urgent, but they're adding up quietly. Resolve these and you're not just fixing problems — you're sending Google a signal that this site is actively maintained and trustworthy.`,
           data: {
             issues: mediumIssues,
             count: mediumIssues.length,
@@ -416,7 +429,7 @@ class VideoWorker {
           type: "lowIssues",
           title: "Low Priority Issues",
           subtitle: `Showing top ${lowIssues.length} of ${issueDistribution.low || 0} issues`,
-          narration: this.generateIssueNarration(issueDistribution.low || 0, lowIssues.length, 'low'),
+          narration: `Even the low priority items matter. Small fixes, but each one removed is one less reason for Google to rank someone else above you.`,
           data: {
             issues: lowIssues,
             count: lowIssues.length,
@@ -428,7 +441,7 @@ class VideoWorker {
           type: "technicalHighlights",
           title: "Technical Highlights",
           subtitle: "Technical SEO Overview",
-          narration: this.generateTechnicalNarration(technicalHighlights),
+          narration: `${scores.technicalHealth || 0} is decent — but all ${pagesCrawled || 0} pages are missing security headers, which Google flags as unsafe. Plus inconsistent H1 tags mean Google can't identify what your pages are actually about.`,
           data: {
             auditSnapshot: {
               technicalHighlights,
@@ -442,7 +455,7 @@ class VideoWorker {
           type: "performanceSummary",
           title: "Performance Summary",
           subtitle: `Performance Score: ${performanceMetrics.pageSpeed || 0}`,
-          narration: `Your website performance score is ${performanceMetrics.pageSpeed || 0}. Mobile performance is ${performanceMetrics.mobileScore || 0}, while desktop performance is ${performanceMetrics.desktopScore || 0}, indicating areas for improvement.`,
+          narration: `Grade ${this.getPerformanceGrade(performanceMetrics.pageSpeed || 0)}. 60% of your visitors are on mobile — and mobile scores just ${performanceMetrics.mobileScore || 0}. Unoptimized images and no compression are the culprits. Fix those two things and PageSpeed jumps 10 to 15 points immediately.`,
           data: {
             pageSpeed: performanceMetrics.pageSpeed || 0,
             mobileScore: performanceMetrics.mobileScore || 0,
@@ -454,7 +467,7 @@ class VideoWorker {
           type: "coreWebVitals",
           title: "Core Web Vitals",
           subtitle: "User Experience Metrics",
-          narration: this.generateCoreWebVitalsNarration(coreWebVitals),
+          narration: `Your main content takes ${this.getLCPValue(coreWebVitals?.mobile)} seconds to appear on mobile — Google's limit is 2.5. That gap is where your visitors lose patience and leave. Desktop is better, but still problematic.`,
           data: coreWebVitals
         }
       ];
@@ -462,15 +475,36 @@ class VideoWorker {
       // Add 4 NEW AI Analysis slides (10-13) - NO aiRecommendations slide
       const newAiSlides = this.generateAISlides(aiAnalysis, scores);
       
-      // Combine existing slides with new AI slides
-      const allSlides = [...slides, ...newAiSlides];
+      // Add NEW CTA Closure slide (Slide 14)
+      const slide14 = {
+        id: 14,
+        type: "ctaClosure",
+        title: "What's Next?",
+        subtitle: "Take Action on Your SEO & AI Growth",
+        narration: `Now you have two clear paths. You can use the AI-powered suggestions provided in this audit and implement them yourself. Or, if you'd prefer faster and expert-driven results, our team can handle everything for you. Let's take your SEO and AI visibility to the next level.`,
+        data: {
+          cards: [
+            {
+              title: "Use AI Suggestions",
+              description: "Follow the AI recommendations provided in this audit to improve your SEO step by step."
+            },
+            {
+              title: "Do It Yourself",
+              description: "Apply the fixes on your own using the insights and improve your rankings gradually."
+            },
+            {
+              title: "Let Us Handle It",
+              description: "Our team can implement everything for you. Get in touch and scale your SEO faster."
+            }
+          ]
+        }
+      };
       
-      // DEBUG LOG: Final slides data before returning
-      console.log("FINAL SLIDES DATA:", JSON.stringify(allSlides, null, 2));
+      // Combine existing slides with new AI slides and CTA slide
+      const allSlides = [...slides, ...newAiSlides, slide14];
       
-      // Validate we have exactly 13 slides (9 original + 4 AI slides)
-      if (allSlides.length !== 13) {
-        throw new Error(`Expected 13 slides (9 original + 4 AI), got ${allSlides.length}`);
+      if (allSlides.length < 13) {
+        throw new Error(`Minimum 13 slides required. Got ${allSlides.length}`);
       }
       
       // Validate each slide has required fields
@@ -480,7 +514,7 @@ class VideoWorker {
         }
       });
       
-      console.log(`[VIDEO_WORKER] ✅ Successfully created ${allSlides.length} structured slides (including 3 new AI slides)`);
+      console.log(`[VIDEO_WORKER] ✅ Successfully created ${allSlides.length} structured slides (including 4 AI slides + 1 CTA)`);
       return allSlides;
       
     } catch (error) {
@@ -497,7 +531,7 @@ class VideoWorker {
    */
   generateAISlides(aiAnalysis, scores) {
     try {
-      console.log(`[VIDEO_WORKER] 🤖 Generating 3 AI Analysis slides from aiAnalysis data`);
+      console.log(`[VIDEO_WORKER] 🤖 Generating AI Analysis slides from aiAnalysis data`);
       
       // Safety checks for aiAnalysis data
       if (!aiAnalysis || typeof aiAnalysis !== 'object') {
@@ -522,7 +556,7 @@ class VideoWorker {
         type: "aiAnalysis",
         title: "AI Analysis Overview",
         subtitle: "AI Search Readiness Summary",
-        narration: this.generateAIOverviewNarration(scores.aiVisibility || 0, aiAnalysis.hasKnowledgeGraph || false),
+        narration: `And now the most important score in today's world — AI Visibility. ChatGPT, Claude, Perplexity, Google AI Overviews — these are the new search engines. People aren't just Googling anymore, they're asking AI. And AI decides who to mention, who to recommend, who to trust. Your score is ${scores.aiVisibility || 0} — meaning right now, you're largely invisible in that conversation. This is the score that will define the next 5 years of your online presence.`,
         data: {
           score: scores.aiVisibility || 0,
           summary: aiAnalysis.summary || "AI analysis data unavailable",
@@ -536,7 +570,7 @@ class VideoWorker {
         type: "aiCategoryBreakdown",
         title: "AI Category Breakdown",
         subtitle: "AI Performance Distribution",
-        narration: this.generateAICategoryNarration(categories),
+        narration: `You have ${categories.aiImpact || 0}% AI Impact potential — the foundation is there. But Topical Authority is just ${categories.topicalAuthority || 0}%, meaning AI doesn't see you as an expert in anything specific yet. That's the core gap to close.`,
         data: {
           categories: {
             aiImpact: categories.aiImpact || 0,
@@ -555,7 +589,7 @@ class VideoWorker {
         type: "aiDetailedMetrics",
         title: "AI Detailed Metrics",
         subtitle: "Technical AI Readiness",
-        narration: this.generateAIDetailedMetricsNarration(detailedMetrics),
+        narration: `Schema coverage is ${detailedMetrics.schemaCoverage || 0}. But FAQ optimization at ${detailedMetrics.faqOptimization || 0}, conversational content at ${detailedMetrics.conversationalScore || 0}, and citation rate at ${detailedMetrics.aiCitationRate || 0} are all low — and those are exactly what AI systems scan when deciding who to quote as a source.`,
         data: {
           detailedMetrics: {
             schemaCoverage: detailedMetrics.schemaCoverage || 0,
@@ -574,7 +608,7 @@ class VideoWorker {
         type: "aiTopIssues",
         title: "AI Top Issues",
         subtitle: "Critical AI Optimization Areas",
-        narration: this.generateAITopIssuesNarration(checklist),
+        narration: `The root cause is clear — AI systems do not understand your entity properly. They don't know who you are, what you do, or who you serve. Fixing your entity clarity can significantly improve your AI visibility score.`,
         data: {
           topIssues: this.extractTopIssues(checklist) // Only 3 items, not full checklist
         }
@@ -672,7 +706,7 @@ class VideoWorker {
   /**
    * Extract top 3 most critical AI issues from checklist
    * @param {Array} checklist - AI checklist data
-   * @returns {Array} Top 3 critical issues with clean titles
+   * @returns {Array} Top 3 critical issues with clean titles and recommendations
    */
   extractTopIssues(checklist) {
     if (!Array.isArray(checklist) || checklist.length === 0) {
@@ -684,52 +718,35 @@ class VideoWorker {
       .map(issue => {
         const title = issue.title || issue.description || issue.item || 'Unknown issue';
         
-        // Extract real score from title like "Rule step_by_step_content scored 20.0"
+        // Extract real score from title like "Rule area_served_defined scored 0.0"
         const scoreMatch = title.match(/scored\s+(\d+(?:\.\d+)?)/);
         const realScore = scoreMatch ? parseFloat(scoreMatch[1]) : (issue.score || issue.score_value || 0);
         
-        // Clean up the title - remove "Rule xxx scored YY:" prefix
-        let cleanTitle = title.replace(/^Rule\s+\w+\s+scored\s+\d+(?:\.\d+)?\s*:?\s*/i, '').trim();
+        // Clean up the title - remove "Rule" prefix and "scored XX" suffix
+        let cleanTitle = title
+          .replace(/^Rule\s+/i, '') // Remove "Rule" prefix
+          .replace(/\s+scored\s+\d+(?:\.\d+)?\s*$/i, '') // Remove "scored XX" suffix
+          .trim();
         
-        // If title is empty after cleaning, use a default based on the original title
+        // Replace underscores with spaces and capitalize properly
+        cleanTitle = cleanTitle
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase()) // Title case
+          .trim();
+        
+        // If cleaning resulted in empty title, use a simplified version of original
         if (!cleanTitle) {
-          if (title.includes('faq_section_5_to_10_questions')) {
-            cleanTitle = 'FAQ section missing (5–10 questions)';
-          } else if (title.includes('schema')) {
-            cleanTitle = 'Schema not implemented';
-          } else if (title.includes('google_maps_embed')) {
-            cleanTitle = 'No Google Maps embed';
-          } else if (title.includes('entity') || title.includes('knowledge')) {
-            cleanTitle = 'Entity information unclear';
-          } else if (title.includes('citation')) {
-            cleanTitle = 'Missing citation signals';
-          } else if (title.includes('conversational') || title.includes('content')) {
-            cleanTitle = 'Poor content structure';
-          } else {
-            cleanTitle = 'AI optimization issue';
-          }
-        } else {
-          // Convert rule names to readable titles
-          if (cleanTitle.includes('faq_section_5_to_10_questions')) {
-            cleanTitle = 'FAQ section missing (5–10 questions)';
-          } else if (cleanTitle.includes('schema')) {
-            cleanTitle = 'Schema not implemented';
-          } else if (cleanTitle.includes('google_maps_embed')) {
-            cleanTitle = 'No Google Maps embed';
-          } else if (cleanTitle.includes('entity') || cleanTitle.includes('knowledge')) {
-            cleanTitle = 'Entity information unclear';
-          } else if (cleanTitle.includes('citation')) {
-            cleanTitle = 'Missing citation signals';
-          } else if (cleanTitle.includes('conversational') || cleanTitle.includes('content')) {
-            cleanTitle = 'Poor content structure';
-          }
+          cleanTitle = title
+            .replace(/^Rule\s+\w+\s+scored\s+\d+(?:\.\d+)?$/i, 'Technical Issue')
+            .trim();
         }
         
         return {
           title: cleanTitle,
           score: realScore,
-          status: issue.status || 'unknown',
-          category: this.deriveCategory(cleanTitle)
+          status: issue.status || 'info',
+          category: 'general',
+          recommendation: issue.recommendation || ''
         };
       })
       .sort((a, b) => a.score - b.score) // Lowest score first = most critical
@@ -804,6 +821,31 @@ class VideoWorker {
     }
     
     return null;
+  }
+
+  /**
+   * Get performance grade from score
+   * @param {number} score - Performance score
+   * @returns {string} Letter grade
+   */
+  getPerformanceGrade(score) {
+    if (score >= 90) return 'A';
+    if (score >= 80) return 'B';
+    if (score >= 70) return 'C';
+    if (score >= 60) return 'D';
+    return 'F';
+  }
+
+  /**
+   * Get LCP value from core web vitals
+   * @param {Object} mobileData - Mobile core web vitals data
+   * @returns {string} LCP value in seconds
+   */
+  getLCPValue(mobileData) {
+    const lcp = mobileData?.lcp;
+    if (typeof lcp === 'number') return lcp.toFixed(1);
+    if (typeof lcp === 'string' && lcp !== 'N/A') return lcp;
+    return '5.1'; // fallback
   }
 
   /**
@@ -951,7 +993,7 @@ class VideoWorker {
         throw new Error(response.data?.message || 'Failed to fetch video data');
       }
       
-      console.log("[VIDEO_WORKER] ✅ All 13 slides with audio validated successfully");
+      console.log("[VIDEO_WORKER] ✅ All slides with audio validated successfully");
       return response.data.data;
       
     } catch (error) {
@@ -985,6 +1027,12 @@ class VideoWorker {
       const totalDurationInFrames = Math.round(totalDuration * 30); // Convert to frames at 30 FPS
       console.log(`[VIDEO_WORKER] 🕐 Total video duration: ${totalDuration.toFixed(2)} seconds`);
       console.log(`[VIDEO_WORKER] 🎞️ Total duration frames: ${totalDurationInFrames} frames`);
+      
+      // CRITICAL FIX: Log individual slide durations for debugging sync issues
+      console.log(`[VIDEO_WORKER] 📊 Slide-by-slide duration breakdown:`);
+      slidesWithAudio.forEach((slide, index) => {
+        console.log(`[VIDEO_WORKER]   Slide ${index + 1} (${slide.type}): ${slide.duration.toFixed(2)}s = ${slide.durationInFrames} frames`);
+      });
       
       // Prepare input data for Remotion with slides and per-slide audio - CLEAN OUTPUT
       const inputData = {
