@@ -370,10 +370,10 @@ export default function ProjectOverview({ projectId, onBack }) {
           await fetchProjectIssues();
         }
         
-        // Set screenshot from project details response
+        // Set screenshot from project details response - DISABLED
         if (response.data.screenshot_url) {
-          console.log('✅ Screenshot URL found:', response.data.screenshot_url);
-          setScreenshot(response.data.screenshot_url);
+          console.log('✅ Screenshot URL found but disabled:', response.data.screenshot_url);
+          setScreenshot(null); // Screenshots disabled for performance
         }
       } else {
         setError('Failed to fetch project details');

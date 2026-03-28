@@ -328,24 +328,11 @@ const getSeoProjectById = async (req, res) => {
       });
     }
 
-    // Fetch latest screenshot for this project using existing connection
+    // Fetch latest screenshot for this project - DISABLED
     let screenshotUrl = null;
     try {
-      // Use the same mongoose connection that's already established
-      const screenshotsCollection = mongoose.connection.collection('seo_mainurl_snapshot');
-      
-      const latestScreenshot = await screenshotsCollection
-        .find({ project_id: new mongoose.Types.ObjectId(id) })
-        .sort({ captured_at: -1 })
-        .limit(1)
-        .toArray();
-      
-      if (latestScreenshot.length > 0 && latestScreenshot[0].screenshot_path) {
-        // Convert relative path to public URL
-        const screenshotPath = latestScreenshot[0].screenshot_path;
-        screenshotUrl = `http://localhost:5000/${screenshotPath}`;
-        LoggerUtil.debug('Screenshot found', { projectId: id, screenshotUrl });
-      }
+      // Screenshots disabled for performance
+      LoggerUtil.debug('Screenshot fetching DISABLED', { projectId: id });
     } catch (screenshotError) {
       LoggerUtil.error('Error fetching screenshot', screenshotError, { projectId: id });
       // Continue without screenshot if fetch fails
@@ -731,11 +718,16 @@ const getProjectScreenshot = async (req, res) => {
   try {
     const { id: projectId } = req.params;
     
-    LoggerUtil.info('Screenshot API called', { projectId });
+    LoggerUtil.info('Screenshot API called - DISABLED', { projectId });
     
-    // Get database connection
-    const db = mongoose.connection.db;
-    const { ObjectId } = mongoose.Types;
+    // Return safe empty response - screenshots disabled for performance
+    return res.status(200).json({
+      success: true,
+      data: {
+        sections: [],
+        message: "Screenshot functionality disabled for performance"
+      }
+    });
     
     // Validate project exists
     const project = await SeoProject.findById(projectId);

@@ -112,12 +112,13 @@ export class ProjectIssuesService {
         url: decodedPageUrl
       });
 
-    // Get screenshot from seo_first_snapshot collection
-    const pageScreenshot = await db.collection('seo_first_snapshot')
-      .findOne({
-        projectId: projectIdObj,
-        pageUrl: decodedPageUrl
-      });
+    // Get screenshot from seo_first_snapshot collection - DISABLED
+    const pageScreenshot = null; // Screenshots disabled for performance
+    // const pageScreenshot = await db.collection('seo_first_snapshot')
+    //   .findOne({
+    //     projectId: projectIdObj,
+    //     pageUrl: decodedPageUrl
+    //   });
 
     // Get all issues for this specific page
     const pageIssues = await db.collection('seo_page_issues')

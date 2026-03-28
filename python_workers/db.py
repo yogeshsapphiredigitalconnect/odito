@@ -78,6 +78,9 @@ domain_technical_reports = db["domain_technical_reports"]
 seo_keyword_research = db["seo_keyword_research"]
 seo_keyword_opportunities = db["seo_keyword_opportunities"]
 
+# collection for SEO ranking results (onboarding)
+seo_rankings = db["seo_rankings"]
+
 # Create unique index to prevent duplicate performance records
 # Ensures one record per (projectId, page_url, device_type)
 try:

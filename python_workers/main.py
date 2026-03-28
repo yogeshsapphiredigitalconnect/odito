@@ -31,6 +31,7 @@ from api.technical_domain import router as technical_domain_router
 from api.headless_accessibility import router as headless_accessibility_router
 from api.crawl_graph import router as crawl_graph_router
 from api.keyword_research import router as keyword_research_router
+from api.onboarding import router as onboarding_router
 from scraper.workers.ai.ai_visibility.ai_visibility import execute_ai_visibility, AIVisibilityJob
 
 # Configure logging to suppress third-party errors
@@ -53,6 +54,7 @@ app.include_router(technical_domain_router, prefix="/api", tags=["technical_doma
 app.include_router(headless_accessibility_router, prefix="/api", tags=["headless_accessibility"])
 app.include_router(crawl_graph_router, prefix="/api", tags=["crawl_graph"])
 app.include_router(keyword_research_router, prefix="/api", tags=["keyword_research"])
+app.include_router(onboarding_router, prefix="/api", tags=["onboarding"])
 
 # Global set to track cancelled jobs
 cancelled_jobs = set()

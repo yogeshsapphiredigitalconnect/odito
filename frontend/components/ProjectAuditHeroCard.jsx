@@ -99,6 +99,7 @@ export default function ProjectAuditHeroCard({
                 <div className="text-center">
                   <div className="text-xs mb-1">Website Preview</div>
                   <div className="text-xs font-mono truncate max-w-[180px]">{websiteUrl || 'No URL provided'}</div>
+                  <div className="text-xs text-gray-500 mt-1">Screenshots disabled</div>
                 </div>
               </div>
             </div>

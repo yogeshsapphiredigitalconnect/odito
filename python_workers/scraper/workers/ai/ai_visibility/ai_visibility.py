@@ -4120,7 +4120,11 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
                         }).limit(50)
                 
                 internal_links = list(internal_links_cursor)
-                print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links")
+                
+                # Apply 25-page limit to AI analysis (URL discovery remains unlimited)
+                links_to_analyze = internal_links[:25]  # Take only first 25 URLs for processing
+                
+                print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links | limitedTo={len(links_to_analyze)}")
                 
             elif job.projectId and job.projectId != 'null':
                 # No aiProjectId but has projectId - use seo_internal_links
@@ -4140,14 +4144,21 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
                     }).limit(50)
                 
                 internal_links = list(internal_links_cursor)
-                print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links")
+                
+                # Apply 25-page limit to AI analysis (URL discovery remains unlimited)
+                links_to_analyze = internal_links[:25]  # Take only first 25 URLs for processing
+                
+                print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links | limitedTo={len(links_to_analyze)}")
                 
             else:
                 print(f"[WORKER] No project data available | projectId={job.projectId} | aiProjectId={aiProjectId}")
                 internal_links = []
                 collection_used = "none"
             
-            if not internal_links:
+            # Apply 25-page limit to AI analysis (URL discovery remains unlimited)
+            links_to_analyze = internal_links[:25] if internal_links else []  # Take only first 25 URLs for processing
+            
+            if not links_to_analyze:
                 print(f"[AI_VISIBILITY] No URLs found for job | jobId={job.jobId}")
                 return {
                     "status": "no_urls",
@@ -4168,14 +4179,13 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
             failed_pages = 0
             
             # === FIX: Use deterministic progress calculation ===
-            total_pages = len(internal_links)
+            total_pages = len(links_to_analyze)
             print(f"[AI_VISIBILITY] Total pages to analyze: {total_pages}")
             
             with ThreadPoolExecutor(max_workers=4) as executor:
-                # Submit all analysis tasks
-                # Extract URL from each link document
+                # Submit only first 25 analysis tasks
                 futures = []
-                for link_doc in internal_links:
+                for link_doc in links_to_analyze:
                     url = link_doc.get('url') if isinstance(link_doc, dict) else str(link_doc)
                     if url:
                         futures.append(executor.submit(analyze_single_url, url, job, aiProjectId))

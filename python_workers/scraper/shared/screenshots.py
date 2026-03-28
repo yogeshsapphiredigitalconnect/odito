@@ -1,5 +1,8 @@
 """Screenshot capture functionality with duplicate detection."""
 
+# 🚨 SCREENSHOT FUNCTIONALITY DISABLED FOR PERFORMANCE
+SCREENSHOT_FUNCTIONALITY_DISABLED = True
+
 import os
 import hashlib
 import threading
@@ -37,6 +40,8 @@ SCREENSHOT_LOCK = threading.Lock()
 
 def clear_screenshot_registry():
     """Clear the screenshot registry at the start of each PAGE_SCRAPING job."""
+    if SCREENSHOT_FUNCTIONALITY_DISABLED:
+        return
     global SCREENSHOT_REGISTRY
     with SCREENSHOT_LOCK:
         SCREENSHOT_REGISTRY = {}
@@ -171,6 +176,9 @@ def take_page_screenshot(url: str, job_id: str = None, project_id: str = None) -
     Take a full-page screenshot for a URL with duplicate detection.
     Returns screenshot path or None if duplicate/failed/skipped.
     """
+    if SCREENSHOT_FUNCTIONALITY_DISABLED:
+        print(f"📸 Screenshot DISABLED for {url}")
+        return None
     # Skip non-HTML resources early
     if should_skip_url(url):
         print(f"📸 Screenshot decision for {url}")
@@ -293,6 +301,12 @@ def capture_homepage_screenshot(url: str, job_id: str, project_id: str) -> dict:
     
     Returns dict with status and metadata for logging.
     """
+    if SCREENSHOT_FUNCTIONALITY_DISABLED:
+        print(f"📸 Homepage screenshot DISABLED for {url}")
+        return {
+            "status": "disabled",
+            "error": "Screenshot functionality disabled"
+        }
     # Skip non-HTML resources early
     if should_skip_url(url):
         return {

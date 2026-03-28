@@ -3,6 +3,7 @@ import authRoutes from '../modules/user/routes/authRoutes.js';
 import oauthRoutes from '../modules/user/routes/oauth.routes.js';
 import seoProjectRoutes from '../modules/app_user/routes/seoProjectRoutes.js';
 import scrapingRoutes from '../modules/app_user/routes/scrapingRoutes.js';
+import seoOnboardingRoutes from '../modules/app_user/routes/seoOnboardingRoutes.js';
 import jobRoutes from '../modules/jobs/routes/jobRoutes.js';
 import workerRoutes from '../modules/jobs/routes/workerRoutes.js';
 import searchConsoleRoutes from '../modules/app_user/routes/searchConsoleRoutes.js';
@@ -18,6 +19,7 @@ import aiVideoScriptRoutes from '../modules/aiVideo/routes/aiScript.routes.js';
 import aiVideoRoutes from '../modules/aiVideo/routes/aiVideo.routes.js';
 import videoDataRoutes from '../modules/video/routes/videoData.routes.js';
 import debugRoutes from '../modules/aiVideo/routes/debug.routes.js';
+import businessRoutes from '../modules/app_user/routes/businessRoutes.js';
 
 const router = express.Router();
 
@@ -25,8 +27,12 @@ router.use('/auth', authRoutes);
 router.use('/auth/oauth', oauthRoutes);
 // All project-related routes (including project data)
 router.use('/app_user', seoProjectRoutes);
+// Business verification routes
+router.use('/app_user', businessRoutes);
 // Scraping pipeline routes
 router.use('/seo', scrapingRoutes);
+// SEO onboarding routes (keyword generation + ranking check)
+router.use('/seo', seoOnboardingRoutes);
 // Search Console routes (matches frontend API calls)
 router.use('/projects', searchConsoleRoutes);
 // Analytics routes (matches frontend API calls)

@@ -50,7 +50,7 @@ from scraper.shared.utils import normalize_url, get_registrable_domain
 
 from scraper.shared.fetcher import fetch_html
 
-from scraper.shared.screenshots import capture_homepage_screenshot
+# from scraper.shared.screenshots import capture_homepage_screenshot  # DISABLED
 
 from scraper.shared.recursive_sitemap import discover_all_sitemap_urls
 
@@ -173,9 +173,9 @@ def execute_link_discovery(job: LinkDiscoveryJob):
 
         try:
 
-            print(f"[WORKER] Capturing homepage screenshot | jobId={job.jobId} | url={url}")
-
-            screenshot_result = capture_homepage_screenshot(url, job.jobId, job.projectId)
+            print(f"[WORKER] Capturing homepage screenshot | jobId={job.jobId} | url={url} - DISABLED")
+            screenshot_result = {"status": "disabled", "error": "Screenshot functionality disabled"}
+            # screenshot_result = capture_homepage_screenshot(url, job.jobId, job.projectId)
 
             if screenshot_result["status"] == "captured":
 

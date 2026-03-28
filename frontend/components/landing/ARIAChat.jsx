@@ -1,439 +1,569 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import apiService from '@/lib/apiService';
+import BusinessResultsList from '@/components/business/BusinessResultsList.jsx';
 
 const ARIAChat = ({ onComplete }) => {
-  const [step, setStep] = useState(0);
+  // ── Flow states ──────────────────────────────────────────────────────
+  const FLOW_STATES = {
+    // Phase 1: Business verification (UNCHANGED)
+    ASK_BUSINESS_NAME: 'ASK_BUSINESS_NAME',
+    ASK_BUSINESS_LOCATION: 'ASK_BUSINESS_LOCATION',
+    SEARCHING_BUSINESS: 'SEARCHING_BUSINESS',
+    SHOW_BUSINESS_RESULTS: 'SHOW_BUSINESS_RESULTS',
+    CONFIRM_BUSINESS: 'CONFIRM_BUSINESS',
+
+    // Phase 2: Website (conditional — only if business has no website)
+    ASK_WEBSITE_URL: 'ASK_WEBSITE_URL',
+
+    // Phase 3: SEO Onboarding (NEW)
+    ASK_BUSINESS_TYPE: 'ASK_BUSINESS_TYPE',
+    ASK_SUB_TYPE: 'ASK_SUB_TYPE',
+    ASK_TARGET_LEVEL: 'ASK_TARGET_LEVEL',
+    GENERATING_KEYWORDS: 'GENERATING_KEYWORDS',
+    CONFIRM_KEYWORDS: 'CONFIRM_KEYWORDS',
+    ASK_CUSTOM_KEYWORDS: 'ASK_CUSTOM_KEYWORDS',
+
+    // Phase 4: Project creation → Ranking → Save (CORRECTED ORDER)
+    CREATING_PROJECT: 'CREATING_PROJECT',
+    CHECKING_RANKINGS: 'CHECKING_RANKINGS',
+    SAVING_RANKINGS: 'SAVING_RANKINGS',
+    SHOW_RANKING_RESULTS: 'SHOW_RANKING_RESULTS',
+  };
+
+  // ── Business type options ────────────────────────────────────────────
+  const BUSINESS_TYPES = [
+    { label: 'Service-based', icon: '🛠️' },
+    { label: 'Product-based', icon: '📦' },
+    { label: 'E-commerce', icon: '🛒' },
+    { label: 'Local Business', icon: '📍' },
+    { label: 'Agency', icon: '🏢' },
+    { label: 'SaaS / Tech', icon: '💻' },
+  ];
+
+  // ── State ────────────────────────────────────────────────────────────
+  const [flowState, setFlowState] = useState(FLOW_STATES.ASK_BUSINESS_NAME);
   const [messages, setMessages] = useState([
-    { type: "ai", text: "👋 Hey! I'm ARIA, your AI SEO co-pilot. Let's uncover what's holding your site back — and what's possible. What's your website URL?" }
+    { type: "ai", text: "👋 Hey! I'm ARIA, your AI SEO co-pilot. Let's uncover what's holding your site back — and what's possible. First, what's your business name?" }
   ]);
   const [input, setInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const [isSearchingBusiness, setIsSearchingBusiness] = useState(false);
+  const [isGeneratingKeywords, setIsGeneratingKeywords] = useState(false);
+  const [isCheckingRankings, setIsCheckingRankings] = useState(false);
   const [projectData, setProjectData] = useState({
+    businessName: '',
+    businessLocation: '',
+    businessSearchResults: [],
+    verifiedBusiness: null,
     websiteUrl: '',
+    // NEW fields
+    businessType: '',
+    subType: '',
+    targetLevel: '',
+    selectedKeywords: [],
+    rankingResults: [],
+    // Kept for project creation
     keywords: [],
     industry: '',
     location: '',
     country: 'US',
     language: 'en'
   });
-  
+
+  const chatEndRef = useRef(null);
   const router = useRouter();
 
-  // Country name to ISO code mapping
-  const countryNameToISO = {
-    // Full names
-    'united states': 'US',
-    'united kingdom': 'GB', 
-    'great britain': 'GB',
-    'britain': 'GB',
-    'england': 'GB',
-    'scotland': 'GB',
-    'wales': 'GB',
-    'northern ireland': 'GB',
-    'canada': 'CA',
-    'australia': 'AU',
-    'germany': 'DE',
-    'france': 'FR',
-    'spain': 'ES',
-    'italy': 'IT',
-    'japan': 'JP',
-    'china': 'CN',
-    'india': 'IN',
-    'brazil': 'BR',
-    'mexico': 'MX',
-    'south korea': 'KR',
-    'korea': 'KR',
-    'russia': 'RU',
-    
-    // Common abbreviations
-    'usa': 'US',
-    'uk': 'GB',
-    'aus': 'AU',
-    'ger': 'DE',
-    'fra': 'FR',
-    'spa': 'ES',
-    'ita': 'IT',
-    'jpn': 'JP',
-    'chn': 'CN',
-    'ind': 'IN',
-    'bra': 'BR',
-    'mex': 'MX',
-    'kor': 'KR',
-    'rus': 'RU',
-    
-    // Alternative spellings
-    'america': 'US',
-    'british': 'GB',
-    'canadian': 'CA',
-    'australian': 'AU',
-    'german': 'DE',
-    'french': 'FR',
-    'spanish': 'ES',
-    'italian': 'IT',
-    'japanese': 'JP',
-    'chinese': 'CN',
-    'indian': 'IN',
-    'brazilian': 'BR',
-    'mexican': 'MX',
-    'korean': 'KR',
-    'russian': 'RU'
+  // Auto-scroll to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, flowState]);
+
+  // ── Sub-type prompt per business type ────────────────────────────────
+  const subTypePrompts = {
+    'Service-based': 'Which type of service do you offer? (e.g., IT services, marketing, consulting)',
+    'Product-based': 'What type of products do you sell? (e.g., electronics, clothing, furniture)',
+    'E-commerce': 'What does your online store specialize in? (e.g., fashion, gadgets, home goods)',
+    'Local Business': 'What type of local business is it? (e.g., restaurant, salon, gym)',
+    'Agency': 'What kind of agency? (e.g., digital marketing, design, PR)',
+    'SaaS / Tech': 'What does your software/product do? (e.g., project management, CRM, analytics)',
   };
 
-  // Supported ISO country codes
-  const supportedCountries = ['US', 'GB', 'CA', 'AU', 'DE', 'FR', 'ES', 'IT', 'JP', 'CN', 'IN', 'BR', 'MX', 'KR', 'RU'];
-
-  const normalizeCountry = (input) => {
-    if (!input || typeof input !== 'string') {
-      return null;
-    }
-
-    const normalized = input.toLowerCase().trim();
-    
-    // Direct ISO code match
-    if (supportedCountries.includes(normalized.toUpperCase())) {
-      return normalized.toUpperCase();
-    }
-    
-    // Country name match
-    if (countryNameToISO[normalized]) {
-      return countryNameToISO[normalized];
-    }
-    
-    // Fuzzy matching for common variations
-    const fuzzyMatches = {
-      'states': 'US',
-      'uk': 'GB',
-      'england': 'GB',
-      'scotland': 'GB',
-      'wales': 'GB',
-      'britain': 'GB'
-    };
-    
-    if (fuzzyMatches[normalized]) {
-      return fuzzyMatches[normalized];
-    }
-    
-    return null;
-  };
-
-  // Language name to ISO code mapping
-  const languageNameToISO = {
-    // Full names
-    'english': 'en',
-    'spanish': 'es',
-    'french': 'fr',
-    'german': 'de',
-    'chinese': 'zh',
-    'japanese': 'ja',
-    'portuguese': 'pt',
-    'italian': 'it',
-    'russian': 'ru',
-    'arabic': 'ar',
-    'hindi': 'hi',
-    'korean': 'ko',
-    
-    // Alternative names and common variations
-    'inglés': 'es',    // Spanish with accent
-    'ingles': 'es',    // Spanish without accent
-    'français': 'fr',  // French with accent
-    'francais': 'fr',  // French without accent
-    'deutsch': 'de',  // German
-    'español': 'es',   // Spanish with accent
-    'espanol': 'es',   // Spanish without accent
-    'italiano': 'it',  // Italian
-    'português': 'pt', // Portuguese with accent
-    'portugues': 'pt', // Portuguese without accent
-    'русский': 'ru',   // Russian
-    'russkiy': 'ru',   // Russian transliteration
-    'العربية': 'ar',   // Arabic
-    'arabiya': 'ar',   // Arabic transliteration
-    'हिन्दी': 'hi',    // Hindi
-    'hindi': 'hi',     // Hindi transliteration
-    '한국어': 'ko',    // Korean
-    'hangugeo': 'ko',  // Korean transliteration
-    '中文': 'zh',      // Chinese
-    'zhongwen': 'zh',  // Chinese transliteration
-    '日本語': 'ja',    // Japanese
-    'nihongo': 'ja',   // Japanese transliteration
-    
-    // Common abbreviations and slang
-    'eng': 'en',
-    'spa': 'es',
-    'fre': 'fr',
-    'ger': 'de',
-    'chi': 'zh',
-    'jpn': 'ja',
-    'por': 'pt',
-    'ita': 'it',
-    'rus': 'ru',
-    'ara': 'ar',
-    'hin': 'hi',
-    'kor': 'ko'
-  };
-
-  // Supported ISO language codes
-  const supportedLanguages = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'pt', 'it', 'ru', 'ar', 'hi', 'ko'];
-
-  const normalizeLanguage = (input) => {
-    if (!input || typeof input !== 'string') {
-      return null;
-    }
-
-    const normalized = input.toLowerCase().trim();
-    
-    // Direct ISO code match
-    if (supportedLanguages.includes(normalized)) {
-      return normalized;
-    }
-    
-    // Language name match
-    if (languageNameToISO[normalized]) {
-      return languageNameToISO[normalized];
-    }
-    
-    // Fuzzy matching for common variations
-    const fuzzyMatches = {
-      'eng': 'en',
-      'esp': 'es',
-      'fra': 'fr',
-      'deu': 'de',
-      'chn': 'zh',
-      'jap': 'ja',
-      'por': 'pt',
-      'ita': 'it',
-      'rus': 'ru',
-      'ara': 'ar',
-      'hin': 'hi',
-      'kor': 'ko'
-    };
-    
-    if (fuzzyMatches[normalized]) {
-      return fuzzyMatches[normalized];
-    }
-    
-    return null;
-  };
-
-  const prompts = [
-    "What are your 3 main target keywords? (comma-separated)",
-    "What industry / niche are you in?",
-    "What's your target location? (e.g., New York, London, or leave empty for country-level targeting)",
-    "Which country are you targeting? (Example: United States, India, UK, Canada, Australia)",
-    "Which language? (Example: English, Spanish, French, German, Chinese, Japanese)",
-    "Perfect! Creating your project and starting analysis... 🔍",
-  ];
-
+  // ── Helpers ──────────────────────────────────────────────────────────
   const generateProjectName = (url) => {
     try {
       const urlObj = new URL(url);
       let hostname = urlObj.hostname.replace('www.', '');
-      
-      console.log('🔧 Original hostname:', hostname);
-      
-      // Replace dots with hyphens and remove invalid characters
-      hostname = hostname
-        .replace(/\./g, '-')
-        .replace(/[^a-zA-Z0-9\s-_]/g, '')
-        .replace(/\s+/g, '-')
-        .toLowerCase();
-      
-      console.log('🔧 Sanitized hostname:', hostname);
-      
-      // Capitalize first letter of each word
-      const projectName = hostname
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('-');
-      
-      console.log('🔧 Final project name:', projectName);
-      
-      return projectName || 'SEO Project';
-    } catch (error) {
-      console.error('🔧 Error generating project name:', error);
+      hostname = hostname.replace(/\./g, '-').replace(/[^a-zA-Z0-9\s-_]/g, '').replace(/\s+/g, '-').toLowerCase();
+      return hostname.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') || 'SEO Project';
+    } catch {
       return 'SEO Project';
     }
   };
 
-  const validateProjectName = (name) => {
-    // Check if project name contains only allowed characters
-    const allowedPattern = /^[a-zA-Z0-9\s-_]+$/;
-    return allowedPattern.test(name) && name.trim().length > 0;
-  };
+  // ── Business search (UNCHANGED) ─────────────────────────────────────
+  const searchBusiness = async (businessName, businessLocation) => {
+    setIsSearchingBusiness(true);
+    setFlowState(FLOW_STATES.SEARCHING_BUSINESS);
 
-  const createProject = async () => {
-    setIsCreating(true);
-    
     try {
-      // Validate URL
-      try {
-        new URL(projectData.websiteUrl);
-      } catch {
-        setMessages(m => [...m, { 
-          type: "ai", 
-          text: "❌ Please provide a valid website URL (e.g., https://example.com). Let's start over - what's your website URL?" 
-        }]);
-        setStep(0);
-        setProjectData({ websiteUrl: '', keywords: [], industry: '', location: '', country: 'US', language: 'en' });
-        setIsCreating(false);
-        return;
-      }
-
-      // Create project with onboarding data
-      const projectName = generateProjectName(projectData.websiteUrl);
-      
-      // Validate project name before sending
-      if (!validateProjectName(projectName)) {
-        throw new Error('Generated project name contains invalid characters');
-      }
-
-      const projectPayload = {
-        project_name: projectName,
-        main_url: projectData.websiteUrl,
-        keywords: projectData.keywords.filter(k => k.trim()).slice(0, 5), // Limit to 5 keywords
-        industry: projectData.industry,
-        location: projectData.location,
-        country: projectData.country,
-        language: projectData.language,
-        status: 'active'
-      };
-
-      console.log('🚀 Creating project with payload:', projectPayload);
-
-      const response = await apiService.createProject(projectPayload);
-
-      console.log('📥 API Response:', response);
-      console.log('📥 Response success:', response.success);
-      console.log('📥 Response data:', response.data);
-      console.log('📥 Project ID:', response.data?.projectId);
-
-      if (response.success) {
-        const projectId = response.data?.projectId;
-
-        if (!projectId) {
-          console.error('❌ Project ID not found in response');
-          throw new Error('Project ID not found in response');
-        }
-
-        // Automatically start the scraping/analysis job
-        setIsStartingAnalysis(true);
-        try {
-          console.log('🚀 Starting analysis job for project:', projectId);
-          const auditResponse = await apiService.startAudit(projectId);
-          console.log('✅ Analysis job started successfully:', auditResponse);
-        } catch (auditError) {
-          console.error('⚠️ Failed to start analysis job:', auditError);
-          // Don't fail the entire flow if job start fails, project is still created
-          setMessages(m => [...m, { 
-            type: "ai", 
-            text: `✅ Project created successfully! Note: Analysis will start automatically. If it doesn't, you can start it manually from the dashboard.` 
+      const response = await apiService.searchBusiness(businessName, businessLocation);
+      if (response.success && response.data) {
+        setProjectData(prev => ({ ...prev, businessSearchResults: response.data.results || [] }));
+        if (response.data.results?.length > 0) {
+          setFlowState(FLOW_STATES.SHOW_BUSINESS_RESULTS);
+          setMessages(m => [...m, {
+            type: "ai",
+            text: `I found ${response.data.results.length} business${response.data.results.length !== 1 ? 'es' : ''}. Is one of these yours?`,
+            businessResults: response.data.results
           }]);
-        } finally {
-          setIsStartingAnalysis(false);
+        } else {
+          setMessages(m => [...m, { type: "ai", text: "I couldn't find any businesses matching that search. Let's try different terms or continue manually. What's your business name?" }]);
+          setFlowState(FLOW_STATES.ASK_BUSINESS_NAME);
         }
-
-        const redirectUrl = `/processing/${projectId}`;
-        console.log(`🔄 Redirecting to ${redirectUrl}`);
-
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('skipAuthRedirect', 'true');
-          sessionStorage.setItem('pendingRedirectUrl', redirectUrl);
-        }
-
-        window.location.replace(redirectUrl);
-        return;
       } else {
-        console.error('❌ API response not successful:', response);
-        throw new Error(response.message || 'Failed to create project');
+        throw new Error(response.message || 'Failed to search');
       }
     } catch (error) {
+      setMessages(m => [...m, { type: "ai", text: `I had trouble searching: ${error.message}. What's your business name?` }]);
+      setFlowState(FLOW_STATES.ASK_BUSINESS_NAME);
+    } finally {
+      setIsSearchingBusiness(false);
+    }
+  };
+
+  // ── Business selection → go to business type (MODIFIED) ─────────────
+  const handleBusinessSelection = (business) => {
+    setProjectData(prev => ({
+      ...prev,
+      verifiedBusiness: business,
+      websiteUrl: business.website || '',
+      location: business.address || prev.location
+    }));
+
+    if (business.website) {
+      // Has website → skip website step, go straight to business type
+      setMessages(m => [...m, {
+        type: "ai",
+        text: `Great! I found **${business.name}**${business.website ? ` with website ${business.website}` : ''}. Now let's understand your business better.\n\n**What type of business is it?**`
+      }]);
+      setFlowState(FLOW_STATES.ASK_BUSINESS_TYPE);
+    } else {
+      // No website → ask for it
+      setMessages(m => [...m, {
+        type: "ai",
+        text: `Great! I found **${business.name}**. I couldn't find a website for your business. What's your website URL?`
+      }]);
+      setFlowState(FLOW_STATES.ASK_WEBSITE_URL);
+    }
+  };
+
+  const handleNoneOfThese = () => {
+    setMessages(m => [...m, { type: "ai", text: "No problem! Let's try searching again. What's your business name?" }]);
+    setFlowState(FLOW_STATES.ASK_BUSINESS_NAME);
+  };
+
+  const handleShowMore = () => {
+    setMessages(m => [...m, { type: "ai", text: "Let me search for more options..." }]);
+  };
+
+  // ── Business type selection handler ─────────────────────────────────
+  const handleBusinessTypeSelect = (type) => {
+    setProjectData(prev => ({ ...prev, businessType: type, industry: type }));
+    setMessages(m => [
+      ...m,
+      { type: "user", text: type },
+      { type: "ai", text: subTypePrompts[type] || 'What specific type of business is it?' }
+    ]);
+    setFlowState(FLOW_STATES.ASK_SUB_TYPE);
+  };
+
+  // ── Target level selection handler ──────────────────────────────────
+  const handleTargetLevelSelect = (level) => {
+    setProjectData(prev => ({ ...prev, targetLevel: level }));
+    setMessages(m => [
+      ...m,
+      { type: "user", text: level === 'local' ? 'Local (city-level)' : 'Country level' }
+    ]);
+
+    // Trigger keyword generation
+    const location = level === 'local'
+      ? (projectData.verifiedBusiness?.address || projectData.businessLocation)
+      : null;
+
+    setFlowState(FLOW_STATES.GENERATING_KEYWORDS);
+    generateKeywordsFlow(projectData.subType, location);
+  };
+
+  // ── Keyword generation flow ─────────────────────────────────────────
+  const generateKeywordsFlow = async (subType, location) => {
+    setIsGeneratingKeywords(true);
+    setMessages(m => [...m, { type: "ai", text: "🔍 Finding the best keywords for your business..." }]);
+
+    try {
+      const response = await apiService.generateKeywords(
+        subType,
+        location,
+        projectData.country,
+        projectData.language
+      );
+
+      if (response.success && response.data?.keywords?.length > 0) {
+        const keywords = response.data.keywords;
+        setProjectData(prev => ({ ...prev, selectedKeywords: keywords, keywords }));
+        setMessages(m => [...m, {
+          type: "ai",
+          text: `Here are the top keywords I found:\n\n${keywords.map((k, i) => `${i + 1}. **${k}**`).join('\n')}\n\nDo you want to go with these?`,
+          keywordConfirmation: true
+        }]);
+        setFlowState(FLOW_STATES.CONFIRM_KEYWORDS);
+      } else {
+        throw new Error('No keywords returned');
+      }
+    } catch (error) {
+      console.error('Keyword generation failed:', error);
+      setMessages(m => [...m, {
+        type: "ai",
+        text: `⚠️ I couldn't auto-generate keywords: ${error.message}\n\nPlease enter up to 5 target keywords (comma-separated):`
+      }]);
+      setFlowState(FLOW_STATES.ASK_CUSTOM_KEYWORDS);
+    } finally {
+      setIsGeneratingKeywords(false);
+    }
+  };
+
+  // ── Keyword confirmation handler ────────────────────────────────────
+  const handleKeywordConfirm = (confirmed) => {
+    if (confirmed) {
+      setMessages(m => [
+        ...m,
+        { type: "user", text: "Yes, let's go with these!" },
+        { type: "ai", text: "✅ Perfect! Setting up your project..." }
+      ]);
+      startProjectAndRankingFlow();
+    } else {
+      setMessages(m => [
+        ...m,
+        { type: "user", text: "No, I want different keywords" },
+        { type: "ai", text: "No problem! Enter up to 5 target keywords (comma-separated):" }
+      ]);
+      setFlowState(FLOW_STATES.ASK_CUSTOM_KEYWORDS);
+    }
+  };
+
+  // ── NON-BLOCKING: Create project → trigger background tasks → redirect ─────
+  const startProjectAndRankingFlow = async () => {
+    setFlowState(FLOW_STATES.CREATING_PROJECT);
+    setIsCreating(true);
+
+    try {
+      // STEP 1: Validate & create the project
+      const websiteUrl = projectData.websiteUrl;
+      try { new URL(websiteUrl); } catch {
+        setMessages(m => [...m, { type: "ai", text: "❌ Invalid website URL. Please check and try again." }]);
+        setIsCreating(false);
+        setFlowState(FLOW_STATES.ASK_WEBSITE_URL);
+        return;
+      }
+
+      const projectName = generateProjectName(websiteUrl);
+      const projectPayload = {
+        project_name: projectName,
+        main_url: websiteUrl,
+        keywords: projectData.selectedKeywords.filter(k => k.trim()).slice(0, 5),
+        industry: projectData.businessType || projectData.industry,
+        location: projectData.verifiedBusiness?.address || projectData.location || '',
+        country: projectData.country,
+        language: projectData.language,
+        status: 'active',
+        business_type: projectData.businessType,
+        ...(projectData.verifiedBusiness && {
+          verified_business: {
+            placeId: projectData.verifiedBusiness.placeId,
+            name: projectData.verifiedBusiness.name,
+            address: projectData.verifiedBusiness.address,
+            website: projectData.verifiedBusiness.website,
+            phone: projectData.verifiedBusiness.phone,
+            rating: projectData.verifiedBusiness.rating,
+            location: projectData.verifiedBusiness.location,
+            verifiedAt: new Date().toISOString()
+          }
+        })
+      };
+
+      const response = await apiService.createProject(projectPayload);
+      if (!response.success) throw new Error(response.message || 'Failed to create project');
+
+      const projectId = response.data?.projectId;
+      if (!projectId) throw new Error('Project ID not found in response');
+
+      // STEP 2: Trigger background tasks WITHOUT waiting
+      triggerBackgroundTasks(projectId, websiteUrl);
+
+      // STEP 3: Immediate redirect to processing page
+      const redirectUrl = `/processing/${projectId}`;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('skipAuthRedirect', 'true');
+        sessionStorage.setItem('pendingRedirectUrl', redirectUrl);
+      }
+
+      // Redirect immediately
+      router.push(redirectUrl);
+
+    } catch (error) {
       console.error('Project creation error:', error);
-      setMessages(m => [...m, { 
-        type: "ai", 
-        text: `❌ Sorry, there was an error creating your project: ${error.message}. Please try again.` 
+      setMessages(m => [...m, {
+        type: "ai",
+        text: `❌ Error: ${error.message}. Please try again.`
       }]);
       setIsCreating(false);
     }
   };
 
+  // ── Fire-and-forget background tasks ─────────────────────────────────────
+  const triggerBackgroundTasks = async (projectId, websiteUrl) => {
+    try {
+      // Background task 1: Check rankings (non-blocking)
+      apiService.checkRanking(
+        websiteUrl,
+        projectData.selectedKeywords,
+        projectData.verifiedBusiness?.address || projectData.location,
+        projectData.country,
+        projectData.language
+      ).then(rankResponse => {
+        if (rankResponse.success && rankResponse.data?.results) {
+          // Save rankings in background
+          apiService.saveRanking(
+            projectId,
+            websiteUrl,
+            projectData.verifiedBusiness?.address || projectData.location,
+            rankResponse.data.results
+          ).catch(saveError => {
+            console.error('Background ranking save failed:', saveError);
+          });
+        }
+      }).catch(rankError => {
+        console.error('Background ranking check failed:', rankError);
+      });
+
+      // Background task 2: Start audit (non-blocking)
+      apiService.startAudit(projectId).catch(auditError => {
+        console.error('Background audit start failed:', auditError);
+      });
+
+    } catch (error) {
+      console.error('Background task trigger failed:', error);
+    }
+  };
+
+  // ── Main send handler ───────────────────────────────────────────────
   function send() {
-    if (!input.trim() || isCreating || isStartingAnalysis) return;
-    
+    if (!input.trim() || isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings) return;
+
     const userResponse = input.trim();
     const newMsgs = [...messages, { type: "user", text: userResponse }];
     setMessages(newMsgs);
     setInput("");
 
-    // Process the response based on current step
     setTimeout(() => {
-      switch (step) {
-        case 0: // Website URL
+      switch (flowState) {
+        case FLOW_STATES.ASK_BUSINESS_NAME:
+          setProjectData(prev => ({ ...prev, businessName: userResponse }));
+          setMessages(m => [...m, { type: "ai", text: "What's your business location? (city or area)" }]);
+          setFlowState(FLOW_STATES.ASK_BUSINESS_LOCATION);
+          break;
+
+        case FLOW_STATES.ASK_BUSINESS_LOCATION:
+          setProjectData(prev => ({ ...prev, businessLocation: userResponse }));
+          searchBusiness(projectData.businessName, userResponse);
+          break;
+
+        case FLOW_STATES.ASK_WEBSITE_URL:
           setProjectData(prev => ({ ...prev, websiteUrl: userResponse }));
-          setMessages(m => [...m, { type: "ai", text: prompts[step] }]);
-          setStep(s => s + 1);
+          setMessages(m => [...m, {
+            type: "ai",
+            text: "Got it! Now let's understand your business better.\n\n**What type of business is it?**"
+          }]);
+          setFlowState(FLOW_STATES.ASK_BUSINESS_TYPE);
           break;
-          
-        case 1: // Keywords
+
+        case FLOW_STATES.ASK_SUB_TYPE:
+          setProjectData(prev => ({ ...prev, subType: userResponse }));
+          setMessages(m => [...m, {
+            type: "ai",
+            text: `Great — "${userResponse}"! What level of SEO targeting do you need?`
+          }]);
+          setFlowState(FLOW_STATES.ASK_TARGET_LEVEL);
+          break;
+
+        case FLOW_STATES.ASK_CUSTOM_KEYWORDS: {
           const keywords = userResponse.split(',').map(k => k.trim()).filter(k => k);
-          setProjectData(prev => ({ ...prev, keywords }));
-          setMessages(m => [...m, { type: "ai", text: prompts[step] }]);
-          setStep(s => s + 1);
-          break;
-          
-        case 2: // Industry
-          setProjectData(prev => ({ ...prev, industry: userResponse }));
-          setMessages(m => [...m, { type: "ai", text: prompts[step] }]);
-          setStep(s => s + 1);
-          break;
-          
-        case 3: // Location
-          setProjectData(prev => ({ ...prev, location: userResponse }));
-          setMessages(m => [...m, { type: "ai", text: prompts[step] }]);
-          setStep(s => s + 1);
-          break;
-          
-        case 4: // Country
-          const normalizedCountry = normalizeCountry(userResponse);
-          if (normalizedCountry) {
-            setProjectData(prev => ({ ...prev, country: normalizedCountry }));
-            setMessages(m => [...m, { 
-              type: "ai", 
-              text: `Great! I've set your target country to ${normalizedCountry}. ${prompts[step]}` 
-            }]);
-            setStep(s => s + 1);
-          } else {
-            setMessages(m => [...m, { 
-              type: "ai", 
-              text: `❌ I didn't recognize that country. Please try one of these: United States, United Kingdom, Canada, Australia, Germany, France, Spain, Italy, Japan, China, India, Brazil, Mexico, South Korea, or Russia. You can also use ISO codes like US, GB, CA, etc. Which country are you targeting?` 
-            }]);
+          // Deduplicate
+          const unique = [...new Set(keywords.map(k => k.toLowerCase()))].map(k =>
+            keywords.find(orig => orig.toLowerCase() === k) || k
+          );
+          if (unique.length === 0) {
+            setMessages(m => [...m, { type: "ai", text: "Please enter at least one keyword. (comma-separated)" }]);
+            return;
           }
+          const finalKws = unique.slice(0, 5);
+          setProjectData(prev => ({ ...prev, selectedKeywords: finalKws, keywords: finalKws }));
+          setMessages(m => [...m, {
+            type: "ai",
+            text: `✅ Got it! Using these keywords:\n\n${finalKws.map((k, i) => `${i + 1}. **${k}**`).join('\n')}\n\nSetting up your project...`
+          }]);
+          startProjectAndRankingFlow();
           break;
-          
-        case 5: // Language
-          const normalizedLanguage = normalizeLanguage(userResponse);
-          if (normalizedLanguage) {
-            setProjectData(prev => ({ ...prev, language: normalizedLanguage }));
-            setMessages(m => [...m, { 
-              type: "ai", 
-              text: `Perfect! I've set your language to ${normalizedLanguage}. ${prompts[step]}` 
-            }]);
-            setStep(s => s + 1);
-            // Create project after language is provided
-            setTimeout(createProject, 1000);
-          } else {
-            setMessages(m => [...m, { 
-              type: "ai", 
-              text: `❌ I didn't recognize that language. Please try one of these: English, Spanish, French, German, Chinese, Japanese, Portuguese, Italian, Russian, Arabic, Hindi, or Korean. You can also use language codes like en, es, fr, etc. Which language?` 
-            }]);
-          }
+        }
+
+        default:
           break;
       }
     }, 600);
   }
 
+  // ── Render helpers ──────────────────────────────────────────────────
+
+  // Business type selector cards
+  const renderBusinessTypeSelector = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 10, maxWidth: '100%' }}>
+      {BUSINESS_TYPES.map(({ label, icon }) => (
+        <button
+          key={label}
+          onClick={() => handleBusinessTypeSelect(label)}
+          style={{
+            padding: '10px 12px',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 10,
+            color: '#fff',
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 500,
+            textAlign: 'left',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <span style={{ fontSize: 18 }}>{icon}</span>
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // Target level selector
+  const renderTargetLevelSelector = () => (
+    <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+      {[
+        { key: 'local', label: '📍 Local (city-level)', desc: 'Target your city area' },
+        { key: 'country', label: '🌐 Country level', desc: 'Target entire country' }
+      ].map(({ key, label, desc }) => (
+        <button
+          key={key}
+          onClick={() => handleTargetLevelSelect(key)}
+          style={{
+            flex: 1,
+            padding: '12px 14px',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 10,
+            color: '#fff',
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 500,
+            textAlign: 'center',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>{desc}</div>
+        </button>
+      ))}
+    </div>
+  );
+
+  // Keyword confirm buttons
+  const renderKeywordConfirmButtons = () => (
+    <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+      <button
+        onClick={() => handleKeywordConfirm(true)}
+        style={{
+          flex: 1, padding: '10px 16px',
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: '#fff', border: 'none', borderRadius: 8,
+          cursor: 'pointer', fontWeight: 600, fontSize: 14,
+          transition: 'all 0.2s ease'
+        }}
+      >
+        ✅ Yes, use these
+      </button>
+      <button
+        onClick={() => handleKeywordConfirm(false)}
+        style={{
+          flex: 1, padding: '10px 16px',
+          background: 'rgba(255,255,255,0.08)',
+          color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8,
+          cursor: 'pointer', fontWeight: 500, fontSize: 14,
+          transition: 'all 0.2s ease'
+        }}
+      >
+        ✏️ Enter my own
+      </button>
+    </div>
+  );
+
+  // Loading indicator
+  const renderLoadingIndicator = (message) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, opacity: 0.8 }}>
+      <div style={{
+        width: 20, height: 20,
+        border: '2px solid rgba(255,255,255,0.2)',
+        borderTop: '2px solid #10b981',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>{message}</span>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  // ── Determine which states hide the text input ──────────────────────
+  const hideInputStates = [
+    FLOW_STATES.SEARCHING_BUSINESS,
+    FLOW_STATES.SHOW_BUSINESS_RESULTS,
+    FLOW_STATES.ASK_BUSINESS_TYPE,
+    FLOW_STATES.ASK_TARGET_LEVEL,
+    FLOW_STATES.GENERATING_KEYWORDS,
+    FLOW_STATES.CONFIRM_KEYWORDS,
+    FLOW_STATES.CREATING_PROJECT,
+    // REMOVED: CHECKING_RANKINGS, SAVING_RANKINGS, SHOW_RANKING_RESULTS (now non-blocking)
+  ];
+
+  // ── Render ──────────────────────────────────────────────────────────
   return (
     <div className="glass-card" style={{ width: "100%", maxWidth: 520, padding: 24 }}>
       <div style={{ marginBottom: 16 }}>
@@ -443,47 +573,107 @@ const ARIAChat = ({ onComplete }) => {
               <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--grad1)", display: "grid", placeItems: "center", fontSize: 12, marginRight: 8, flexShrink: 0, marginTop: 4 }}>✦</div>
             )}
             <div style={{ display: "flex", flexDirection: "column", maxWidth: "80%" }}>
-              <div className={`chat-bubble ${m.type}`}>{m.text}</div>
+              <div 
+                className={`chat-bubble ${m.type}`}
+                style={{ 
+                  whiteSpace: 'pre-line',
+                  ...({}) 
+                }}
+                dangerouslySetInnerHTML={{ __html: m.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+              />
+
+              {/* Action button */}
               {m.action && (
-                <button 
+                <button
                   onClick={m.action.onClick}
                   style={{
-                    marginTop: 8,
-                    padding: "8px 16px",
-                    backgroundColor: "var(--grad1)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "500",
+                    marginTop: 8, padding: "8px 16px",
+                    backgroundColor: "var(--grad1)", color: "white",
+                    border: "none", borderRadius: "6px",
+                    cursor: "pointer", fontSize: "14px", fontWeight: "500",
                     alignSelf: "flex-start"
                   }}
                 >
                   {m.action.text}
                 </button>
               )}
+
+              {/* Business results (UNCHANGED) */}
+              {m.businessResults && flowState === FLOW_STATES.SHOW_BUSINESS_RESULTS && (
+                <BusinessResultsList
+                  results={m.businessResults}
+                  onSelect={handleBusinessSelection}
+                  onShowMore={handleShowMore}
+                  onNone={handleNoneOfThese}
+                  searchQuery={`${projectData.businessName} in ${projectData.businessLocation}`}
+                  isLoading={false}
+                />
+              )}
+
+              {/* Keyword confirmation buttons */}
+              {m.keywordConfirmation && flowState === FLOW_STATES.CONFIRM_KEYWORDS && renderKeywordConfirmButtons()}
             </div>
           </div>
         ))}
+
+        {/* Business search loading (UNCHANGED) */}
+        {flowState === FLOW_STATES.SEARCHING_BUSINESS && (
+          <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--grad1)", display: "grid", placeItems: "center", fontSize: 12, marginRight: 8, flexShrink: 0, marginTop: 4 }}>✦</div>
+            <div style={{ display: "flex", flexDirection: "column", maxWidth: "80%" }}>
+              <BusinessResultsList
+                results={[]}
+                onSelect={handleBusinessSelection}
+                onShowMore={handleShowMore}
+                onNone={handleNoneOfThese}
+                searchQuery={`${projectData.businessName} in ${projectData.businessLocation}`}
+                isLoading={true}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Business type selector */}
+        {flowState === FLOW_STATES.ASK_BUSINESS_TYPE && renderBusinessTypeSelector()}
+
+        {/* Target level selector */}
+        {flowState === FLOW_STATES.ASK_TARGET_LEVEL && renderTargetLevelSelector()}
+
+        {/* Loading states */}
+        {flowState === FLOW_STATES.GENERATING_KEYWORDS && renderLoadingIndicator('Finding keywords...')}
+        {flowState === FLOW_STATES.CREATING_PROJECT && renderLoadingIndicator('Creating your project...')}
+        {/* REMOVED: CHECKING_RANKINGS, SAVING_RANKINGS loading indicators (now non-blocking) */}
+
+        <div ref={chatEndRef} />
       </div>
-      <div className="chat-input-row">
-        <input
-          className="chat-input"
-          placeholder={step === 0 ? "https://yourwebsite.com" : "Type your answer..."}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && send()}
-          disabled={isCreating || isStartingAnalysis}
-        />
-        <button 
-          onClick={send} 
-          disabled={!input.trim() || isCreating || isStartingAnalysis}
-          className="chat-send-btn"
-        >
-          {isStartingAnalysis ? '🔄' : isCreating ? '⏳' : '➤'}
-        </button>
-      </div>
+
+      {/* Text input — hidden during button/loading states */}
+      {!hideInputStates.includes(flowState) && (
+        <div className="chat-input-row">
+          <input
+            className="chat-input"
+            placeholder={
+              flowState === FLOW_STATES.ASK_BUSINESS_NAME ? "Enter your business name..." :
+              flowState === FLOW_STATES.ASK_BUSINESS_LOCATION ? "Enter city or area..." :
+              flowState === FLOW_STATES.ASK_WEBSITE_URL ? "https://yourwebsite.com" :
+              flowState === FLOW_STATES.ASK_SUB_TYPE ? "e.g., IT services, digital marketing..." :
+              flowState === FLOW_STATES.ASK_CUSTOM_KEYWORDS ? "keyword1, keyword2, keyword3..." :
+              "Type your answer..."
+            }
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && send()}
+            disabled={isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings}
+          />
+          <button
+            onClick={send}
+            disabled={!input.trim() || isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings}
+            className="chat-send-btn"
+          >
+            {isCheckingRankings ? '📊' : isGeneratingKeywords ? '🔍' : isStartingAnalysis ? '🔄' : isCreating ? '⏳' : isSearchingBusiness ? '🔍' : '➤'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

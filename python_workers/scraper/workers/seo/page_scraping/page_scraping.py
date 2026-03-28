@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup
 
 from scraper.shared.orchestrator import scrape_page_data
 
-from scraper.shared.screenshots import clear_screenshot_registry, take_page_screenshot
+# from scraper.shared.screenshots import clear_screenshot_registry, take_page_screenshot  # DISABLED
 
 from scraper.shared.utils import normalize_url, get_registrable_domain
 
@@ -291,13 +291,16 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
     try:
 
-        print(f"[WORKER] PAGE_SCRAPING started | jobId={job.jobId} | totalUrls={len(job.urls)}")
+        # Apply 25-page limit to scraping (URL discovery remains unlimited)
+        urls_to_scrape = job.urls[:25]  # Take only first 25 URLs for processing
+        total_pages = len(urls_to_scrape)
+        
+        print(f"[WORKER] PAGE_SCRAPING started | jobId={job.jobId} | totalUrls={len(job.urls)} | limitedTo={len(urls_to_scrape)}")
 
         
 
-        # Clear screenshot registry at the start of each job
-
-        clear_screenshot_registry()
+        # Clear screenshot registry at the start of each job - DISABLED
+        # clear_screenshot_registry()
 
         
 
@@ -318,8 +321,6 @@ def execute_page_scraping_logic(job: PageScrapingJob):
         failed_pages = 0
 
         completed_pages = 0
-
-        total_pages = len(job.urls)
 
         
 
@@ -347,9 +348,9 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
                 
 
-                # Take screenshot (best-effort, failures don't affect scraping)
-
-                screenshot_path = take_page_screenshot(url, job.jobId, job.projectId)
+                # Take screenshot (best-effort, failures don't affect scraping) - DISABLED
+                screenshot_path = None
+                # screenshot_path = take_page_screenshot(url, job.jobId, job.projectId)
 
                 
 
@@ -551,9 +552,8 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
         with ThreadPoolExecutor(max_workers=6) as executor:
 
-            # Submit all scraping tasks
-
-            futures = [executor.submit(scrape_single_url, url) for url in job.urls]
+            # Submit only first 25 scraping tasks
+            futures = [executor.submit(scrape_single_url, url) for url in urls_to_scrape]
 
             
 

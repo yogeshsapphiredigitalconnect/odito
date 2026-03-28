@@ -213,6 +213,50 @@ const seoProjectSchema = new mongoose.Schema({
   // created_at: Date (implicit)
   // updated_at: Date (implicit)
 
+  // 🏢 Verified Business Information (from Google Places API)
+  verified_business: {
+    placeId: {
+      type: String,
+      required: false
+    },
+    name: {
+      type: String,
+      required: false
+    },
+    address: {
+      type: String,
+      required: false
+    },
+    website: {
+      type: String,
+      required: false
+    },
+    phone: {
+      type: String,
+      required: false
+    },
+    rating: {
+      type: Number,
+      required: false,
+      min: 0,
+      max: 5
+    },
+    location: {
+      lat: {
+        type: Number,
+        required: false
+      },
+      lng: {
+        type: Number,
+        required: false
+      }
+    },
+    verifiedAt: {
+      type: Date,
+      required: false
+    }
+  }
+
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });

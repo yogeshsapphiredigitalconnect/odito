@@ -1123,6 +1123,157 @@ class ApiService {
 
   }
 
+
+  // ═══════════════════════════════════════════════════════════════════════
+  //  SEO Onboarding endpoints (keyword generation + ranking)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  async generateKeywords(subType, location, country = 'US', language = 'en') {
+    const endpoint = '/seo/generate-keywords';
+    const payload = { subType, location, country, language };
+    console.log('🔍 Generating keywords:', { endpoint, payload });
+
+    try {
+      const response = await this.request(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      console.log('✅ Keywords generated:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Keyword generation error:', error);
+      throw error;
+    }
+  }
+
+  async checkRanking(domain, keywords, location, country = 'US', language = 'en') {
+    const endpoint = '/seo/check-ranking';
+    const payload = { domain, keywords, location, country, language };
+    console.log('📊 Checking rankings:', { endpoint, payload });
+
+    try {
+      const response = await this.request(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      console.log('✅ Rankings checked:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Ranking check error:', error);
+      throw error;
+    }
+  }
+
+  async saveRanking(projectId, domain, location, keywords) {
+    const endpoint = '/seo/save-ranking';
+    const payload = { projectId, domain, location, keywords };
+    console.log('💾 Saving rankings:', { endpoint, payload });
+
+    try {
+      const response = await this.request(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      console.log('✅ Rankings saved:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Ranking save error:', error);
+      throw error;
+    }
+  }
+
+  // Business search endpoints
+
+  async searchBusiness(businessName, businessLocation) {
+
+    const endpoint = '/app_user/business/search';
+
+    console.log('🔍 Searching for business:', { endpoint, businessName, businessLocation });
+
+    
+
+    try {
+
+      const response = await this.request(endpoint, {
+
+        method: 'POST',
+
+        body: JSON.stringify({
+
+          businessName: businessName.trim(),
+
+          businessLocation: businessLocation.trim()
+
+        })
+
+      });
+
+      console.log('✅ Business search response:', response);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Business search error:', error);
+
+      throw error;
+
+    }
+
+  }
+
+  async getBusinessDetails(placeId) {
+
+    const endpoint = `/app_user/business/details/${placeId}`;
+
+    console.log('🔍 Getting business details:', { endpoint, placeId });
+
+    
+
+    try {
+
+      const response = await this.request(endpoint);
+
+      console.log('✅ Business details response:', response);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Business details error:', error);
+
+      throw error;
+
+    }
+
+  }
+
+  async checkBusinessHealth() {
+
+    const endpoint = '/app_user/business/health';
+
+    console.log('🔍 Checking business service health:', { endpoint });
+
+    
+
+    try {
+
+      const response = await this.request(endpoint);
+
+      console.log('✅ Business health response:', response);
+
+      return response;
+
+    } catch (error) {
+
+      console.error('❌ Business health error:', error);
+
+      throw error;
+
+    }
+
+  }
+
 }
 
 
