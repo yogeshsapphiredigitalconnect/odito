@@ -65,15 +65,37 @@ def execute_technical_domain(job):
         print(f"[TECHNICAL_DOMAIN] Fetching sitemap.xml | domain={domain_with_protocol}")
         sitemap_result = fetch_sitemap(domain_with_protocol)
         
-        # Step 3: Check SSL certificate (using base domain)
-        print(f"[TECHNICAL_DOMAIN] Checking SSL certificate | base_domain={base_domain}")
-        ssl_result = check_ssl_certificate(base_domain)
-        
-        # Step 4: Check HTTPS redirect (using base domain)
+        # Step 3: Check HTTPS redirect first (using base domain)
         print(f"[TECHNICAL_DOMAIN] Checking HTTPS redirect | base_domain={base_domain}")
         https_redirect_result = check_https_redirect(base_domain)
         
-        # Step 5: Store results via Node.js API
+        # Step 4: Extract hostname from final URL for SSL checking
+        final_url = https_redirect_result["final_url"]
+        final_hostname = None
+        
+        if final_url:
+            try:
+                parsed_final = urlparse(final_url)
+                final_hostname = parsed_final.hostname
+                print(f"[TECHNICAL_DOMAIN] Extracted hostname from final URL | final_url={final_url} | final_hostname={final_hostname}")
+            except Exception as parse_error:
+                print(f"[TECHNICAL_DOMAIN] Failed to parse final URL | final_url={final_url} | error={str(parse_error)}")
+                final_hostname = base_domain  # Fallback to base domain
+        else:
+            print(f"[TECHNICAL_DOMAIN] No final URL available, using base domain for SSL | base_domain={base_domain}")
+            final_hostname = base_domain
+        
+        # Step 5: Check SSL certificate using hostname from final resolved URL
+        print(f"[TECHNICAL_DOMAIN] Checking SSL certificate | hostname={final_hostname}")
+        ssl_result = check_ssl_certificate(final_hostname)
+        
+        # Add debug logging for SSL results
+        if ssl_result["ssl_valid"]:
+            print(f"[TECHNICAL_DOMAIN] SSL check successful | hostname={final_hostname} | expiry={ssl_result['ssl_expiry_date']} | days_remaining={ssl_result['ssl_days_remaining']}")
+        else:
+            print(f"[TECHNICAL_DOMAIN] SSL check failed | hostname={final_hostname} | ssl_valid=False")
+        
+        # Step 6: Store results via Node.js API
         report_data = {
             "projectId": project_id,
             "domain": base_domain,  # Store base domain without www as requested
@@ -101,7 +123,7 @@ def execute_technical_domain(job):
             print(f"⚠️ [TECHNICAL_DOMAIN] Failed to store report | error={str(store_error)}")
             # Non-critical: continue even if storage fails
         
-        # Step 6: Report job completion to Node.js
+        # Step 7: Report job completion to Node.js
         stats = {
             "robotsExists": robots_result["exists"],
             "robotsStatus": robots_result["status"],

@@ -72,14 +72,26 @@ def _get_schemas(normalized):
 
 def _find_schema_by_type(schemas, type_name):
     """Find first schema dict matching a given @type."""
+    if not schemas or not isinstance(schemas, list):
+        return None
+    
+    if not type_name:
+        return None
+    
+    target_type_lower = type_name.lower()
+    
     for s in schemas:
         if isinstance(s, dict):
             schema_type = s.get("@type", "")
             if isinstance(schema_type, list):
-                if type_name in schema_type:
+                # Handle @type as array
+                for t in schema_type:
+                    if isinstance(t, str) and t.lower() == target_type_lower:
+                        return s
+            elif isinstance(schema_type, str):
+                # Handle @type as string
+                if schema_type.lower() == target_type_lower:
                     return s
-            elif schema_type == type_name:
-                return s
     return None
 
 
@@ -143,3 +155,52 @@ def _get_keyboard(normalized):
     """Get keyboard analysis dict from headless data."""
     headless = _get_headless(normalized)
     return headless.get("keyboard_analysis", {})
+
+
+# ── Anti-False-Positive Helpers ───────────────────────────────
+
+def _safe_get_first_value(field):
+    """Safely extract first value from field that could be string or list."""
+    if field is None:
+        return ""
+    if isinstance(field, list):
+        if not field:
+            return ""
+        first_item = field[0]
+        return str(first_item).strip() if first_item is not None else ""
+    if isinstance(field, str):
+        return field.strip()
+    return str(field).strip() if field is not None else ""
+
+
+def _normalize_meta_tags(meta_tags):
+    """Normalize meta tags dict with case-insensitive keys."""
+    if not meta_tags or not isinstance(meta_tags, dict):
+        return {}
+    normalized = {}
+    for key, value in meta_tags.items():
+        if key is not None:
+            normalized_key = str(key).lower().strip()
+            normalized[normalized_key] = value
+    return normalized
+
+
+def _get_meta_tag_value(normalized_meta, tag_name):
+    """Get meta tag value with safe extraction."""
+    if not normalized_meta:
+        return ""
+    value = normalized_meta.get(tag_name.lower())
+    if value is not None:
+        return _safe_get_first_value(value)
+    return ""
+
+
+def _has_noindex_directive(normalized_meta):
+    """Only flag if 'noindex' is explicitly present in robots meta."""
+    if not normalized_meta:
+        return False
+    robots_value = _get_meta_tag_value(normalized_meta, "robots")
+    if not robots_value:
+        return False
+    robots_content = robots_value.lower()
+    return "noindex" in robots_content

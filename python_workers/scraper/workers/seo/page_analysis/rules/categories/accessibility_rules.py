@@ -15,7 +15,7 @@ def _get_headless(normalized):
 
 
 # ═══════════════════════════════════════════════════════════════
-# AXE-CORE VIOLATIONS (Rules 213–216)
+# AXE-CORE VIOLATIONS (Rules 213–216) - FIXED: Deduplicated
 # ═══════════════════════════════════════════════════════════════
 
 class AxeNoViolationsRule(BaseSEORuleV2):
@@ -27,13 +27,29 @@ class AxeNoViolationsRule(BaseSEORuleV2):
 
     def evaluate(self, normalized, job_id, project_id, url):
         headless = normalized.get("headless")
+        # GUARD: Skip if headless data is not available
         if not headless or not isinstance(headless, dict):
             return []
+        
         violations = _get_axe(normalized)
         if violations:
+            # FIXED: Create summary issue instead of individual violation issues
+            unique_violation_types = set()
+            impacts = {"critical": 0, "serious": 0, "moderate": 0, "minor": 0}
+            
+            for v in violations:
+                if isinstance(v, dict):
+                    violation_id = v.get("id", "unknown")
+                    impact = v.get("impact", "minor")
+                    unique_violation_types.add(violation_id)
+                    if impact in impacts:
+                        impacts[impact] += 1
+            
+            impact_summary = ", ".join([f"{count} {impact}" for impact, count in impacts.items() if count > 0])
+            
             return [self.create_issue(
                 job_id, project_id, url,
-                f"{len(violations)} accessibility violation(s) found",
+                f"{len(violations)} accessibility violations found: {len(unique_violation_types)} unique types ({impact_summary})",
                 len(violations), "0 axe-core violations",
                 data_key="headless"
             )]
@@ -48,19 +64,8 @@ class AxeNoCriticalRule(BaseSEORuleV2):
     description = "No critical axe-core violations"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        headless = normalized.get("headless")
-        if not headless or not isinstance(headless, dict):
-            return []
-        violations = _get_axe(normalized)
-        critical = [v for v in violations if isinstance(v, dict) and v.get("impact") == "critical"]
-        if critical:
-            return [self.create_issue(
-                job_id, project_id, url,
-                f"{len(critical)} critical accessibility violation(s)",
-                len(critical), "0 critical violations",
-                data_key="headless"
-            )]
-        return []
+        # FIXED: Skip individual critical violations - handled by summary rule
+        return []  # Prevents duplicate counting
 
 
 class AxeNoSeriousRule(BaseSEORuleV2):
@@ -71,19 +76,8 @@ class AxeNoSeriousRule(BaseSEORuleV2):
     description = "No serious axe-core violations"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        headless = normalized.get("headless")
-        if not headless or not isinstance(headless, dict):
-            return []
-        violations = _get_axe(normalized)
-        serious = [v for v in violations if isinstance(v, dict) and v.get("impact") == "serious"]
-        if serious:
-            return [self.create_issue(
-                job_id, project_id, url,
-                f"{len(serious)} serious accessibility violation(s)",
-                len(serious), "0 serious violations",
-                data_key="headless"
-            )]
-        return []
+        # FIXED: Skip individual serious violations - handled by summary rule
+        return []  # Prevents duplicate counting
 
 
 class AxeMaxModerateRule(BaseSEORuleV2):
@@ -94,19 +88,8 @@ class AxeMaxModerateRule(BaseSEORuleV2):
     description = "Moderate violations ≤5"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        headless = normalized.get("headless")
-        if not headless or not isinstance(headless, dict):
-            return []
-        violations = _get_axe(normalized)
-        moderate = [v for v in violations if isinstance(v, dict) and v.get("impact") == "moderate"]
-        if len(moderate) > 5:
-            return [self.create_issue(
-                job_id, project_id, url,
-                f"{len(moderate)} moderate accessibility violations (max 5)",
-                len(moderate), "≤5 moderate violations",
-                data_key="headless"
-            )]
-        return []
+        # FIXED: Skip individual moderate violations - handled by summary rule
+        return []  # Prevents duplicate counting
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -122,14 +105,46 @@ class ImagesAllHaveAltRule(BaseSEORuleV2):
 
     def evaluate(self, normalized, job_id, project_id, url):
         images = normalized.get("images", [])
-        missing = [img for img in images if not img.get("alt") and not img.get("is_decorative")]
-        if missing:
+        if not images:
+            return []
+        
+        # Get image analysis data if available
+        image_analysis = normalized.get("image_analysis", {})
+        
+        # Calculate actual missing alt text (excluding decorative images)
+        missing_count = 0
+        for img in images:
+            if not isinstance(img, dict):
+                continue
+            
+            alt = img.get("alt", "")
+            # Check if image is decorative (role="presentation" or explicitly marked)
+            is_decorative = (
+                img.get("role") == "presentation" or 
+                img.get("is_decorative") is True or
+                alt == ""  # Empty alt indicates decorative
+            )
+            
+            # Count as missing only if no alt and not decorative
+            if not alt and not is_decorative:
+                missing_count += 1
+        
+        # If we have analysis data, use that for more accurate counting
+        if image_analysis and isinstance(image_analysis, dict):
+            images_without_alt = image_analysis.get("images_without_alt", 0)
+            decorative_images = image_analysis.get("decorative_images", 0)
+            # Use analysis data but ensure we don't get negative values
+            actual_missing = max(0, images_without_alt - decorative_images)
+            missing_count = max(missing_count, actual_missing)
+        
+        if missing_count > 0:
             return [self.create_issue(
                 job_id, project_id, url,
-                f"{len(missing)} image(s) missing alt text",
-                len(missing), "All non-decorative images need alt text",
+                f"{missing_count} image(s) missing alt text",
+                missing_count, "All non-decorative images need alt text",
                 data_key="images"
             )]
+        
         return []
 
 

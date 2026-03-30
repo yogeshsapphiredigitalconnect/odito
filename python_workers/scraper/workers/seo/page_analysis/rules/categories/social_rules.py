@@ -9,6 +9,7 @@ from urllib.parse import urlparse, urljoin
 from ..base_seo_rule import BaseSEORuleV2
 from ..utils import safe_str
 from ..seo_rule_utils import _keyword_from_context
+from ..unified_validators import check_social_tags, check_pinterest_tags
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -57,14 +58,19 @@ class OgTitleExistsRule(BaseSEORuleV2):
     description = "og:title must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        og = normalized.get("og_tags", {})
-        if not og.get("og:title"):
+        # Use unified validation that checks meta_tags with og: prefix
+        social_check = check_social_tags(normalized)
+        
+        if not social_check['og_tags'].get('og:title'):
             return [self.create_issue(
                 job_id, project_id, url,
-                "og:title is missing",
-                "None", "Add og:title meta property",
-                data_key="og_tags"
+                "OG title is missing",
+                "None",
+                '<meta property="og:title" content="Page Title">',
+                data_key="meta_tags",
+                data_path="og:title"
             )]
+        
         return []
 
 
@@ -76,13 +82,16 @@ class OgDescriptionExistsRule(BaseSEORuleV2):
     description = "og:description must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        og = normalized.get("og_tags", {})
-        if not og.get("og:description"):
+        # Use unified validation that checks meta_tags with og: prefix
+        social_check = check_social_tags(normalized)
+        
+        if not social_check['og_tags'].get('og:description'):
             return [self.create_issue(
                 job_id, project_id, url,
-                "og:description is missing",
+                "OG description is missing",
                 "None", "Add og:description meta property",
-                data_key="og_tags"
+                data_key="meta_tags",
+                data_path="og:description"
             )]
         return []
 
@@ -95,13 +104,16 @@ class OgImageExistsRule(BaseSEORuleV2):
     description = "og:image must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        og = normalized.get("og_tags", {})
-        if not og.get("og:image"):
+        # Use unified validation that checks meta_tags with og: prefix
+        social_check = check_social_tags(normalized)
+        
+        if not social_check['og_tags'].get('og:image'):
             return [self.create_issue(
                 job_id, project_id, url,
-                "og:image is missing",
+                "OG image is missing",
                 "None", "Add og:image meta property",
-                data_key="og_tags"
+                data_key="meta_tags",
+                data_path="og:image"
             )]
         return []
 
@@ -114,13 +126,23 @@ class OgUrlExistsRule(BaseSEORuleV2):
     description = "og:url must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        og = normalized.get("og_tags", {})
-        if not og.get("og:url"):
+        from ..seo_rule_utils import _normalize_meta_tags, _get_meta_tag_value
+        
+        # GUARD: Skip if meta_tags data is not available
+        meta_tags = normalized.get("meta_tags")
+        if not meta_tags or not isinstance(meta_tags, dict):
+            return []
+        
+        normalized_meta = _normalize_meta_tags(meta_tags)
+        og_url = _get_meta_tag_value(normalized_meta, "og:url")
+        
+        if not og_url:
             return [self.create_issue(
                 job_id, project_id, url,
-                "og:url is missing",
+                "OG URL is missing",
                 "None", "Add og:url meta property",
-                data_key="og_tags"
+                data_key="meta_tags",
+                data_path="og:url"
             )]
         return []
 
@@ -133,13 +155,23 @@ class OgTypeExistsRule(BaseSEORuleV2):
     description = "og:type must exist"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        og = normalized.get("og_tags", {})
-        if not og.get("og:type"):
+        from ..seo_rule_utils import _normalize_meta_tags, _get_meta_tag_value
+        
+        # GUARD: Skip if meta_tags data is not available
+        meta_tags = normalized.get("meta_tags")
+        if not meta_tags or not isinstance(meta_tags, dict):
+            return []
+        
+        normalized_meta = _normalize_meta_tags(meta_tags)
+        og_type = _get_meta_tag_value(normalized_meta, "og:type")
+        
+        if not og_type:
             return [self.create_issue(
                 job_id, project_id, url,
-                "og:type is missing",
+                "OG type is missing",
                 "None", "Add og:type (e.g. website, article)",
-                data_key="og_tags"
+                data_key="meta_tags",
+                data_path="og:type"
             )]
         return []
 
@@ -232,17 +264,21 @@ class PinterestMediaPresentRule(BaseSEORuleV2):
     rule_id = "PINTEREST_MEDIA_PRESENT"
     rule_no = 71
     category = "Social"
-    severity = "info"
-    description = "pin:media should be present"
+    severity = "info"  # Changed from "info" to emphasize it's optional
+    description = "pin:media should be present (optional)"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        pinterest = normalized.get("social", {}).get("pinterest", {})
-        if not pinterest.get("pin:media") and not pinterest.get("media"):
+        # Use unified validation for Pinterest tags
+        pinterest_check = check_pinterest_tags(normalized)
+        
+        if not pinterest_check['present']:
             return [self.create_issue(
                 job_id, project_id, url,
-                "pin:media tag is missing",
-                "None", "Add pin:media for Pinterest sharing",
-                data_key="social", data_path="pinterest"
+                "pin:media tag is missing (optional for Pinterest)",
+                "None", 
+                "Add pin:media for Pinterest sharing (optional)",
+                data_key="social", 
+                data_path="pinterest"
             )]
         return []
 
@@ -252,16 +288,20 @@ class PinterestDescriptionPresentRule(BaseSEORuleV2):
     rule_no = 72
     category = "Social"
     severity = "info"
-    description = "pin:description should be present"
+    description = "pin:description should be present (optional)"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        pinterest = normalized.get("social", {}).get("pinterest", {})
-        if not pinterest.get("pin:description") and not pinterest.get("description"):
+        # Use unified validation for Pinterest tags
+        pinterest_check = check_pinterest_tags(normalized)
+        
+        if not pinterest_check['present']:
             return [self.create_issue(
                 job_id, project_id, url,
-                "pin:description tag is missing",
-                "None", "Add pin:description for Pinterest sharing",
-                data_key="social", data_path="pinterest"
+                "pin:description tag is missing (optional for Pinterest)",
+                "None", 
+                "Add pin:description for Pinterest sharing (optional)",
+                data_key="social", 
+                data_path="pinterest"
             )]
         return []
 

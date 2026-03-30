@@ -766,8 +766,27 @@ export class TechnicalChecksService {
     const requiredOGTags = ['og:title', 'og:description', 'og:image', 'og:url'];
     
     const pagesMissingOGTags = pages.filter(page => {
-      const ogTags = page.social?.open_graph || {};
-      return requiredOGTags.some(tag => !ogTags[tag]);
+      // Check meta_tags for OG tags (primary source where scraper stores them)
+      const metaTags = page.meta_tags || {};
+      const ogTags = {};
+      
+      // Extract OG tags from meta_tags with correct prefix
+      Object.keys(metaTags).forEach(key => {
+        if (key.startsWith('og:')) {
+          const values = metaTags[key];
+          if (Array.isArray(values) && values.length > 0) {
+            ogTags[key] = values[0]; // Take first value
+          } else if (values) {
+            ogTags[key] = values;
+          }
+        }
+      });
+      
+      // Fallback to social.open_graph if meta_tags empty (for backward compatibility)
+      const fallbackOgTags = page.social?.open_graph || {};
+      const finalOgTags = Object.keys(ogTags).length > 0 ? ogTags : fallbackOgTags;
+      
+      return requiredOGTags.some(tag => !finalOgTags[tag]);
     }).length;
     
     return { pagesMissingOGTags };

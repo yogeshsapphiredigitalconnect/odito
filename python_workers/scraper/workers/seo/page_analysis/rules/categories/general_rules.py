@@ -8,6 +8,7 @@ AMP, E-E-A-T signals, SGE optimization.
 import re
 from ..base_seo_rule import BaseSEORuleV2
 from ..seo_rule_utils import _keyword_from_context
+from ..unified_validators import check_security_headers, check_author
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -170,21 +171,35 @@ class SecurityHeadersRule(BaseSEORuleV2):
     rule_id = "SECURITY_HEADERS"
     rule_no = 201
     category = "Security"
-    severity = "info"
-    description = "Security headers should be present"
+    severity = "info"  # Changed from "info" to emphasize it's not a critical SEO issue
+    description = "Security headers should be present (optional for SEO)"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        meta_tags = normalized.get("meta_tags", {})
-        # Check for Content-Security-Policy via meta tag
-        has_csp = "content-security-policy" in meta_tags
-        has_xframe = "x-frame-options" in meta_tags
-        if not has_csp:
+        # Use unified validation for security headers
+        security_check = check_security_headers(normalized)
+        
+        # Only flag as issue if critical security headers are missing
+        critical_missing = [h for h in security_check['missing'] if h in ['X-Frame-Options', 'X-Content-Type-Options']]
+        
+        if critical_missing:
             return [self.create_issue(
                 job_id, project_id, url,
-                "Content-Security-Policy not found in meta tags",
-                "Missing", "Add CSP header or meta tag",
-                data_key="meta_tags"
+                f"Missing security headers: {', '.join(critical_missing[:2])} (optional for SEO)",
+                f"Missing: {', '.join(critical_missing[:2])}", 
+                "Add security headers via server configuration (optional for SEO)",
+                data_key="headers"
             )]
+        
+        # If only CSP is missing, it's info level (not critical for SEO)
+        if 'Content-Security-Policy' in security_check['missing']:
+            return [self.create_issue(
+                job_id, project_id, url,
+                "Content-Security-Policy header missing (optional for SEO)",
+                "Missing CSP", 
+                "Add CSP header via server configuration (optional for SEO)",
+                data_key="headers"
+            )]
+        
         return []
 
 
@@ -200,21 +215,19 @@ class EeatAuthorInfoRule(BaseSEORuleV2):
     description = "Author information should be present (E-E-A-T)"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        meta_tags = normalized.get("meta_tags", {})
-        has_author = "author" in meta_tags
-        # Also check structured data for author
-        schemas = normalized.get("structured_data", [])
-        has_schema_author = any(
-            isinstance(s, dict) and s.get("author")
-            for s in schemas
-        )
-        if not has_author and not has_schema_author:
+        # Use unified validation that checks BOTH meta_tags AND structured_data
+        author_check = check_author(normalized)
+        
+        if not author_check['present']:
             return [self.create_issue(
                 job_id, project_id, url,
                 "Author information not found (E-E-A-T signal)",
-                "Missing", "Add author meta tag or schema author field",
+                "Missing", 
+                "Add author meta tag or schema author field",
                 data_key="meta_tags"
             )]
+        
+        # Author found in either meta_tags or structured_data - no issue
         return []
 
 

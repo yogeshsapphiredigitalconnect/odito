@@ -111,15 +111,50 @@ class ImagesValidUrlRule(BaseSEORuleV2):
 
     def evaluate(self, normalized, job_id, project_id, url):
         images = normalized.get("images", [])
-        invalid = [img for img in images if not img.get("src", "").strip()]
-        if invalid:
+        if not images:
+            return []
+        
+        # FIXED: This rule should check URL validity, not alt text (moved to accessibility rules)
+        invalid_urls = []
+        seen_urls = set()  # FIXED: Deduplication tracking
+        
+        for img in images:
+            if not isinstance(img, dict):
+                continue
+                
+            src = img.get("src", "")
+            if not src:
+                continue
+                
+            # FIXED: Deduplication - skip if we've already checked this URL
+            if src in seen_urls:
+                continue
+            seen_urls.add(src)
+            
+            # Check if URL is valid
+            if not self._is_valid_url(src):
+                invalid_urls.append(src)
+        
+        if invalid_urls:
             return [self.create_issue(
                 job_id, project_id, url,
-                f"{len(invalid)} image(s) missing src URL",
-                len(invalid), "All images must have valid src",
+                f"{len(invalid_urls)} image(s) have invalid URLs",
+                len(invalid_urls), "All images should have valid HTTP/HTTPS URLs",
                 data_key="images"
             )]
+        
         return []
+    
+    def _is_valid_url(self, url_str):
+        """Check if URL string is valid."""
+        if not url_str:
+            return False
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(str(url_str).strip())
+            return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+        except Exception:
+            return False
 
 
 class ImagesHttpsRule(BaseSEORuleV2):
@@ -304,14 +339,48 @@ class ImagesRoleAttributeRule(BaseSEORuleV2):
 
     def evaluate(self, normalized, job_id, project_id, url):
         images = normalized.get("images", [])
-        missing_role = [img for img in images if not img.get("role")]
-        if missing_role and len(missing_role) > len(images) * 0.5:
+        if not images:
+            return []
+        
+        # FIXED: Only flag non-decorative images that should have role="img"
+        missing_role = []
+        seen_images = set()  # FIXED: Deduplication tracking
+        
+        for img in images:
+            if not isinstance(img, dict):
+                continue
+                
+            src = img.get("src", "")
+            if not src:
+                continue
+                
+            # FIXED: Deduplication - skip if we've already seen this image
+            if src in seen_images:
+                continue
+            seen_images.add(src)
+            
+            # Check if image is decorative
+            alt = img.get("alt", "")
+            is_decorative = (
+                img.get("role") == "presentation" or 
+                img.get("role") == "none" or
+                img.get("is_decorative") is True or
+                alt == ""  # Empty alt indicates decorative
+            )
+            
+            # FIXED: Only flag non-decorative images that should have role="img"
+            if not is_decorative and not img.get("role"):
+                missing_role.append(img)
+        
+        # FIXED: Only create issue if significant number of images need roles
+        if missing_role and len(missing_role) > len(images) * 0.3:  # Only if >30% need roles
             return [self.create_issue(
                 job_id, project_id, url,
-                f"{len(missing_role)} image(s) missing role attribute",
-                len(missing_role), 'Add role="img" for accessibility',
+                f"{len(missing_role)} non-decorative image(s) missing role attribute",
+                len(missing_role), 'Add role="img" for non-decorative images',
                 data_key="images"
             )]
+        
         return []
 
 

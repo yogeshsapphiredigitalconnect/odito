@@ -5,6 +5,14 @@ import socket
 import datetime
 from urllib.parse import urlparse
 
+# Import cryptography library for robust certificate parsing
+try:
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    CRYPTOGRAPHY_AVAILABLE = True
+except ImportError:
+    CRYPTOGRAPHY_AVAILABLE = False
+
 
 def check_ssl_certificate(hostname: str) -> dict:
     """
@@ -23,7 +31,11 @@ def check_ssl_certificate(hostname: str) -> dict:
     }
     
     if not hostname:
-        print(f"⚠️ SSL check failed - invalid hostname | hostname={hostname}")
+        print(f"[SSL ERROR] Invalid hostname | hostname={hostname}")
+        return result
+    
+    if not CRYPTOGRAPHY_AVAILABLE:
+        print(f"[SSL ERROR] Cryptography library not available | hostname={hostname}")
         return result
     
     try:
@@ -38,76 +50,49 @@ def check_ssl_certificate(hostname: str) -> dict:
                 # If we can establish TLS connection, SSL is valid
                 result["ssl_valid"] = True
                 
-                # Try to extract certificate expiry date
+                # Extract certificate expiry date using cryptography library
                 try:
-                    # Get certificate info
-                    cert_info = ssock.getpeercert()
+                    # Get DER certificate and parse with cryptography
+                    der_cert = ssock.getpeercert(binary_form=True)
+                    cert = x509.load_der_x509_certificate(der_cert, default_backend())
                     
-                    # Try to extract expiry date
-                    expiry_date = None
+                    # Extract expiry date (notAfter field)
+                    not_after = cert.not_valid_after_utc if hasattr(cert, 'not_valid_after_utc') else cert.not_valid_after
                     
-                    # Method 1: Standard certificate dictionary
-                    if cert_info and isinstance(cert_info, dict) and 'notAfter' in cert_info:
-                        expiry_date_str = cert_info['notAfter']
-                        try:
-                            expiry_date = datetime.datetime.strptime(expiry_date_str, '%b %d %H:%M:%S %Y %Z')
-                            print(f"✅ SSL certificate expiry extracted | hostname={hostname}")
-                        except ValueError as e:
-                            print(f"⚠️ SSL certificate date parsing failed | hostname={hostname} | error={str(e)}")
+                    # Convert to ISO 8601 format with UTC timezone
+                    iso_expiry_date = not_after.strftime('%Y-%m-%dT%H:%M:%SZ')
                     
-                    # Method 2: Try alternative approach if cert dict is empty
-                    if expiry_date is None:
-                        try:
-                            # Get the raw DER certificate
-                            der_cert = ssock.getpeercert(binary_form=True)
-                            
-                            # For now, since we can't parse the DER certificate without additional libraries,
-                            # we'll set a reasonable default expiry date far in the future
-                            # This indicates SSL is working but we can't extract exact expiry
-                            default_expiry = datetime.datetime.now() + datetime.timedelta(days=365)
-                            
-                            result.update({
-                                "ssl_expiry_date": default_expiry.strftime('%Y-%m-%dT%H:%M:%SZ'),
-                                "ssl_days_remaining": 365
-                            })
-                            
-                            print(f"✅ SSL certificate valid (default expiry) | hostname={hostname}")
-                            return result
-                            
-                        except Exception as e:
-                            print(f"⚠️ SSL certificate DER parsing failed | hostname={hostname} | error={str(e)}")
-                    
-                    # If we successfully got expiry date, calculate days remaining
-                    if expiry_date:
-                        # Convert to ISO date format with timezone
-                        iso_expiry_date = expiry_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-                        
-                        # Calculate remaining days
-                        now = datetime.datetime.now()
-                        days_remaining = (expiry_date - now).days
-                        
-                        result.update({
-                            "ssl_expiry_date": iso_expiry_date,
-                            "ssl_days_remaining": days_remaining
-                        })
-                        
-                        print(f"✅ SSL certificate valid | hostname={hostname} | expiry={iso_expiry_date} | days={days_remaining}")
+                    # Calculate remaining days (timezone-safe)
+                    now = datetime.datetime.now(datetime.timezone.utc)
+                    if hasattr(not_after, 'tzinfo') and not_after.tzinfo:
+                        # Certificate has timezone info
+                        days_remaining = (not_after - now).days
                     else:
-                        print(f"✅ SSL certificate valid (no expiry details) | hostname={hostname}")
-                
-                except Exception as cert_error:
-                    print(f"⚠️ SSL certificate extraction failed | hostname={hostname} | error={str(cert_error)}")
-                    # Still return ssl_valid = True since connection worked
+                        # Certificate is naive, assume UTC
+                        not_after_utc = not_after.replace(tzinfo=datetime.timezone.utc)
+                        days_remaining = (not_after_utc - now).days
+                    
+                    # Update result with real certificate data
+                    result.update({
+                        "ssl_expiry_date": iso_expiry_date,
+                        "ssl_days_remaining": days_remaining
+                    })
+                    
+                    print(f"✅ SSL certificate parsed successfully | hostname={hostname} | expiry={iso_expiry_date} | days_remaining={days_remaining}")
+                    
+                except Exception as cert_parse_error:
+                    print(f"[SSL ERROR] Certificate parsing failed | hostname={hostname} | error_type={type(cert_parse_error).__name__} | error={str(cert_parse_error)}")
+                    # Keep ssl_valid=True since connection worked, but no expiry data
                 
     except socket.gaierror as e:
-        print(f"⚠️ SSL check failed - DNS resolution | hostname={hostname} | error={str(e)}")
+        print(f"[SSL ERROR] DNS resolution failed | hostname={hostname} | error={str(e)}")
     except socket.timeout:
-        print(f"⚠️ SSL check failed - connection timeout | hostname={hostname}")
+        print(f"[SSL ERROR] Connection timeout | hostname={hostname}")
     except socket.error as e:
-        print(f"⚠️ SSL check failed - connection error | hostname={hostname} | error={str(e)}")
+        print(f"[SSL ERROR] Connection error | hostname={hostname} | error={str(e)}")
     except ssl.SSLError as e:
-        print(f"⚠️ SSL check failed - SSL error | hostname={hostname} | error={str(e)}")
+        print(f"[SSL ERROR] SSL handshake failed | hostname={hostname} | error={str(e)}")
     except Exception as e:
-        print(f"⚠️ SSL check failed - unexpected error | hostname={hostname} | error={str(e)}")
+        print(f"[SSL ERROR] Unexpected error | hostname={hostname} | error_type={type(e).__name__} | error={str(e)}")
     
     return result

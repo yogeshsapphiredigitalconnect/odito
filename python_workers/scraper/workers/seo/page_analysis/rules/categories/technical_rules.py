@@ -7,6 +7,7 @@ Canonical URL validation, viewport, URL structure, DOCTYPE, plus Apple Touch Ico
 import re
 from urllib.parse import urlparse
 from ..base_seo_rule import BaseSEORuleV2
+from ..unified_validators import check_apple_touch_icon
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -165,15 +166,20 @@ class AppleTouchIconPresentRule(BaseSEORuleV2):
     description = "Apple touch icon should be present"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        meta_tags = normalized.get("meta_tags", {})
-        has_icon = "apple-touch-icon" in meta_tags or "apple-touch-icon-precomposed" in meta_tags
-        if not has_icon:
+        # Use unified validation that checks BOTH meta_tags AND visual_branding
+        icon_check = check_apple_touch_icon(normalized)
+        
+        if not icon_check['present']:
             return [self.create_issue(
                 job_id, project_id, url,
                 "Apple touch icon is missing",
-                "None", '<link rel="apple-touch-icon" href="...">',
-                data_key="meta_tags"
+                "None", 
+                '<link rel="apple-touch-icon" href="...">',
+                data_key="visual_branding",
+                data_path="apple_icons"
             )]
+        
+        # Icon found - no issue (even if source is visual_branding instead of meta_tags)
         return []
 
 
@@ -185,18 +191,56 @@ class AppleTouchIconValidUrlRule(BaseSEORuleV2):
     description = "Apple touch icon must have valid URL"
 
     def evaluate(self, normalized, job_id, project_id, url):
+        # Use unified validation to get comprehensive icon data
+        icon_check = check_apple_touch_icon(normalized)
+        
+        if not icon_check['present']:
+            return []  # Skip URL validation if no icons found
+        
+        # Check URLs from both sources
+        invalid_urls = []
+        
+        # Check meta_tags URLs - FIXED: Handle list properly
         meta_tags = normalized.get("meta_tags", {})
-        icon_values = meta_tags.get("apple-touch-icon", [])
-        if isinstance(icon_values, list):
-            for val in icon_values:
-                if val and not _is_valid_url(str(val)):
-                    return [self.create_issue(
-                        job_id, project_id, url,
-                        "Apple touch icon has invalid URL",
-                        str(val)[:80], "Use valid URL for icon",
-                        data_key="meta_tags"
-                    )]
+        apple_touch_icons = meta_tags.get("apple-touch-icon", [])
+        
+        # FIXED: Ensure we have a list to iterate
+        if isinstance(apple_touch_icons, str):
+            apple_touch_icons = [apple_touch_icons]
+        elif not isinstance(apple_touch_icons, list):
+            apple_touch_icons = []
+        
+        for icon_url in apple_touch_icons:
+            if icon_url and not self._is_valid_url(str(icon_url)):
+                invalid_urls.append(str(icon_url))
+        
+        # Check visual_branding URLs
+        visual_details = icon_check['details'].get('visual_branding', {})
+        for icon in visual_details.get('valid_icons', []):
+            if icon.get('href') and not self._is_valid_url(str(icon['href'])):
+                invalid_urls.append(str(icon['href']))
+        
+        if invalid_urls:
+            return [self.create_issue(
+                job_id, project_id, url,
+                f"Apple touch icon has invalid URL(s): {', '.join(invalid_urls[:2])}",
+                '; '.join(invalid_urls[:2]), 
+                "Use valid HTTPS URLs for apple touch icons",
+                data_key="visual_branding",
+                data_path="apple_icons"
+            )]
+        
         return []
+    
+    def _is_valid_url(self, url_str):
+        """Check if URL string is valid."""
+        if not url_str:
+            return False
+        try:
+            parsed = urlparse(str(url_str).strip())
+            return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+        except Exception:
+            return False
 
 
 # DISABLED: Cannot be implemented with current normalized data structure.
