@@ -10,6 +10,7 @@ import { Page08Service } from '../service/page08Service.js';
 import { Page09Service } from '../service/page09Service.js';
 import { Page10Service } from '../service/page10Service.js';
 import { Page11Service } from '../service/page11Service.js';
+import { Page16Service } from '../service/page16Service.js';
 import { Page19Service } from '../service/page19Service.js';
 import { Page22Service } from '../service/page22Service.js';
 import { ExecutiveMapper } from '../mapper/sections/executive.mapper.js';
@@ -842,6 +843,52 @@ export class PDFDataController {
       
     } catch (error) {
       LoggerUtil.error('Page 11 controller error', error, {
+        projectId: req.params.projectId,
+        userId: req.user?.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Internal server error',
+          code: 'CONTROLLER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Generate Page 16 - Keyword Ranking Analysis data
+   */
+  static async getPage16Data(req, res) {
+    try {
+      const { projectId } = req.params;
+      
+      console.log("Page16 controller hit - projectId:", projectId);
+      
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Project ID is required',
+            code: 'MISSING_PROJECT_ID'
+          }
+        });
+      }
+      
+      // Use Page16Service to get keyword ranking analysis
+      const result = await Page16Service.getKeywordRankingAnalysis(projectId);
+      
+      if (!result.success) {
+        return res.status(500).json(result);
+      }
+      
+      console.log("Page16 controller success - returning keyword ranking analysis");
+      res.json(result);
+      
+    } catch (error) {
+      console.error("Page16 controller error:", error);
+      LoggerUtil.error('Page 16 controller error', error, {
         projectId: req.params.projectId,
         userId: req.user?.id
       });

@@ -9,7 +9,22 @@ import auth from '../../../modules/user/middleware/auth.js';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
+// Public routes (no authentication required)
+/**
+ * @route GET /api/pdf/health
+ * @desc Health check endpoint
+ * @access Public
+ */
+router.get('/health', PDFDataController.healthCheck);
+
+/**
+ * @route GET /api/pdf/sections
+ * @desc Get available PDF sections
+ * @access Public
+ */
+router.get('/sections', PDFDataController.getAvailableSections);
+
+// Apply authentication middleware to all remaining routes
 router.use(auth);
 
 /**
@@ -62,6 +77,13 @@ router.get('/:projectId/page10', PDFDataController.getPage10Data);
 router.get('/:projectId/page11', PDFDataController.getPage11Data);
 
 /**
+ * @route GET /api/pdf/:projectId/page16
+ * @desc Generate Page 16 - Keyword Ranking Analysis data
+ * @access Private
+ */
+router.get('/:projectId/page16', PDFDataController.getPage16Data);
+
+/**
  * @route GET /api/pdf/:projectId/page19
  * @desc Generate Page 19 - AI Visibility Overview data
  * @access Private
@@ -109,19 +131,5 @@ router.get('/:projectId/status', PDFDataController.getGenerationStatus);
  * @access Private
  */
 router.get('/:projectId/metrics', PDFDataController.getGenerationMetrics);
-
-/**
- * @route GET /api/pdf/health
- * @desc Health check endpoint
- * @access Public
- */
-router.get('/health', PDFDataController.healthCheck);
-
-/**
- * @route GET /api/pdf/sections
- * @desc Get available PDF sections
- * @access Public
- */
-router.get('/sections', PDFDataController.getAvailableSections);
 
 export default router;

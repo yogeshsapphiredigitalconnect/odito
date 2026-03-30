@@ -129,6 +129,24 @@ async function getAISearchAuditIssues(projectId) {
     // Convert to ObjectId for MongoDB query
     const projectObjectId = new mongoose.Types.ObjectId(projectId);
 
+    // First get total pages count for impact calculation
+    const totalPagesResult = await mongoose.connection.db.collection('seo_ai_visibility').aggregate([
+      {
+        $match: {
+          projectId: projectObjectId,
+          ai_visibility_available: true
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total_pages: { $sum: 1 }
+        }
+      }
+    ]).toArray();
+
+    const totalPages = totalPagesResult.length > 0 ? totalPagesResult[0].total_pages : 0;
+
     // Main aggregation pipeline for issues from database collection
     const aggregationResult = await mongoose.connection.db.collection('seo_ai_visibility_issues').aggregate([
       // Stage 1: Filter by projectId
@@ -151,7 +169,7 @@ async function getAISearchAuditIssues(projectId) {
         }
       },
 
-      // Stage 3: Project and format the results
+      // Stage 3: Add dynamic calculations and project the results
       {
         $project: {
           _id: 0,
@@ -162,15 +180,26 @@ async function getAISearchAuditIssues(projectId) {
           pagesAffected: "$pagesAffected",
           rule_score: "$rule_score",
           sampleUrls: { $slice: ["$sampleUrls", 10] }, // Limit to 10 sample URLs
-          impact: { $concat: ["+", { $toString: { $round: [{ $multiply: ["$rule_score", 100] }, 0] } }, "% Impact"] },
+          // Dynamic impact percentage calculation
+          impact_percentage: {
+            $cond: {
+              if: { $gt: [totalPages, 0] },
+              then: { $round: [{ $multiply: [{ $divide: ["$pagesAffected", totalPages] }, 100] }, 1] },
+              else: 0
+            }
+          },
+          // Dynamic difficulty based on severity (same logic as technical checks)
           difficulty: {
             $switch: {
               branches: [
-                { case: { $eq: ["$severity", "critical"] }, then: "High" },
-                { case: { $eq: ["$severity", "warning"] }, then: "Medium" },
-                { case: { $eq: ["$severity", "info"] }, then: "Low" }
+                { case: { $eq: ["$severity", "critical"] }, then: "hard" },
+                { case: { $eq: ["$severity", "warning"] }, then: "medium" },
+                { case: { $eq: ["$severity", "info"] }, then: "easy" },
+                { case: { $eq: ["$severity", "high"] }, then: "hard" },
+                { case: { $eq: ["$severity", "medium"] }, then: "medium" },
+                { case: { $eq: ["$severity", "low"] }, then: "easy" }
               ],
-              default: "Medium"
+              default: "medium"
             }
           }
         }

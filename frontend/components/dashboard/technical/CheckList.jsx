@@ -197,8 +197,8 @@ export default function CheckList({ onSelectCheck }) {
             return {
               ...check,
               status: statusMap[check.status] || check.status,
-              impact: lookup.impact || 0,
-              difficulty: lookup.difficulty || "Medium",
+              impact: check.impact_percentage || 0,  // Use backend-calculated impact_percentage
+              difficulty: check.difficulty || "Medium", // Use backend-calculated difficulty
               icon: lookup.icon || "⚙",
               aiPrompt: lookup.aiPrompt || "",
               what: lookup.what || check.message || check.description || "",

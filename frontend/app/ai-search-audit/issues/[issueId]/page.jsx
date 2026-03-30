@@ -63,9 +63,9 @@ export default function AISearchAuditIssuePage() {
           severity: issueData.severity === 'crit' ? 'critical' : 
                    issueData.severity === 'warn' ? 'warning' : 'info',
           category: issueData.cat || issueData.category,
-          description: issueData.desc || `This issue affects ${issueData.pagesAffected || issueData.pages} pages. ${issueData.impact} impact. Difficulty: ${issueData.difficulty || issueData.diff}.`,
+          description: issueData.desc || `This issue affects ${issueData.pagesAffected || issueData.pages} pages. +${issueData.impact_percentage || 0}% impact. Difficulty: ${issueData.difficulty || issueData.diff}.`,
           pagesAffected: issueData.pagesAffected || issueData.pages,
-          impact: issueData.impact,
+          impact: `+${issueData.impact_percentage || 0}%`,
           difficulty: issueData.difficulty || issueData.diff,
           pages: issueData.pagesAffected || issueData.pages, // Add pages property for display
           diff: issueData.difficulty || issueData.diff, // Add diff property for display
@@ -409,7 +409,7 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
       `Analysing ${url}…`,
       `✦ Issue detected: ${issue.title}`,
       `Generating targeted fix code…`,
-      `✅ Fix ready. High SEO impact recovered.`
+      `✅ Fix ready. +${issue.impact_percentage || 0}% SEO impact recovered.`
     ]
 
     messages.forEach((msg, i) => {
@@ -543,7 +543,7 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
             fontSize: 32,
             lineHeight: 1,
             color: "#00dfff"
-          }}>{issue.impact}</div>
+          }}>{issue.impact || `+${issue.impact_percentage || 0}%`}</div>
         </div>
         <div style={{
           background: "rgba(255,255,255,0.038)",
@@ -627,55 +627,28 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
           This issue affects {issue.pages} pages. 
           {issue.desc}
           Fixing this is rated {issue.diff} difficulty and can recover an estimated 
-          {issue.impact}.
+          {issue.impact || `+${issue.impact_percentage || 0}%`}.
         </div>
       </div>
 
       {/* Two Column Layout */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 460px",
-        gap: 20,
-        alignItems: "start",
-        marginTop: 4
-      }}>
+      <div className="flex flex-col lg:flex-row gap-5 mt-1 min-w-0">
         {/* Left Column - URLs */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{
-                fontFamily: "Syne, sans-serif",
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#eef2ff"
-              }}>Affected URLs</div>
-              <div style={{
-                background: "rgba(0,223,255,0.09)",
-                border: "1px solid rgba(0,223,255,0.18)",
-                color: "#00dfff",
-                borderRadius: 20,
-                fontSize: 9,
-                fontWeight: 700,
-                padding: "3px 10px",
-                marginLeft: 8
-              }}>{loadingUrls ? "Loading..." : `${urls.length} OPEN`}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2">
+              <div className="font-syne text-base font-bold text-[#eef2ff]">
+                Affected URLs
+              </div>
+              <div className="bg-[rgba(0,223,255,0.09)] border border-[rgba(0,223,255,0.18)] text-[#00dfff] rounded-full text-[9px] font-bold px-2.5 py-0.5 ml-2">
+                {loadingUrls ? "Loading..." : `${urls.length} OPEN`}
+              </div>
             </div>
           </div>
           
           {loadingUrls ? (
-            <div style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "40px",
-              color: "#8494b0",
-              fontSize: "14px"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px"
-              }}>
+            <div className="flex justify-center items-center p-10 text-[#8494b0] text-sm">
+              <div className="flex items-center gap-2.5">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
                 Loading affected URLs...
               </div>
@@ -690,58 +663,28 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
             return (
               <div 
                 key={index}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "12px 14px",
-                  marginBottom: 8,
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: 11,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  border: isSelected ? "1px solid rgba(119,48,237,0.4)" : 
-                           "1px solid rgba(255,255,255,0.075)",
-                  opacity: isFixedUrl ? 0.55 : 1,
-                  ...(isSelected && !isFixedUrl && { background: "rgba(119,48,237,0.07)" })
-                }}
+                className={`
+                  flex items-center gap-2.5 p-3 mb-2 bg-[rgba(255,255,255,0.03)] rounded-xl cursor-pointer 
+                  transition-all duration-200 border min-w-0
+                  ${isSelected && !isFixedUrl ? 'bg-[rgba(119,48,237,0.07)] border-[rgba(119,48,237,0.4)]' : 'border-[rgba(255,255,255,0.075)]'}
+                  ${isFixedUrl ? 'opacity-55' : 'hover:bg-[rgba(255,255,255,0.05)]'}
+                `}
                 onClick={() => !isFixedUrl && setSelUrl(isSelected ? null : url)}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: "12.5px",
-                    color: "#00dfff",
-                    fontWeight: 500,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                  }}>{url}</div>
-                  <div style={{
-                    fontSize: "10.5px",
-                    color: "#4e5f7a",
-                    marginTop: 2,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                  }}>{subtitle}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-dm-mono text-xs text-[#00dfff] font-medium truncate">
+                    {url}
+                  </div>
+                  <div className="text-[10.5px] text-[#4e5f7a] mt-0.5 truncate">
+                    {subtitle}
+                  </div>
                 </div>
                 {!isFixedUrl && (
                   <>
                     <button 
-                      style={{
-                        background: "rgba(255,56,96,0.11)",
-                        color: "#ff3860",
-                        border: "1px solid rgba(255,56,96,0.2)",
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        padding: "5px 10px",
-                        borderRadius: 7,
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        marginRight: "6px",
-                        transition: "all 0.2s ease"
-                      }}
+                      className="bg-[rgba(255,56,96,0.11)] text-[#ff3860] border border-[rgba(255,56,96,0.2)] 
+                               text-[10px] font-medium px-2.5 py-1 rounded-md flex-shrink-0 mr-1.5
+                               transition-all duration-200 hover:bg-[rgba(255,255,255,0.15)] hover:border-[rgba(255,255,255,0.3)]"
                       onClick={(e) => {
                         e.stopPropagation()
                         // This will be handled by the parent component
@@ -752,44 +695,19 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
                           window.open(url, '_blank')
                         }
                       }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = "rgba(255,255,255,0.15)"
-                        e.target.style.borderColor = "rgba(255,255,255,0.3)"
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = "rgba(255,56,96,0.11)"
-                        e.target.style.borderColor = "rgba(255,56,96,0.2)"
-                      }}
                     >
                       Open
                     </button>
                     <button 
-                      style={{
-                        background: "linear-gradient(135deg,#7730ed,#00dfff)",
-                        color: "#fff",
-                        border: "none",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        padding: "5px 12px",
-                        borderRadius: 7,
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        boxShadow: "0 0 12px rgba(0,223,255,0.2)",
-                        transition: "all 0.2s ease"
-                      }}
+                      className="bg-gradient-to-r from-[#7730ed] to-[#00dfff] text-white border-none
+                               text-[10px] font-bold px-3 py-1 rounded-md flex-shrink-0
+                               shadow-[0_0_12px_rgba(0,223,255,0.2)] transition-all duration-200
+                               hover:-translate-y-px hover:shadow-[0_3px_16px_rgba(0,223,255,0.3)]"
                       onClick={(e) => {
                         e.stopPropagation()
                         setSelUrl(url)
                         setMode("ai")
                         startStream(url)
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = "translateY(-1px)"
-                        e.target.style.boxShadow = "0 3px 16px rgba(0,223,255,0.3)"
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = "translateY(0)"
-                        e.target.style.boxShadow = "0 0 12px rgba(0,223,255,0.2)"
                       }}
                     >
                       ✦ Fix
@@ -802,102 +720,54 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
           )}
           
           {/* Progress Card */}
-          <div style={{
-            marginTop: 14,
-            background: "rgba(255,255,255,0.038)",
-            border: "1px solid rgba(255,255,255,0.075)",
-            borderRadius: 14,
-            padding: "15px 18px"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ fontSize: "12.5px", color: "#8494b0" }}>Remediation Progress</span>
-              <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#00f5a0" }}>{fixedCount}/{urls.length} Fixed</span>
+          <div className="mt-3.5 bg-[rgba(255,255,255,0.038)] border border-[rgba(255,255,255,0.075)] rounded-xl p-4">
+            <div className="flex justify-between mb-2.5">
+              <span className="text-xs text-[#8494b0]">Remediation Progress</span>
+              <span className="text-xs font-bold text-[#00f5a0]">{fixedCount}/{urls.length} Fixed</span>
             </div>
-            <div style={{
-              height: 5,
-              background: "rgba(255,255,255,0.06)",
-              borderRadius: 3,
-              overflow: "hidden",
-              marginTop: 8
-            }}>
+            <div className="h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden mt-2">
               <div 
-                style={{
-                  height: "100%",
-                  borderRadius: 3,
-                  background: "#00f5a0",
-                  width: `${progress}%`,
-                  transition: "width 1.1s cubic-bezier(.4,0,.2,1)"
-                }}
+                className="h-full rounded-full bg-[#00f5a0] transition-all duration-1100 ease-out"
+                style={{ width: `${progress}%` }}
               />
             </div>
             {progress === 100 && (
-              <div style={{
-                fontSize: 12,
-                color: "#00f5a0",
-                fontWeight: 600,
-                textAlign: "center",
-                marginTop: 10
-              }}>🎉 All issues resolved! Re-audit to confirm.</div>
+              <div className="text-xs text-[#00f5a0] font-semibold text-center mt-2.5">
+                🎉 All issues resolved! Re-audit to confirm.
+              </div>
             )}
           </div>
         </div>
 
         {/* Right Column - Fix Panel */}
-        <div style={{
-          background: "#06101d",
-          border: "1px solid rgba(255,255,255,0.075)",
-          borderRadius: 20,
-          overflow: "hidden",
-          position: "sticky",
-          top: 0
-        }}>
-          {/* Panel Header */}
-          <div style={{
-            padding: "16px 18px",
-            borderBottom: "1px solid rgba(255,255,255,0.075)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between"
-          }}>
-            <div>
-              <div style={{
-                fontFamily: "Syne, sans-serif",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#eef2ff"
-              }}>
-                {streaming ? "🔧 AI Fixing" : selUrl ? "🔍 Selected" : "Fix Assistant"}
+        <div className="w-full lg:w-96 xl:w-[460px] flex-shrink-0">
+          <div className="bg-[#06101d] border border-[rgba(255,255,255,0.075)] rounded-2xl overflow-hidden sticky top-0">
+            {/* Panel Header */}
+            <div className="px-4.5 py-4 border-b border-[rgba(255,255,255,0.075)] flex items-center justify-between">
+              <div>
+                <div className="font-syne text-sm font-bold text-[#eef2ff]">
+                  {streaming ? "🔧 AI Fixing" : selUrl ? "🔍 Selected" : "Fix Assistant"}
+                </div>
               </div>
+              {(selUrl || streaming) && (
+                <button 
+                  className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] 
+                           rounded-md px-2 py-0.5 text-xs text-[#8494b0] cursor-pointer
+                           hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+                  onClick={() => {
+                    setSelUrl(null)
+                    setStreaming(false)
+                    setStreamLines([])
+                    setStreamDone(false)
+                  }}
+                >
+                  ✕ Clear
+                </button>
+              )}
             </div>
-            {(selUrl || streaming) && (
-              <button 
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 6,
-                  padding: "3px 8px",
-                  fontSize: 10,
-                  color: "#8494b0",
-                  cursor: "pointer"
-                }}
-                onClick={() => {
-                  setSelUrl(null)
-                  setStreaming(false)
-                  setStreamLines([])
-                  setStreamDone(false)
-                }}
-              >
-                ✕ Clear
-              </button>
-            )}
-          </div>
 
-          {/* Panel Body */}
-          <div style={{
-            padding: 18,
-            maxHeight: "calc(100vh - 180px)",
-            overflowY: "auto"
-          }}>
+            {/* Panel Body */}
+            <div className="p-4.5 max-h-[calc(100vh-180px)] overflow-y-auto">
             {/* 3-Tab Switcher */}
             <div style={{
               display: "grid",
@@ -1091,7 +961,7 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
                             color: "#8494b0",
                             lineHeight: 1.65
                           }}>
-                            This fix resolves <strong style={{ color: "#eef2ff" }}>{issue.title}</strong> on <strong style={{ color: "#00dfff", fontFamily: "'DM Mono', monospace" }}>{selUrl}</strong>. Estimated recovery: <strong style={{ color: "#00f5a0" }}>{issue.impact}</strong>. Difficulty: <strong style={{ color: "#eef2ff" }}>{issue.diff}</strong>.
+                            This fix resolves <strong style={{ color: "#eef2ff" }}>{issue.title}</strong> on <strong style={{ color: "#00dfff", fontFamily: "'DM Mono', monospace" }}>{selUrl}</strong>. Estimated recovery: <strong style={{ color: "#00f5a0" }}>{issue.impact || `+${issue.impact_percentage || 0}%`}</strong>. Difficulty: <strong style={{ color: "#eef2ff" }}>{issue.diff}</strong>.
                           </div>
                         </div>
 
@@ -1345,5 +1215,6 @@ function AIssueDetailView({ issue, onBack, onOpenUrl }) {
         </div>
       </div>
     </div>
+  </div>
   )
 }

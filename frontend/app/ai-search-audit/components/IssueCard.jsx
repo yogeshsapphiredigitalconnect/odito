@@ -49,8 +49,8 @@ export default function IssueCard({ issue }) {
           {/* Meta row */}
           <div className={styles.iMeta}>
             <span className={styles.iPagesBadge}>{issue.pages} pages</span>
-            <span className={styles.iImpactBadge}>▲ {issue.impact}</span>
-            <span className={styles.iDiffBadge}>{issue.diff}</span>
+            <span className={styles.iImpactBadge}>▲ +{issue.impact_percentage || 0}%</span>
+            <span className={styles.iDiffBadge}>{issue.difficulty || issue.diff}</span>
             {fixed.length > 0 && (
               <span className={styles.iFixedBadge}>✓ {fixed.length} fixed</span>
             )}

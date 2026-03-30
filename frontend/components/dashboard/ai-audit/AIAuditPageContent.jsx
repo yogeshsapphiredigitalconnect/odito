@@ -93,9 +93,9 @@ export default function AIAuditPageContent({ projectId }) {
     title: issue.title,
     sev: issue.severity === 'critical' ? 'crit' : issue.severity === 'warning' ? 'warn' : 'info',
     cat: issue.category,
-    desc: `This issue affects ${issue.pagesAffected} pages. ${issue.impact} impact. Difficulty: ${issue.difficulty}.`,
+    desc: `This issue affects ${issue.pagesAffected} pages. +${issue.impact_percentage || 0}% impact. Difficulty: ${issue.difficulty}.`,
     pages: issue.pagesAffected,
-    impact: issue.impact,
+    impact: `+${issue.impact_percentage || 0}%`,
     diff: issue.difficulty,
     urls: issue.sampleUrls?.map((url, index) => ({ key: index, url, sub: 'Affected by this issue' })) || []
   }))

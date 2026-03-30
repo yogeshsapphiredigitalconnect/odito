@@ -258,12 +258,32 @@ export class TechnicalChecksService {
       }
     }
 
+    // For domain-level checks, impact is based on status severity
+    let impact_percentage = 0;
+    if (status === 'Critical') {
+      impact_percentage = 100; // SSL issues affect entire site
+    } else if (status === 'Warning') {
+      impact_percentage = 50; // Warning level impact
+    }
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'ssl_certificate',
       name: 'SSL Certificate',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: affectedPages,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -284,12 +304,29 @@ export class TechnicalChecksService {
       }
     }
 
+    // Calculate dynamic impact percentage (same as on-page issues)
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((stats.pagesWithMissingHeaders / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status (same logic as on-page issues)
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'security_headers',
       name: 'Security Headers',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: stats.pagesWithMissingHeaders,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -310,12 +347,29 @@ export class TechnicalChecksService {
       }
     }
 
+    // Calculate dynamic impact percentage
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((stats.pagesWithoutCanonical / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'canonical_tags',
       name: 'Canonical Tags',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: stats.pagesWithoutCanonical,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -326,6 +380,7 @@ export class TechnicalChecksService {
 
     let checkStatus = 'Critical';
     let message = 'Robots.txt file not found';
+    let affectedPages = 0;
 
     if (exists) {
       if (status === 200) {
@@ -337,12 +392,32 @@ export class TechnicalChecksService {
       }
     }
 
+    // For domain-level checks, impact is based on status severity
+    let impact_percentage = 0;
+    if (checkStatus === 'Critical') {
+      impact_percentage = 100; // Missing robots.txt affects entire site
+    } else if (checkStatus === 'Warning') {
+      impact_percentage = 30; // Access issues have moderate impact
+    }
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (checkStatus === 'Critical') {
+      difficulty = 'hard';
+    } else if (checkStatus === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'robots_txt',
       name: 'Robots.txt',
       status: checkStatus,
       severity: checkStatus === 'Critical' ? 'high' : checkStatus === 'Warning' ? 'medium' : 'none',
-      affected_pages: 0,
+      affected_pages: affectedPages,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -363,12 +438,29 @@ export class TechnicalChecksService {
       }
     }
 
+    // Calculate dynamic impact percentage
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((stats.noindexPages / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'noindex_tags',
       name: 'Noindex on Key Pages',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: stats.noindexPages,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -390,12 +482,29 @@ export class TechnicalChecksService {
       }
     }
 
+    // Calculate dynamic impact percentage
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((affectedPages / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'h1_tags',
       name: 'H1 Tags',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: affectedPages,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -405,15 +514,33 @@ export class TechnicalChecksService {
     
     let status = 'Critical';
     let message = 'No structured data found';
+    let affectedPages = pageAggregations.totalPages - stats.pagesWithValidSchema;
     
     if (stats.pagesWithSchema > 0) {
       if (stats.pagesWithSchema / pageAggregations.totalPages > 0.7) {
         status = 'OK';
         message = `${stats.pagesWithValidSchema} pages with valid structured data`;
+        affectedPages = 0;
       } else {
         status = 'Warning';
         message = `${stats.pagesWithSchema} pages have structured data (${stats.pagesWithValidSchema} valid)`;
+        affectedPages = pageAggregations.totalPages - stats.pagesWithValidSchema;
       }
+    }
+
+    // Calculate dynamic impact percentage
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((affectedPages / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
     }
 
     return {
@@ -421,7 +548,9 @@ export class TechnicalChecksService {
       name: 'Structured Data / Schema',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
-      affected_pages: pageAggregations.totalPages - stats.pagesWithValidSchema,
+      affected_pages: affectedPages,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -442,12 +571,29 @@ export class TechnicalChecksService {
       }
     }
 
+    // Calculate dynamic impact percentage
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((stats.pagesWithoutViewport / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'mobile_friendliness',
       name: 'Mobile Friendliness',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: stats.pagesWithoutViewport,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -459,6 +605,7 @@ export class TechnicalChecksService {
 
     let checkStatus = 'Critical';
     let message = 'XML sitemap not found';
+    let affectedPages = 0;
 
     if (exists) {
       if (status === 200) {
@@ -470,12 +617,32 @@ export class TechnicalChecksService {
       }
     }
 
+    // For domain-level checks, impact is based on status severity
+    let impact_percentage = 0;
+    if (checkStatus === 'Critical') {
+      impact_percentage = 100; // Missing sitemap affects entire site
+    } else if (checkStatus === 'Warning') {
+      impact_percentage = 40; // Access issues have moderate impact
+    }
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (checkStatus === 'Critical') {
+      difficulty = 'hard';
+    } else if (checkStatus === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'xml_sitemap',
       name: 'XML Sitemap',
       status: checkStatus,
       severity: checkStatus === 'Critical' ? 'high' : checkStatus === 'Warning' ? 'medium' : 'none',
-      affected_pages: 0,
+      affected_pages: affectedPages,
+      impact_percentage,
+      difficulty,
       message
     };
   }
@@ -496,12 +663,29 @@ export class TechnicalChecksService {
       }
     }
 
+    // Calculate dynamic impact percentage
+    const impact_percentage = pageAggregations.totalPages > 0
+      ? Math.round(((stats.pagesMissingOGTags / pageAggregations.totalPages) * 100) * 10) / 10
+      : 0;
+
+    // Calculate difficulty based on status
+    let difficulty;
+    if (status === 'Critical') {
+      difficulty = 'hard';
+    } else if (status === 'Warning') {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'easy';
+    }
+
     return {
       id: 'og_social_tags',
       name: 'OG / Social Tags',
       status,
       severity: status === 'Critical' ? 'high' : status === 'Warning' ? 'medium' : 'none',
       affected_pages: stats.pagesMissingOGTags,
+      impact_percentage,
+      difficulty,
       message
     };
   }

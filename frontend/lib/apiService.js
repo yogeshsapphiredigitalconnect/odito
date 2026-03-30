@@ -1182,6 +1182,20 @@ class ApiService {
     }
   }
 
+  async getKeywordRankingAnalysis(projectId) {
+    const endpoint = `/pdf/${projectId}/page16`;
+    console.log('📊 Getting keyword ranking analysis:', { endpoint, projectId });
+
+    try {
+      const response = await this.request(endpoint);
+      console.log('✅ Keyword ranking analysis response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Keyword ranking analysis error:', error);
+      throw error;
+    }
+  }
+
   // Business search endpoints
 
   async searchBusiness(businessName, businessLocation) {

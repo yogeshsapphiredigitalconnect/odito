@@ -16,7 +16,7 @@ export default function AIFix({ issue, selUrl, onFixed }) {
       { t: 600, l: "🧩 Checking " + (issue.cat === "AEO" ? "FAQ / snippet signals" : issue.cat === "GEO" ? "conversational patterns" : "AI entity signals") + "…" },
       { t: 1300, l: "✦ Issue confirmed: " + issue.title },
       { t: 2100, l: "🧠 Generating optimized markup…" },
-      { t: 2900, l: "✅ Fix ready — " + issue.impact },
+      { t: 2900, l: "✅ Fix ready — +" + (issue.impact_percentage || 0) + "% SEO Impact" },
     ];
     
     const ts = msgs.map(m => setTimeout(() => setLines(l => [...l, m.l]), m.t));
@@ -101,7 +101,7 @@ export default function AIFix({ issue, selUrl, onFixed }) {
       <div className={styles.ariaBox} style={{ marginBottom:10, padding:"10px 12px" }}>
         <div className={styles.ariaLbl}>✦ ARIA</div>
         <div className={styles.ariaBody} style={{ fontSize:11 }}>
-          Applying fix to <span style={{ color:"var(--cy)", fontFamily:"var(--fm)", fontSize:9.5 }}>{selUrl}</span> — est. <strong style={{ color:"var(--gr)" }}>{issue.impact}</strong>
+          Applying fix to <span style={{ color:"var(--cy)", fontFamily:"var(--fm)", fontSize:9.5 }}>{selUrl}</span> — est. <strong style={{ color:"var(--gr)" }}>+{issue.impact_percentage || 0}% SEO Impact</strong>
         </div>
       </div>
       <button className={`${styles.act} ${styles.actPr}`} onClick={onFixed}>

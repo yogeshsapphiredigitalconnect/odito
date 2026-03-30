@@ -117,7 +117,7 @@ export function useExportPDF() {
         { id: 'p13', component: <CoreWebVitalsPage projectId={projectId} /> },
         { id: 'p14', component: <PerformanceOpportunitiesPage /> },
         { id: 'p15', component: <SectionDivider pageNum={15} sectionNum={4} title="Keyword Analysis" subtitle="Rankings, positions and near-page-1 opportunities" /> },
-        { id: 'p16', component: <KeywordRankingPage /> },
+        { id: 'p16', component: <KeywordRankingPage projectId={projectId} /> },
         { id: 'p17', component: <KeywordOpportunityPage /> },
         { id: 'p18', component: <SectionDivider pageNum={18} sectionNum={5} title="AI Visibility" subtitle="GEO, AEO, AISEO — visibility across AI search platforms" /> },
         { id: 'p19', component: <AIVisibilityOverviewPage projectId={projectId} /> },
