@@ -127,14 +127,14 @@ class AIVideoService {
   }
 
   /**
-   * GET /jobs/:jobId
+   * GET /jobs/:jobId/status
    * Get job status by ID
    * @param {string} jobId - Job ID
    * @returns {Promise<Object>} Job status information
    */
   async getJobStatus(jobId) {
     const token = this.getToken();
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/jobs/${jobId}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/jobs/${jobId}/status`;
 
     const config = {
       method: 'GET',
@@ -146,12 +146,22 @@ class AIVideoService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
-
+      
+      // Check if response is OK before parsing JSON
       if (!response.ok) {
-        throw new Error(data.message || `API Error: ${response.status}`);
+        // Try to get error message, but handle cases where response isn't JSON
+        let errorMessage = `API Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          // Response might be HTML (404 page), use status text instead
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
+      const data = await response.json();
       return data;
     } catch (error) {
       console.error(`[AI Video API] Get job status error:`, error);

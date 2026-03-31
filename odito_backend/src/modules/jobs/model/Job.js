@@ -74,6 +74,16 @@ const jobSchema = new mongoose.Schema({
     stack: String,
     timestamp: Date
   },
+  progress: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  currentStep: {
+    type: String,
+    default: ''
+  },
   claimed_at: Date,
   started_at: Date,
   completed_at: Date

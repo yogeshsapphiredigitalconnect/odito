@@ -43,6 +43,8 @@ router.get('/:jobId/status', async (req, res) => {
         started_at: job.started_at,
         completed_at: job.completed_at,
         failed_at: job.failed_at,
+        progress: job.progress || 0,
+        currentStep: job.currentStep || '',
         result_data: job.result_data || {}
       }
     });
@@ -77,7 +79,16 @@ router.post('/update-status', async (req, res) => {
     console.log(`[API] Job status update | jobId=${jobId} | status=${status}`);
 
     // Update job status
-    const updatedJob = await jobService.updateJobStatus(jobId, status, updateData);
+    const { progress: progressValue, currentStep: stepValue, ...otherUpdateData } = updateData;
+    
+    const finalUpdateData = {
+      status,
+      ...(progressValue !== undefined && { progress: Math.max(0, Math.min(100, progressValue)) }),
+      ...(stepValue !== undefined && { currentStep: stepValue }),
+      ...otherUpdateData
+    };
+
+    const updatedJob = await jobService.updateJobStatus(jobId, status, finalUpdateData);
 
     if (!updatedJob) {
       return res.status(404).json({
@@ -90,9 +101,9 @@ router.post('/update-status', async (req, res) => {
     if (status === 'processing') {
       auditProgressService.emitProgress(jobId, {
         status: 'processing',
-        step: 'Generating Video',
-        percentage: 50,
-        message: 'Video generation in progress...'
+        step: stepValue || 'Generating Video',
+        percentage: progressValue || 50,
+        message: `${stepValue || 'Video generation'} in progress...`
       });
     }
 
@@ -112,7 +123,7 @@ router.post('/update-status', async (req, res) => {
         status: 'failed',
         step: 'Failed',
         percentage: 0,
-        message: updateData.error?.message || 'Video generation failed'
+        message: otherUpdateData.error?.message || 'Video generation failed'
       });
     }
 

@@ -1,0 +1,467 @@
+{
+  "projectId": "69cba4c1694cefad896bcf8e",
+  "slidesWithAudio": [
+    {
+      "id": 1,
+      "type": "projectOverview",
+      "title": "Sapphiredigitalagency-Com",
+      "subtitle": "https://www.sapphiredigitalagency.com/",
+      "narration": "Sapphiredigitalagency-Com scores 55 out of 100 — not because the business isn't good, but because the website isn't communicating that to search engines. Let's break down exactly why.",
+      "data": {
+        "projectName": "Sapphiredigitalagency-Com",
+        "url": "https://www.sapphiredigitalagency.com/",
+        "pagesCrawled": 25,
+        "scores": {
+          "overall": 55,
+          "performance": 55,
+          "seo": 53,
+          "aiVisibility": 41,
+          "technicalHealth": 70
+        },
+        "issueDistribution": {
+          "high": 568,
+          "medium": 173,
+          "low": 0,
+          "total": 741
+        }
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-1.mp3",
+      "duration": 10.26322,
+      "durationInFrames": 308
+    },
+    {
+      "id": 2,
+      "type": "scoreSummary",
+      "title": "Overall Score Analysis",
+      "subtitle": "Score: 55/100",
+      "narration": "Four areas are pulling that score down. Technical is your strongest at 70, but Performance at 55, SEO at 53, and AI Visibility at 41 are all below 50 — meaning speed, content signals, and future search readiness are all suffering simultaneously.",
+      "data": {
+        "scores": {
+          "overall": 55,
+          "performance": 55,
+          "seo": 53,
+          "aiVisibility": 41,
+          "technicalHealth": 70
+        },
+        "overall": 55
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-2.mp3",
+      "duration": 15.696689,
+      "durationInFrames": 471
+    },
+    {
+      "id": 3,
+      "type": "issueDistribution",
+      "title": "Issue Distribution",
+      "subtitle": "741 Total Issues",
+      "narration": "741 issues found — and 568 of them are high priority. That means 77% of your problems are actively costing you rankings right now, today.",
+      "data": {
+        "issueDistribution": {
+          "high": 568,
+          "medium": 173,
+          "low": 0,
+          "total": 741
+        },
+        "total": 741
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-3.mp3",
+      "duration": 9.659501,
+      "durationInFrames": 290
+    },
+    {
+      "id": 4,
+      "type": "highIssues",
+      "title": "High Priority Issues",
+      "subtitle": "Showing top 3 of 568 high-priority issues",
+      "narration": "These high priority issues are the ones bleeding your score the most. Every one of them fixed is a direct point gain — address them first and your overall score could jump significantly within 30 days.",
+      "data": {
+        "issues": [
+          {
+            "issue": "PageSpeed score is 85 (should be ≥90) - mobile",
+            "severity": "high",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Address within 7 days - high priority for SEO improvement"
+          },
+          {
+            "issue": "5 below-fold image(s) missing lazy loading",
+            "severity": "high",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Address within 7 days - high priority for SEO improvement"
+          },
+          {
+            "issue": "Invalid robots directives: max-snippet:-1, max-video-preview:-1, max-image-preview:large",
+            "severity": "high",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Address within 7 days - high priority for SEO improvement"
+          }
+        ],
+        "count": 3,
+        "totalHigh": 568,
+        "hasZeroIssues": false
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-4.mp3",
+      "duration": 11.006259,
+      "durationInFrames": 330
+    },
+    {
+      "id": 5,
+      "type": "mediumIssues",
+      "title": "Medium Priority Issues",
+      "subtitle": "Showing top 3 of 173 issues",
+      "narration": "Your medium priority issues aren't urgent, but they're adding up quietly. Resolve these and you're not just fixing problems — you're sending search engines a signal that this site is actively maintained and trustworthy.",
+      "data": {
+        "issues": [
+          {
+            "issue": "Apple touch icon is missing",
+            "severity": "medium",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Plan to fix within 30 days - moderate SEO impact"
+          },
+          {
+            "issue": "Contact info not found in structured data (E-E-A-T)",
+            "severity": "medium",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Plan to fix within 30 days - moderate SEO impact"
+          },
+          {
+            "issue": "h5 is all lowercase: sales@sapphiredigitalagency.com",
+            "severity": "medium",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Plan to fix within 30 days - moderate SEO impact"
+          }
+        ],
+        "count": 3,
+        "totalMedium": 173,
+        "hasZeroIssues": false
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-5.mp3",
+      "duration": 12.538776,
+      "durationInFrames": 376
+    },
+    {
+      "id": 6,
+      "type": "lowIssues",
+      "title": "Low Priority Issues",
+      "subtitle": "No issues detected 🎉",
+      "narration": "The good news is, there are no low-priority issues detected. This means your site is already clean at the foundational level, allowing you to focus on higher-impact improvements.",
+      "data": {
+        "issues": [],
+        "count": 0,
+        "totalLow": 0,
+        "hasZeroIssues": true
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-6.mp3",
+      "duration": 10.634739,
+      "durationInFrames": 319
+    },
+    {
+      "id": 7,
+      "type": "technicalHighlights",
+      "title": "Technical Highlights",
+      "subtitle": "Technical SEO Overview",
+      "narration": "70 is decent — but all 25 pages are missing security headers, which search engines flag as unsafe. Plus inconsistent H1 tags mean search engines can't identify what your pages are actually about.",
+      "data": {
+        "auditSnapshot": {
+          "technicalHighlights": {
+            "checks": [
+              {
+                "name": "SSL Certificate",
+                "status": "PASS",
+                "detail": "SSL certificate is valid and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Security Headers",
+                "status": "FAIL",
+                "detail": "25 pages missing critical security headers",
+                "affected_pages": 25
+              },
+              {
+                "name": "Canonical Tags",
+                "status": "PASS",
+                "detail": "Canonical tags properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Robots.txt",
+                "status": "PASS",
+                "detail": "Robots.txt is accessible and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Noindex on Key Pages",
+                "status": "PASS",
+                "detail": "All important pages are indexable",
+                "affected_pages": 0
+              },
+              {
+                "name": "H1 Tags",
+                "status": "FAIL",
+                "detail": "6 pages missing H1, 4 with multiple H1s",
+                "affected_pages": 10
+              },
+              {
+                "name": "Structured Data / Schema",
+                "status": "PASS",
+                "detail": "25 pages with valid structured data",
+                "affected_pages": 0
+              },
+              {
+                "name": "Mobile Friendliness",
+                "status": "PASS",
+                "detail": "Mobile-friendly configuration detected",
+                "affected_pages": 0
+              },
+              {
+                "name": "XML Sitemap",
+                "status": "PASS",
+                "detail": "XML sitemap accessible with 3 URLs",
+                "affected_pages": 0
+              },
+              {
+                "name": "OG / Social Tags",
+                "status": "FAIL",
+                "detail": "23 pages missing Open Graph tags",
+                "affected_pages": 23
+              }
+            ],
+            "criticalIssues": [
+              {
+                "name": "Security Headers",
+                "status": "FAIL",
+                "detail": "25 pages missing critical security headers",
+                "affected_pages": 25
+              },
+              {
+                "name": "H1 Tags",
+                "status": "FAIL",
+                "detail": "6 pages missing H1, 4 with multiple H1s",
+                "affected_pages": 10
+              },
+              {
+                "name": "OG / Social Tags",
+                "status": "FAIL",
+                "detail": "23 pages missing Open Graph tags",
+                "affected_pages": 23
+              }
+            ],
+            "topRecommendations": [
+              {
+                "name": "SSL Certificate",
+                "status": "PASS",
+                "detail": "SSL certificate is valid and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Security Headers",
+                "status": "FAIL",
+                "detail": "25 pages missing critical security headers",
+                "affected_pages": 25
+              },
+              {
+                "name": "Canonical Tags",
+                "status": "PASS",
+                "detail": "Canonical tags properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Robots.txt",
+                "status": "PASS",
+                "detail": "Robots.txt is accessible and properly configured",
+                "affected_pages": 0
+              },
+              {
+                "name": "Noindex on Key Pages",
+                "status": "PASS",
+                "detail": "All important pages are indexable",
+                "affected_pages": 0
+              }
+            ]
+          },
+          "scores": {
+            "overall": 55,
+            "performance": 55,
+            "seo": 53,
+            "aiVisibility": 41,
+            "technicalHealth": 70
+          },
+          "issueDistribution": {
+            "high": 568,
+            "medium": 173,
+            "low": 0,
+            "total": 741
+          }
+        }
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-7.mp3",
+      "duration": 11.888617,
+      "durationInFrames": 357
+    },
+    {
+      "id": 8,
+      "type": "performanceSummary",
+      "title": "Performance Summary",
+      "subtitle": "Performance Score: 55",
+      "narration": "Grade F. 60% of your visitors are on mobile — and mobile scores just 51. Unoptimized images and no compression are the culprits. Fix those two things and PageSpeed jumps 10 to 15 points immediately.",
+      "data": {
+        "pageSpeed": 55,
+        "mobileScore": 51,
+        "desktopScore": 63
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-8.mp3",
+      "duration": 12.074376,
+      "durationInFrames": 362
+    },
+    {
+      "id": 9,
+      "type": "coreWebVitals",
+      "title": "Core Web Vitals",
+      "subtitle": "User Experience Metrics",
+      "narration": "Your main content takes 3.7 s seconds to appear on mobile — search engine guidelines recommend 2.5. That gap is where your visitors lose patience and leave. Desktop is better, but still problematic.",
+      "data": {
+        "mobile": {
+          "lcp": "3.7 s",
+          "tbt": "3,240 ms",
+          "fcp": "2.7 s",
+          "cls": "0.002",
+          "score": 51
+        },
+        "desktop": {
+          "lcp": "0.9 s",
+          "tbt": "4,870 ms",
+          "fcp": "0.6 s",
+          "cls": "0.002",
+          "score": 63
+        }
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-9.mp3",
+      "duration": 12.631655,
+      "durationInFrames": 379
+    },
+    {
+      "id": 10,
+      "type": "aiAnalysis",
+      "title": "AI Analysis Overview",
+      "subtitle": "AI Search Readiness Summary",
+      "narration": "And now the most important score in today's world — AI Visibility. ChatGPT, Claude, Perplexity, AI search overviews — these are the new search engines. People aren't just searching online anymore, they're asking AI. And AI decides who to mention, who to recommend, who to trust. Your score is 41 — meaning right now, you're largely invisible in that conversation. This is the score that will define the next 5 years of your online presence.",
+      "data": {
+        "score": 41,
+        "summary": "Moderate AI visibility. Your brand has limited presence in AI-generated search results.",
+        "hasKnowledgeGraph": true
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-10.mp3",
+      "duration": 26.749388,
+      "durationInFrames": 802
+    },
+    {
+      "id": 11,
+      "type": "aiCategoryBreakdown",
+      "title": "AI Category Breakdown",
+      "subtitle": "AI Performance Distribution",
+      "narration": "You have 73% AI Impact potential — the foundation is there. But Topical Authority is just 25%, meaning AI doesn't see you as an expert in anything specific yet. That's the core gap to close.",
+      "data": {
+        "categories": {
+          "aiImpact": 73,
+          "citationProbability": 37,
+          "llmReadiness": 41,
+          "aeoScore": 36,
+          "topicalAuthority": 25,
+          "voiceIntent": 35
+        }
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-11.mp3",
+      "duration": 12.213696,
+      "durationInFrames": 366
+    },
+    {
+      "id": 12,
+      "type": "aiDetailedMetrics",
+      "title": "AI Detailed Metrics",
+      "subtitle": "Technical AI Readiness",
+      "narration": "Schema coverage is 58. But FAQ optimization at 35, conversational content at 35, and citation rate at 34 are all low — and those are exactly what AI systems scan when deciding who to quote as a source.",
+      "data": {
+        "detailedMetrics": {
+          "schemaCoverage": 58,
+          "faqOptimization": 35,
+          "conversationalScore": 35,
+          "aiSnippetProbability": 51,
+          "aiCitationRate": 34,
+          "knowledgeGraph": 44
+        }
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-12.mp3",
+      "duration": 14.628571,
+      "durationInFrames": 439
+    },
+    {
+      "id": 13,
+      "type": "aiTopIssues",
+      "title": "AI Top Issues",
+      "subtitle": "Critical AI Optimization Areas",
+      "narration": "The root cause is clear — AI systems do not understand your entity properly. They don't know who you are, what you do, or who you serve. Fixing your entity clarity can significantly improve your AI visibility score.",
+      "data": {
+        "topIssues": [
+          {
+            "title": "Service Product Schema With Offers",
+            "score": 0,
+            "status": "info",
+            "category": "general",
+            "recommendation": "Address topical_authority issue affecting 25 pages"
+          },
+          {
+            "title": "Faq Schema Matches Content",
+            "score": 10,
+            "status": "info",
+            "category": "general",
+            "recommendation": "Address aeo_score issue affecting 25 pages"
+          },
+          {
+            "title": "Only One Primary Entity",
+            "score": 20,
+            "status": "info",
+            "category": "general",
+            "recommendation": "Address topical_authority issue affecting 25 pages"
+          }
+        ]
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-13.mp3",
+      "duration": 12.817415,
+      "durationInFrames": 385
+    },
+    {
+      "id": 14,
+      "type": "ctaClosure",
+      "title": "What's Next?",
+      "subtitle": "Take Action on Your SEO & AI Growth",
+      "narration": "Now you have two clear paths. You can use the AI-powered suggestions provided in this audit and implement them yourself. Or, if you'd prefer faster and expert-driven results, our team can handle everything for you. Let's take your SEO and AI visibility to the next level.",
+      "data": {
+        "cards": [
+          {
+            "title": "Use AI Suggestions",
+            "description": "Follow the AI recommendations provided in this audit to improve your SEO step by step."
+          },
+          {
+            "title": "Do It Yourself",
+            "description": "Apply the fixes on your own using the insights and improve your rankings gradually."
+          },
+          {
+            "title": "Let Us Handle It",
+            "description": "Our team can implement everything for you. Get in touch and scale your SEO faster."
+          }
+        ]
+      },
+      "audio": "http://localhost:5000/audio/69cba4c1694cefad896bcf8e-slide-14.mp3",
+      "duration": 15.092971,
+      "durationInFrames": 453
+    }
+  ],
+  "fps": 30,
+  "durationInFrames": 5637,
+  "totalDuration": 187.895873
+}

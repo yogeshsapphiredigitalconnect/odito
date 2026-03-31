@@ -387,12 +387,15 @@ class AudioService {
   }
 
   /**
-   * Generate cache key from text
+   * Generate cache key from text and slide identifier
    * @param {string} text - Text to hash
+   * @param {string} slideId - Slide identifier for uniqueness
    * @returns {string} Cache key
    */
-  getCacheKey(text) {
-    return crypto.createHash('sha256').update(text).digest('hex');
+  getCacheKey(text, slideId = '') {
+    // Include slideId to ensure unique cache keys per slide
+    const cacheInput = text + (slideId ? `_${slideId}` : '');
+    return crypto.createHash('sha256').update(cacheInput).digest('hex');
   }
 
   /**
@@ -415,13 +418,14 @@ class AudioService {
    * Cache audio data
    * @param {string} text - Original text
    * @param {Buffer} audioBuffer - Audio data to cache
+   * @param {string} slideId - Slide identifier for uniqueness
    */
-  cacheAudio(text, audioBuffer) {
+  cacheAudio(text, audioBuffer, slideId = '') {
     try {
-      const cacheKey = this.getCacheKey(text);
+      const cacheKey = this.getCacheKey(text, slideId);
       const cachePath = path.join(this.CACHE_DIR, `${cacheKey}.mp3`);
       fs.writeFileSync(cachePath, audioBuffer);
-      console.log(`[AUDIO_SERVICE] Cached audio: ${cacheKey}`);
+      console.log(`[AUDIO_SERVICE] Cached audio: ${cacheKey} (slide: ${slideId || 'N/A'})`);
     } catch (error) {
       console.warn(`[AUDIO_SERVICE] Failed to cache audio:`, error.message);
     }
@@ -711,17 +715,21 @@ class AudioService {
       
       for (let i = 0; i < slides.length; i++) {
         const slide = slides[i];
-        const slideIndex = i + 1;
+        // CRITICAL: Use slide.slideIndex if provided, otherwise use loop index
+        const slideIndex = slide.slideIndex || (i + 1);
         
-        console.log(`[AUDIO_SERVICE] 🎬 Processing slide ${slideIndex}: ${slide.title}`);
+        console.log(`[AUDIO_SERVICE] 🎬 Processing slide ${slideIndex}/${slides.length}: ${slide.title}`);
         console.log(`[AUDIO_SERVICE] 📝 Narration: "${slide.narration.substring(0, 100)}..."`);
         
         // Generate unique filename for each slide
         const slideProjectId = `${projectId}-slide-${slideIndex}`;
         
+        console.log(`[AUDIO_SERVICE] 🔍 Slide ${slideIndex} unique ID: ${slideProjectId}`);
+        console.log(`[AUDIO_SERVICE] 🎵 Generating audio for slide ${slideIndex}...`);
+        
         // Check if slide audio already exists
         if (this.audioExists(slideProjectId)) {
-          console.log(`[AUDIO_SERVICE] Using existing audio for slide ${slideIndex}`);
+          console.log(`[AUDIO_SERVICE] ✅ Using existing audio for slide ${slideIndex} (${slideProjectId})`);
           const audioPath = `http://localhost:5000/audio/${slideProjectId}.mp3`;
           const duration = await this.getAudioDuration(audioPath);
           audioFiles.push({
@@ -777,14 +785,19 @@ class AudioService {
         const outputPath = path.join(this.OUTPUT_DIR, `${slideProjectId}.mp3`);
         fs.writeFileSync(outputPath, audioBuffer);
         
-        // Cache the generated audio
-        this.cacheAudio(cleanedText, audioBuffer);
+        console.log(`[AUDIO_SERVICE] 💾 Slide ${slideIndex} audio saved: ${outputPath}`);
+        console.log(`[AUDIO_SERVICE] 📁 File exists check: ${fs.existsSync(outputPath)}`);
+        
+        // Cache the generated audio with slide ID for uniqueness
+        this.cacheAudio(cleanedText, audioBuffer, slideProjectId);
         
         console.log(`[AUDIO_SERVICE] ✅ Slide ${slideIndex} audio saved using ${providerUsed}: ${outputPath}`);
         
         // Get audio duration
         const audioPath = `http://localhost:5000/audio/${slideProjectId}.mp3`;
         const duration = await this.getAudioDuration(audioPath);
+        
+        console.log(`[AUDIO_SERVICE] ⏱️ Slide ${slideIndex} duration: ${duration.toFixed(2)}s`);
         
         audioFiles.push({
           slideIndex,
@@ -796,6 +809,17 @@ class AudioService {
       }
       
       console.log(`[AUDIO_SERVICE] ✅ Generated ${audioFiles.length} separate audio files`);
+      
+      // CRITICAL VALIDATION: Ensure we have audio for all slides
+      if (audioFiles.length !== slides.length) {
+        throw new Error(`Audio generation validation failed: Expected ${slides.length} audio files, got ${audioFiles.length}`);
+      }
+      
+      // Log each audio file details for verification
+      audioFiles.forEach((audioFile, index) => {
+        console.log(`[AUDIO_SERVICE] 🎵 Slide ${audioFile.slideIndex}: ${audioFile.audioPath} (${audioFile.duration.toFixed(2)}s)`);
+      });
+      
       return audioFiles;
       
     } catch (error) {

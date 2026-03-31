@@ -118,7 +118,20 @@ class VideoWorker {
 
         // Process job asynchronously with sanitized inputs and auditSnapshot only (NO script)
         this.processVideoJob(sanitizedJobId, sanitizedProjectId, auditSnapshot).catch(error => {
-          console.error(`[VIDEO_WORKER] Job processing failed | jobId=${sanitizedJobId}:`, error);
+          console.error(`[VIDEO_WORKER] ❌ CRITICAL: Job processing failed | jobId=${sanitizedJobId}:`, error);
+          // Ensure job is marked as failed even if processing crashes
+          this.updateJobStatus(sanitizedJobId, 'failed', {
+            error: {
+              message: error.message,
+              stack: error.stack,
+              timestamp: new Date(),
+              criticalFailure: true
+            },
+            progress: 0,
+            currentStep: 'Failed - Critical Error'
+          }).catch(updateError => {
+            console.error(`[VIDEO_WORKER] ❌ DOUBLE CRITICAL: Failed to update job status | jobId=${sanitizedJobId}:`, updateError);
+          });
         });
         
       } catch (error) {
@@ -145,9 +158,13 @@ class VideoWorker {
     const maxRetries = 3;
     let retryCount = 0;
     
+    // Ensure jobId is properly sanitized for this method
+    const sanitizedJobId = jobId.toString().replace(/[^a-zA-Z0-9-_]/g, '');
+    const sanitizedProjectId = projectId.toString().replace(/[^a-zA-Z0-9-_]/g, '');
+    
     while (retryCount <= maxRetries) {
       try {
-        console.log(`[VIDEO_WORKER] Processing started | jobId=${jobId} | attempt=${retryCount + 1}`);
+        console.log(`[VIDEO_WORKER] Processing started | jobId=${sanitizedJobId} | attempt=${retryCount + 1}`);
         
         // CRITICAL: Ensure auditSnapshot is ALWAYS defined
         const audit = auditSnapshot;
@@ -159,8 +176,10 @@ class VideoWorker {
         console.log(`[VIDEO_WORKER] ✅ Using provided auditSnapshot (NO DB script)`);
         console.log(`[VIDEO_WORKER] AUDIT SNAPSHOT RECEIVED:`, JSON.stringify(audit, null, 2));
         
-        // Update job status to processing
-        await this.updateJobStatus(jobId, 'processing', { 
+        // Update job status to processing with initial progress
+        await this.updateJobStatus(sanitizedJobId, 'processing', { 
+          progress: 10,
+          currentStep: "Preparing video script",
           retryCount,
           maxRetries,
           timestamp: new Date(),
@@ -182,10 +201,24 @@ class VideoWorker {
         console.log(`[VIDEO_WORKER] ✅ Created ${structuredSlides.length} structured slides`);
         console.log(`[VIDEO_WORKER] SLIDES COUNT:`, structuredSlides.length);
         
-        // Step 2: Generate separate audio for each slide
+        // Update progress after script processing
+        await this.updateJobStatus(sanitizedJobId, 'processing', { 
+          progress: 20,
+          currentStep: "Script prepared - starting audio generation"
+        });
+        
+        // Step 2: Generate separate audio for each slide with progress tracking
         console.log(`[VIDEO_WORKER] Generating separate audio for ${structuredSlides.length} slides...`);
-        const audioFiles = await this.generatePerSlideAudio(structuredSlides, projectId);
+        
+        const audioFiles = await this.generatePerSlideAudioWithProgress(structuredSlides, sanitizedProjectId, sanitizedJobId);
+        
         console.log(`[VIDEO_WORKER] ✅ Generated ${audioFiles.length} separate audio files`);
+        
+        // Update progress after audio generation
+        await this.updateJobStatus(sanitizedJobId, 'processing', { 
+          progress: 70,
+          currentStep: "Audio generation complete - preparing video rendering"
+        });
         
         // Attach audio files to slides with CRITICAL duration validation
         const slidesWithAudio = structuredSlides.map((slide, index) => {
@@ -243,12 +276,26 @@ class VideoWorker {
         
         console.log(`[VIDEO_WORKER] ✅ Fail-safe validation passed - proceeding with render`);
         
+        // Update progress for video rendering start
+        await this.updateJobStatus(sanitizedJobId, 'processing', { 
+          progress: 80,
+          currentStep: "Rendering video"
+        });
+        
         const videoFileName = `${sanitizedProjectId}-${sanitizedJobId}.mp4`;
         const videoPath = await this.renderVideoWithSlides(sanitizedProjectId, sanitizedJobId, slidesWithAudio, audit);
         console.log(`[VIDEO_WORKER] Render done | path=${videoPath}`);
         
+        // Update progress for finalizing
+        await this.updateJobStatus(sanitizedJobId, 'processing', { 
+          progress: 95,
+          currentStep: "Finalizing video"
+        });
+        
         // Step 4: Update job with results
         await this.updateJobStatus(sanitizedJobId, 'completed', {
+          progress: 100,
+          currentStep: "Completed",
           result_data: {
             videoUrl: `http://localhost:5000/videos/${videoFileName}`,
             videoFileName: videoFileName,
@@ -384,6 +431,12 @@ class VideoWorker {
       const mediumIssues = topIssues?.medium || [];
       const lowIssues = topIssues?.low || [];
       
+      // Log issue counts for debugging narration logic
+      console.log(`[VIDEO_WORKER] 📊 Issue counts for dynamic narration:`);
+      console.log(`[VIDEO_WORKER]   High issues: ${issueDistribution.high || 0} → using ${(issueDistribution.high || 0) === 0 ? 'zero-case' : 'normal'} narration`);
+      console.log(`[VIDEO_WORKER]   Medium issues: ${issueDistribution.medium || 0} → using ${(issueDistribution.medium || 0) === 0 ? 'zero-case' : 'normal'} narration`);
+      console.log(`[VIDEO_WORKER]   Low issues: ${issueDistribution.low || 0} → using ${(issueDistribution.low || 0) === 0 ? 'zero-case' : 'normal'} narration`);
+      
       // Extract technical highlights - NO duplication
       const technicalHighlights = audit?.technicalHighlights || {};
       
@@ -440,36 +493,51 @@ class VideoWorker {
           id: 4,
           type: "highIssues",
           title: "High Priority Issues",
-          subtitle: `Showing top ${highIssues.length} of ${issueDistribution.high || 0} high-priority issues`,
-          narration: `These high priority issues are the ones bleeding your score the most. Every one of them fixed is a direct point gain — address them first and your overall score could jump significantly within 30 days.`,
+          subtitle: (issueDistribution.high || 0) === 0 
+            ? "No issues detected 🎉"
+            : `Showing top ${highIssues.length} of ${issueDistribution.high || 0} high-priority issues`,
+          narration: (issueDistribution.high || 0) === 0 
+            ? "Excellent news! There are no high priority issues detected. This means your site doesn't have any critical problems that could be actively harming your rankings right now."
+            : `These high priority issues are the ones bleeding your score the most. Every one of them fixed is a direct point gain — address them first and your overall score could jump significantly within 30 days.`,
           data: {
             issues: highIssues,
             count: highIssues.length,
-            totalHigh: issueDistribution.high || 0
+            totalHigh: issueDistribution.high || 0,
+            hasZeroIssues: (issueDistribution.high || 0) === 0
           }
         },
         {
           id: 5,
           type: "mediumIssues",
           title: "Medium Priority Issues",
-          subtitle: `Showing top ${mediumIssues.length} of ${issueDistribution.medium || 0} issues`,
-          narration: `Your medium priority issues aren't urgent, but they're adding up quietly. Resolve these and you're not just fixing problems — you're sending search engines a signal that this site is actively maintained and trustworthy.`,
+          subtitle: (issueDistribution.medium || 0) === 0
+            ? "No issues detected 🎉"
+            : `Showing top ${mediumIssues.length} of ${issueDistribution.medium || 0} issues`,
+          narration: (issueDistribution.medium || 0) === 0
+            ? "Great job! There are no medium priority issues to address. Your site is already well-maintained beyond the critical fixes, showing search engines you're running a tight ship."
+            : `Your medium priority issues aren't urgent, but they're adding up quietly. Resolve these and you're not just fixing problems — you're sending search engines a signal that this site is actively maintained and trustworthy.`,
           data: {
             issues: mediumIssues,
             count: mediumIssues.length,
-            totalMedium: issueDistribution.medium || 0
+            totalMedium: issueDistribution.medium || 0,
+            hasZeroIssues: (issueDistribution.medium || 0) === 0
           }
         },
         {
           id: 6,
           type: "lowIssues",
           title: "Low Priority Issues",
-          subtitle: `Showing top ${lowIssues.length} of ${issueDistribution.low || 0} issues`,
-          narration: `Even the low priority items matter. Small fixes, but each one removed is one less reason for search engines to rank someone else above you.`,
+          subtitle: (issueDistribution.low || 0) === 0
+            ? "No issues detected 🎉"
+            : `Showing top ${lowIssues.length} of ${issueDistribution.low || 0} issues`,
+          narration: (issueDistribution.low || 0) === 0
+            ? "The good news is, there are no low-priority issues detected. This means your site is already clean at the foundational level, allowing you to focus on higher-impact improvements."
+            : `Even the low priority items matter. Small fixes, but each one removed is one less reason for search engines to rank someone else above you.`,
           data: {
             issues: lowIssues,
             count: lowIssues.length,
-            totalLow: issueDistribution.low || 0
+            totalLow: issueDistribution.low || 0,
+            hasZeroIssues: (issueDistribution.low || 0) === 0
           }
         },
         {
@@ -1009,6 +1077,74 @@ class VideoWorker {
       
     } catch (error) {
       console.error('[VIDEO_WORKER] ❌ Error generating per-slide audio:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate separate audio files for each slide with progress tracking
+   * @param {Array} structuredSlides - Array of slide objects
+   * @param {string} projectId - Project ID
+   * @param {string} jobId - Job ID for progress updates
+   * @returns {Promise<Array>} Array of audio file information
+   */
+  async generatePerSlideAudioWithProgress(structuredSlides, projectId, jobId) {
+    try {
+      console.log(`[VIDEO_WORKER] 🎙️ Starting per-slide audio generation with progress tracking`);
+      
+      const totalSlides = structuredSlides.length;
+      const audioFiles = [];
+
+      // Generate audio for each slide individually to track progress
+      for (let i = 0; i < totalSlides; i++) {
+        const slide = structuredSlides[i];
+        const slideIndex = i + 1;
+        console.log(`[VIDEO_WORKER] 🎵 Generating audio for slide ${slideIndex}/${totalSlides}: ${slide.title}`);
+        
+        try {
+          // CRITICAL FIX: Pass slide with index to ensure proper slide numbering
+          const slideWithIndex = { ...slide, slideIndex };
+          const slideAudioFiles = await this.audioService.generatePerSlideAudio([slideWithIndex], projectId);
+          
+          if (slideAudioFiles && slideAudioFiles.length > 0) {
+            audioFiles.push(...slideAudioFiles);
+            console.log(`[VIDEO_WORKER] ✅ Generated audio for slide ${slideIndex}`);
+          } else {
+            throw new Error(`No audio generated for slide ${slideIndex}`);
+          }
+          
+          // Calculate progress (20% to 70% range)
+          const progress = 20 + ((i + 1) / totalSlides) * 50;
+          
+          // Update progress
+          await this.updateJobStatus(jobId, 'processing', {
+            progress: Math.round(progress),
+            currentStep: `Generating audio (${i + 1}/${totalSlides})`
+          });
+          
+        } catch (error) {
+          console.error(`[VIDEO_WORKER] ❌ Error generating audio for slide ${i + 1}:`, error);
+          throw new Error(`Failed to generate audio for slide ${i + 1}: ${error.message}`);
+        }
+      }
+      
+      console.log(`[VIDEO_WORKER] ✅ Generated ${audioFiles.length} audio files with progress tracking`);
+      
+      // CRITICAL VALIDATION: Ensure unique audio files
+      const uniqueSlideIndices = [...new Set(audioFiles.map(audio => audio.slideIndex))];
+      if (uniqueSlideIndices.length !== audioFiles.length) {
+        throw new Error(`Duplicate audio files detected: Expected ${audioFiles.length} unique files, got ${uniqueSlideIndices.length} unique slide indices`);
+      }
+      
+      // Log each audio file details for verification
+      audioFiles.forEach((audioFile, index) => {
+        console.log(`[VIDEO_WORKER] 🎵 Slide ${audioFile.slideIndex}: ${audioFile.audioPath} (${audioFile.duration.toFixed(2)}s)`);
+      });
+      
+      return audioFiles;
+      
+    } catch (error) {
+      console.error('[VIDEO_WORKER] ❌ Error generating per-slide audio with progress:', error);
       throw error;
     }
   }
