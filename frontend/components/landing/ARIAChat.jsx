@@ -270,10 +270,22 @@ const ARIAChat = ({ onComplete }) => {
       }
 
       const projectName = generateProjectName(websiteUrl);
+      
+      // CRITICAL LOG: Capture keywords before API call
+      const keywordsBeforeAPI = projectData.selectedKeywords.filter(k => k.trim()).slice(0, 5);
+      console.log('🔍 DEBUG: Keywords before API call:', {
+        selectedKeywords: projectData.selectedKeywords,
+        keywordsBeforeAPI,
+        keywordsLength: keywordsBeforeAPI.length
+      });
+
+      // VALIDATION: Final keywords being sent to API
+      console.log('🚨 FINAL KEYWORDS SENT TO API:', keywordsBeforeAPI);
+
       const projectPayload = {
         project_name: projectName,
         main_url: websiteUrl,
-        keywords: projectData.selectedKeywords.filter(k => k.trim()).slice(0, 5),
+        keywords: keywordsBeforeAPI,
         industry: projectData.businessType || projectData.industry,
         location: projectData.verifiedBusiness?.address || projectData.location || '',
         country: projectData.country,
@@ -294,14 +306,25 @@ const ARIAChat = ({ onComplete }) => {
         })
       };
 
+      console.log('🔍 DEBUG: Project payload being sent:', {
+        payloadKeywords: projectPayload.keywords,
+        payloadKeywordsString: JSON.stringify(projectPayload.keywords)
+      });
+
       const response = await apiService.createProject(projectPayload);
       if (!response.success) throw new Error(response.message || 'Failed to create project');
 
       const projectId = response.data?.projectId;
       if (!projectId) throw new Error('Project ID not found in response');
 
+      console.log('🔍 DEBUG: Project created successfully:', {
+        projectId,
+        responseKeywords: response.data?.project?.keywords
+      });
+
       // STEP 2: Trigger background tasks WITHOUT waiting
-      triggerBackgroundTasks(projectId, websiteUrl);
+      // CRITICAL FIX: Pass the actual keywords used in API call to prevent stale closure data
+      triggerBackgroundTasks(projectId, websiteUrl, keywordsBeforeAPI);
 
       // STEP 3: Immediate redirect to processing page
       const redirectUrl = `/processing/${projectId}`;
@@ -324,16 +347,32 @@ const ARIAChat = ({ onComplete }) => {
   };
 
   // ── Fire-and-forget background tasks ─────────────────────────────────────
-  const triggerBackgroundTasks = async (projectId, websiteUrl) => {
+  const triggerBackgroundTasks = async (projectId, websiteUrl, correctKeywords) => {
     try {
+      // CRITICAL FIX: Use the passed keywords instead of stale closure data
+      const keywordsForTasks = correctKeywords || projectData.selectedKeywords;
+      console.log('🔍 DEBUG: Keywords at background task start:', {
+        projectId,
+        keywordsForTasks,
+        keywordsString: JSON.stringify(keywordsForTasks),
+        source: correctKeywords ? 'passed_parameter' : 'closure_fallback'
+      });
+
       // Background task 1: Check rankings (non-blocking)
       apiService.checkRanking(
         websiteUrl,
-        projectData.selectedKeywords,
+        keywordsForTasks,
         projectData.verifiedBusiness?.address || projectData.location,
         projectData.country,
         projectData.language
       ).then(rankResponse => {
+        console.log('🔍 DEBUG: Ranking check response:', {
+          projectId,
+          success: rankResponse.success,
+          keywordsUsed: keywordsForTasks,
+          results: rankResponse.data?.results
+        });
+        
         if (rankResponse.success && rankResponse.data?.results) {
           // Save rankings in background
           apiService.saveRanking(
@@ -341,7 +380,13 @@ const ARIAChat = ({ onComplete }) => {
             websiteUrl,
             projectData.verifiedBusiness?.address || projectData.location,
             rankResponse.data.results
-          ).catch(saveError => {
+          ).then(saveResponse => {
+            console.log('🔍 DEBUG: Ranking save response:', {
+              projectId,
+              success: saveResponse.success,
+              keywordsSaved: keywordsForTasks
+            });
+          }).catch(saveError => {
             console.error('Background ranking save failed:', saveError);
           });
         }
@@ -350,7 +395,12 @@ const ARIAChat = ({ onComplete }) => {
       });
 
       // Background task 2: Start audit (non-blocking)
-      apiService.startAudit(projectId).catch(auditError => {
+      apiService.startAudit(projectId).then(auditResponse => {
+        console.log('🔍 DEBUG: Audit start response:', {
+          projectId,
+          success: auditResponse.success
+        });
+      }).catch(auditError => {
         console.error('Background audit start failed:', auditError);
       });
 

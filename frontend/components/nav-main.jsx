@@ -69,6 +69,29 @@ export function NavMain({
     return pathname === item.url
   }
 
+  // Badge component
+  const Badge = ({ children, variant = "default" }) => {
+    const baseClasses = "ml-auto text-xs px-1.5 py-0.5 rounded-full font-semibold"
+    const variantClasses = variant === "new" 
+      ? "bg-green-500 text-white"
+      : "bg-blue-500 text-white"
+    
+    return (
+      <span className={`${baseClasses} ${variantClasses}`}>
+        {children}
+      </span>
+    )
+  }
+
+  // Prefix component
+  const Prefix = ({ children }) => {
+    return (
+      <span className="text-xs px-1.5 py-0.5 bg-gray-600 text-white rounded font-mono mr-2">
+        {children}
+      </span>
+    )
+  }
+
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-3">
@@ -89,7 +112,9 @@ export function NavMain({
                       onClick={(e) => toggleItem(item.title, e)}
                     >
                       {item.icon && <item.icon className="transition-transform duration-200" />}
+                      {item.prefix && <Prefix>{item.prefix}</Prefix>}
                       <span className="transition-colors duration-200">{item.title}</span>
+                      {item.badge && <Badge variant={item.badge === "NEW" ? "new" : "default"}>{item.badge}</Badge>}
                       {isOpen ? (
                         <IconChevronDown className="ml-auto transition-transform duration-300 ease-in-out" />
                       ) : (
@@ -106,7 +131,9 @@ export function NavMain({
                               className={isSubItemActive(subItem.url) ? "!bg-sidebar-primary !text-sidebar-primary-foreground" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 ease-in-out"}
                             >
                               <Link href={subItem.url} className="transition-transform duration-200 hover:translate-x-1">
+                                {subItem.prefix && <Prefix>{subItem.prefix}</Prefix>}
                                 <span className="transition-colors duration-200">{subItem.title}</span>
+                                {subItem.badge && <Badge variant={subItem.badge === "NEW" ? "new" : "default"}>{subItem.badge}</Badge>}
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
@@ -123,7 +150,9 @@ export function NavMain({
                   >
                     <Link href={item.url} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
                       {item.icon && <item.icon className="transition-transform duration-200" />}
+                      {item.prefix && <Prefix>{item.prefix}</Prefix>}
                       <span className="transition-colors duration-200">{item.title}</span>
+                      {item.badge && <Badge variant={item.badge === "NEW" ? "new" : "default"}>{item.badge}</Badge>}
                     </Link>
                   </SidebarMenuButton>
                 )}

@@ -88,6 +88,15 @@ export const checkRanking = async (req, res) => {
   try {
     const { domain, keywords, location, country = 'US', language = 'en' } = req.body;
 
+    // CRITICAL LOG: Capture keywords received at ranking check
+    console.log('🔍 DEBUG: Ranking check received keywords:', {
+      requestKeywords: keywords,
+      keywordsType: typeof keywords,
+      keywordsLength: keywords?.length,
+      keywordsString: JSON.stringify(keywords),
+      fullBody: req.body
+    });
+
     if (!domain || typeof domain !== 'string') {
       return res.status(400).json({
         success: false,
@@ -106,13 +115,21 @@ export const checkRanking = async (req, res) => {
 
     LoggerUtil.info('Check ranking request', { domain, keywords, country, locationCode });
 
+    // CRITICAL LOG: Capture keywords before sending to Python worker
+    const cleanedKeywords = keywords.map(k => k.trim());
+    console.log('🔍 DEBUG: Keywords before Python worker:', {
+      originalKeywords: keywords,
+      cleanedKeywords,
+      cleanedKeywordsString: JSON.stringify(cleanedKeywords)
+    });
+
     // Forward to Python worker
     const response = await fetch(`${PYTHON_WORKER_URL}/api/onboarding/check-ranking`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         domain: domain.trim(),
-        keywords: keywords.map(k => k.trim()),
+        keywords: cleanedKeywords,
         location_code: locationCode,
         language_code: language?.toLowerCase() || 'en'
       })

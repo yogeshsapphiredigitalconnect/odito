@@ -40,7 +40,7 @@ export function DashboardLayout({
 
   // Default sidebar width and header height to maintain consistency
   const defaultStyles = {
-    "--sidebar-width": "14rem",
+    "--sidebar-width": "16rem", // Increased from 14rem to accommodate longer menu items
     "--header-height": "calc(var(--spacing) * 12)"
   }
 

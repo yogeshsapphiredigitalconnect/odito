@@ -156,7 +156,7 @@ class VideoTemplateService {
     }
     
     if (aiAnalysis.hasKnowledgeGraph) {
-      narration += `Your site appears in Google's Knowledge Graph, which is excellent for AI visibility. `;
+      narration += `Your site appears in the Knowledge Graph, which is excellent for AI visibility. `;
     }
     
     narration += `As AI becomes the primary way people find information, optimizing for these systems is crucial for future-proofing your organic traffic.`;

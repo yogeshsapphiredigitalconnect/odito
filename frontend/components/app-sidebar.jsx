@@ -82,28 +82,92 @@ const getNavigationData = () => {
       title: item.title,
       url: item.url,
       icon: getIcon(item.icon),
+      badge: item.badge,
+      prefix: item.prefix,
       items: item.children?.map(child => ({
         title: child.title,
-        url: child.url
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
       }))
     })),
     aiIntelligence: navigation.aiIntelligence.map(item => ({
       title: item.title,
       url: item.url,
       icon: getIcon(item.icon),
+      badge: item.badge,
+      prefix: item.prefix,
       items: item.children?.map(child => ({
         title: child.title,
-        url: child.url
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
       }))
     })),
+    recommendations: navigation.recommendations?.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      badge: item.badge,
+      prefix: item.prefix,
+      items: item.children?.map(child => ({
+        title: child.title,
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
+      }))
+    })) || [],
+    linkGrowthEngine: navigation.linkGrowthEngine?.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      badge: item.badge,
+      prefix: item.prefix,
+      items: item.children?.map(child => ({
+        title: child.title,
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
+      }))
+    })) || [],
+    monitoring: navigation.monitoring?.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      badge: item.badge,
+      prefix: item.prefix,
+      items: item.children?.map(child => ({
+        title: child.title,
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
+      }))
+    })) || [],
+    agency: navigation.agency?.map(item => ({
+      title: item.title,
+      url: item.url,
+      icon: getIcon(item.icon),
+      badge: item.badge,
+      prefix: item.prefix,
+      items: item.children?.map(child => ({
+        title: child.title,
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
+      }))
+    })) || [],
     navClouds: navigation.clouds.map(item => ({
       title: item.title,
       url: item.url,
       icon: getIcon(item.icon),
       isActive: item.isActive,
+      badge: item.badge,
+      prefix: item.prefix,
       items: item.items?.map(child => ({
         title: child.title,
-        url: child.url
+        url: child.url,
+        badge: child.badge,
+        prefix: child.prefix
       }))
     }))
   }
@@ -137,6 +201,22 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>AI INTELLIGENCE</SidebarGroupLabel>
           <NavMain items={data.aiIntelligence} />
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>RECOMMENDATIONS</SidebarGroupLabel>
+          <NavMain items={data.recommendations} />
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>LINK GROWTH ENGINE</SidebarGroupLabel>
+          <NavMain items={data.linkGrowthEngine} />
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>MONITORING</SidebarGroupLabel>
+          <NavMain items={data.monitoring} />
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>AGENCY</SidebarGroupLabel>
+          <NavMain items={data.agency} />
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>

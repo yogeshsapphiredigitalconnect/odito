@@ -441,14 +441,17 @@ class AudioService {
   }
 
   /**
-   * Clean text for TTS processing
+   * Clean text for TTS processing with Google replacement
    * @param {string} text - Raw script text
-   * @returns {string} Cleaned text
+   * @returns {string} Cleaned text with Google replaced contextually
    */
   cleanTextForTTS(text) {
     if (!text) return '';
     
-    return text
+    // First apply contextual Google replacement
+    const textWithoutGoogle = this.replaceGoogleContextually(text);
+    
+    return textWithoutGoogle
       // Remove excessive whitespace
       .replace(/\s+/g, ' ')
       // Remove markdown formatting
@@ -461,6 +464,81 @@ class AudioService {
       .replace(/[^\w\s.,!?;:'"-]/g, '')
       // Trim whitespace
       .trim();
+  }
+
+  /**
+   * Replace "Google" with contextually appropriate alternatives
+   * Maintains natural grammar and sentence flow
+   * @param {string} text - Text containing Google references
+   * @returns {string} Text with Google replaced contextually
+   */
+  replaceGoogleContextually(text) {
+    if (!text) return '';
+    
+    let result = text;
+    
+    // Context-aware replacement rules
+    const replacements = [
+      // "rank on Google" → "rank on search engines"
+      { pattern: /rank on\s+Google/gi, replacement: 'rank on search engines' },
+      
+      // "search on Google" → "search online" OR "use a search engine"
+      { pattern: /search on\s+Google/gi, replacement: 'search online' },
+      { pattern: /searching on\s+Google/gi, replacement: 'using search engines' },
+      
+      // "Google shows" → "search engines show"
+      { pattern: /Google\s+shows/gi, replacement: 'search engines show' },
+      { pattern: /Google\s+displays/gi, replacement: 'search engines display' },
+      
+      // "Google ranking" → "search engine ranking"
+      { pattern: /Google\s+ranking/gi, replacement: 'search engine ranking' },
+      
+      // "Google results" → "search results"
+      { pattern: /Google\s+results/gi, replacement: 'search results' },
+      
+      // "Google's limit" → "search engine guidelines recommend"
+      { pattern: /Google's\s+limit\s+is\s+(\d+(?:\.\d+)?)\s+seconds?/gi, replacement: 'search engine guidelines recommend $1 seconds' },
+      { pattern: /Google's\s+limit/gi, replacement: 'search engine guidelines' },
+      
+      // "Google flags" → "search engines flag"
+      { pattern: /Google\s+flags/gi, replacement: 'search engines flag' },
+      
+      // "Google can't identify" → "search engines can't identify"
+      { pattern: /Google\s+can't\s+identify/gi, replacement: "search engines can't identify" },
+      
+      // "sending Google a signal" → "sending search engines a signal"
+      { pattern: /Sending\s+Google\s+a\s+signal/gi, replacement: 'Sending search engines a signal' },
+      { pattern: /sending\s+Google\s+a\s+signal/gi, replacement: 'sending search engines a signal' },
+      
+      // "reason for Google to rank" → "reason for search engines to rank"
+      { pattern: /reason\s+for\s+Google\s+to\s+rank/gi, replacement: 'reason for search engines to rank' },
+      
+      // "Googling" → "searching online" or "using search engines"
+      { pattern: /Googling/gi, replacement: 'searching online' },
+      { pattern: /just\s+Googling/gi, replacement: 'just searching online' },
+      
+      // "Google AI Overviews" → "AI search overviews" (keep AI context)
+      { pattern: /Google\s+AI\s+Overviews/gi, replacement: 'AI search overviews' },
+      
+      // "Google's Knowledge Graph" → "the Knowledge Graph" or "search engine knowledge graphs"
+      { pattern: /Google's\s+Knowledge\s+Graph/gi, replacement: 'the Knowledge Graph' },
+      
+      // Standalone "Google" in context of search engines
+      { pattern: /\bGoogle\b(?=\s+(?:searches|looks|finds|indexes|crawls|ranks|evaluates))/gi, replacement: 'search engines' },
+      
+      // Catch-all for remaining standalone instances (use sparingly)
+      { pattern: /\bGoogle\b/gi, replacement: 'search engines' }
+    ];
+    
+    // Apply replacements in order of specificity
+    replacements.forEach(({ pattern, replacement }) => {
+      result = result.replace(pattern, replacement);
+    });
+    
+    // Clean up any double spaces created by replacements
+    result = result.replace(/\s+/g, ' ').trim();
+    
+    return result;
   }
 
   /**

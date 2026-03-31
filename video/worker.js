@@ -5,6 +5,7 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { ObjectId } = require('mongodb');
 
 // Import Audio Service
 const AudioService = require('./services/audioService');
@@ -59,14 +60,47 @@ class VideoWorker {
         
         console.log(`[VIDEO_WORKER] Job received | jobId=${jobId} | projectId=${projectId}`);
         
+        // CRITICAL: Validate required fields
+        if (!jobId || typeof jobId !== 'string' || jobId.trim().length === 0) {
+          console.error(`[VIDEO_WORKER] ❌ INVALID jobId | jobId=${jobId}`);
+          return res.status(400).json({
+            success: false,
+            message: 'Valid jobId is required',
+            jobId
+          });
+        }
+        
+        if (!projectId || typeof projectId !== 'string' || projectId.trim().length === 0) {
+          console.error(`[VIDEO_WORKER] ❌ INVALID projectId | projectId=${projectId}`);
+          return res.status(400).json({
+            success: false,
+            message: 'Valid projectId is required',
+            projectId
+          });
+        }
+        
+        // Validate MongoDB ObjectId format
+        if (!ObjectId.isValid(projectId.trim())) {
+          console.error(`[VIDEO_WORKER] ❌ INVALID projectId format | projectId=${projectId}`);
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid projectId format',
+            projectId
+          });
+        }
+        
+        // Sanitize inputs
+        const sanitizedJobId = jobId.trim().replace(/[^a-zA-Z0-9-_]/g, '');
+        const sanitizedProjectId = projectId.trim();
+        
         // CRITICAL: Validate auditSnapshot is present
         if (!auditSnapshot) {
-          console.error(`[VIDEO_WORKER] ❌ MISSING auditSnapshot | jobId=${jobId} | projectId=${projectId}`);
+          console.error(`[VIDEO_WORKER] ❌ MISSING auditSnapshot | jobId=${sanitizedJobId} | projectId=${sanitizedProjectId}`);
           return res.status(400).json({
             success: false,
             message: 'auditSnapshot is required',
-            jobId,
-            projectId
+            jobId: sanitizedJobId,
+            projectId: sanitizedProjectId
           });
         }
 
@@ -77,14 +111,14 @@ class VideoWorker {
         res.json({
           success: true,
           message: 'Video generation job accepted with auditSnapshot',
-          jobId,
-          projectId,
+          jobId: sanitizedJobId,
+          projectId: sanitizedProjectId,
           hasAuditSnapshot: !!auditSnapshot
         });
 
-        // Process job asynchronously with auditSnapshot only (NO script)
-        this.processVideoJob(jobId, projectId, auditSnapshot).catch(error => {
-          console.error(`[VIDEO_WORKER] Job processing failed | jobId=${jobId}:`, error);
+        // Process job asynchronously with sanitized inputs and auditSnapshot only (NO script)
+        this.processVideoJob(sanitizedJobId, sanitizedProjectId, auditSnapshot).catch(error => {
+          console.error(`[VIDEO_WORKER] Job processing failed | jobId=${sanitizedJobId}:`, error);
         });
         
       } catch (error) {
@@ -209,13 +243,15 @@ class VideoWorker {
         
         console.log(`[VIDEO_WORKER] ✅ Fail-safe validation passed - proceeding with render`);
         
-        const videoPath = await this.renderVideoWithSlides(projectId, slidesWithAudio, audit);
+        const videoFileName = `${sanitizedProjectId}-${sanitizedJobId}.mp4`;
+        const videoPath = await this.renderVideoWithSlides(sanitizedProjectId, sanitizedJobId, slidesWithAudio, audit);
         console.log(`[VIDEO_WORKER] Render done | path=${videoPath}`);
         
         // Step 4: Update job with results
-        await this.updateJobStatus(jobId, 'completed', {
+        await this.updateJobStatus(sanitizedJobId, 'completed', {
           result_data: {
-            videoUrl: `http://localhost:5000/videos/${projectId}.mp4`,
+            videoUrl: `http://localhost:5000/videos/${videoFileName}`,
+            videoFileName: videoFileName,
             audioFiles: audioFiles,
             processingTime: Date.now(),
             retryCount,
@@ -230,11 +266,11 @@ class VideoWorker {
           }
         });
         
-        console.log(`[VIDEO_WORKER] Job completed | jobId=${jobId} | attempts=${retryCount + 1}`);
+        console.log(`[VIDEO_WORKER] Job completed | jobId=${sanitizedJobId} | attempts=${retryCount + 1}`);
         return; // Success, exit retry loop
         
       } catch (error) {
-        console.error(`[VIDEO_WORKER] Job attempt ${retryCount + 1} failed | jobId=${jobId}:`, error);
+        console.error(`[VIDEO_WORKER] Job attempt ${retryCount + 1} failed | jobId=${sanitizedJobId}:`, error);
         
         retryCount++;
         
@@ -243,9 +279,9 @@ class VideoWorker {
         
         if (shouldRetry && retryCount <= maxRetries) {
           const delay = Math.min(5000 * Math.pow(2, retryCount - 1), 30000); // Max 30s delay
-          console.log(`[VIDEO_WORKER] Retrying job in ${delay}ms | jobId=${jobId} | attempt=${retryCount + 1}/${maxRetries + 1}`);
+          console.log(`[VIDEO_WORKER] Retrying job in ${delay}ms | jobId=${sanitizedJobId} | attempt=${retryCount + 1}/${maxRetries + 1}`);
           
-          await this.updateJobStatus(jobId, 'retrying', {
+          await this.updateJobStatus(sanitizedJobId, 'retrying', {
             error: error.message,
             retryCount,
             maxRetries,
@@ -255,9 +291,9 @@ class VideoWorker {
           await this.sleep(delay);
         } else {
           // Final failure
-          console.error(`[VIDEO_WORKER] Job failed permanently | jobId=${jobId} | attempts=${retryCount}`);
+          console.error(`[VIDEO_WORKER] Job failed permanently | jobId=${sanitizedJobId} | attempts=${retryCount}`);
           
-          await this.updateJobStatus(jobId, 'failed', {
+          await this.updateJobStatus(sanitizedJobId, 'failed', {
             error: {
               message: error.message,
               stack: error.stack,
@@ -369,7 +405,7 @@ class VideoWorker {
           type: "projectOverview",
           title: projectName,
           subtitle: url,
-          narration: `${projectName} scores ${scores.overall || 0} out of 100 — not because the business isn't good, but because the website isn't communicating that to Google. Let's break down exactly why.`,
+          narration: `${projectName} scores ${scores.overall || 0} out of 100 — not because the business isn't good, but because the website isn't communicating that to search engines. Let's break down exactly why.`,
           data: {
             projectName,
             url,
@@ -417,7 +453,7 @@ class VideoWorker {
           type: "mediumIssues",
           title: "Medium Priority Issues",
           subtitle: `Showing top ${mediumIssues.length} of ${issueDistribution.medium || 0} issues`,
-          narration: `Your medium priority issues aren't urgent, but they're adding up quietly. Resolve these and you're not just fixing problems — you're sending Google a signal that this site is actively maintained and trustworthy.`,
+          narration: `Your medium priority issues aren't urgent, but they're adding up quietly. Resolve these and you're not just fixing problems — you're sending search engines a signal that this site is actively maintained and trustworthy.`,
           data: {
             issues: mediumIssues,
             count: mediumIssues.length,
@@ -429,7 +465,7 @@ class VideoWorker {
           type: "lowIssues",
           title: "Low Priority Issues",
           subtitle: `Showing top ${lowIssues.length} of ${issueDistribution.low || 0} issues`,
-          narration: `Even the low priority items matter. Small fixes, but each one removed is one less reason for Google to rank someone else above you.`,
+          narration: `Even the low priority items matter. Small fixes, but each one removed is one less reason for search engines to rank someone else above you.`,
           data: {
             issues: lowIssues,
             count: lowIssues.length,
@@ -441,7 +477,7 @@ class VideoWorker {
           type: "technicalHighlights",
           title: "Technical Highlights",
           subtitle: "Technical SEO Overview",
-          narration: `${scores.technicalHealth || 0} is decent — but all ${pagesCrawled || 0} pages are missing security headers, which Google flags as unsafe. Plus inconsistent H1 tags mean Google can't identify what your pages are actually about.`,
+          narration: `${scores.technicalHealth || 0} is decent — but all ${pagesCrawled || 0} pages are missing security headers, which search engines flag as unsafe. Plus inconsistent H1 tags mean search engines can't identify what your pages are actually about.`,
           data: {
             auditSnapshot: {
               technicalHighlights,
@@ -467,7 +503,7 @@ class VideoWorker {
           type: "coreWebVitals",
           title: "Core Web Vitals",
           subtitle: "User Experience Metrics",
-          narration: `Your main content takes ${this.getLCPValue(coreWebVitals?.mobile)} seconds to appear on mobile — Google's limit is 2.5. That gap is where your visitors lose patience and leave. Desktop is better, but still problematic.`,
+          narration: `Your main content takes ${this.getLCPValue(coreWebVitals?.mobile)} seconds to appear on mobile — search engine guidelines recommend 2.5. That gap is where your visitors lose patience and leave. Desktop is better, but still problematic.`,
           data: coreWebVitals
         }
       ];
@@ -556,7 +592,7 @@ class VideoWorker {
         type: "aiAnalysis",
         title: "AI Analysis Overview",
         subtitle: "AI Search Readiness Summary",
-        narration: `And now the most important score in today's world — AI Visibility. ChatGPT, Claude, Perplexity, Google AI Overviews — these are the new search engines. People aren't just Googling anymore, they're asking AI. And AI decides who to mention, who to recommend, who to trust. Your score is ${scores.aiVisibility || 0} — meaning right now, you're largely invisible in that conversation. This is the score that will define the next 5 years of your online presence.`,
+        narration: `And now the most important score in today's world — AI Visibility. ChatGPT, Claude, Perplexity, AI search overviews — these are the new search engines. People aren't just searching online anymore, they're asking AI. And AI decides who to mention, who to recommend, who to trust. Your score is ${scores.aiVisibility || 0} — meaning right now, you're largely invisible in that conversation. This is the score that will define the next 5 years of your online presence.`,
         data: {
           score: scores.aiVisibility || 0,
           summary: aiAnalysis.summary || "AI analysis data unavailable",
@@ -1002,11 +1038,12 @@ class VideoWorker {
     }
   }
 
-  async renderVideoWithSlides(projectId, slidesWithAudio, auditSnapshot) {
+  async renderVideoWithSlides(projectId, jobId, slidesWithAudio, auditSnapshot) {
     try {
       // Dynamic video output path using environment variable or resolved path
       const videoDir = path.join(this.backendPublicPath, 'videos');
-      const videoPath = path.join(videoDir, `${projectId}.mp4`);
+      const videoFileName = `${projectId}-${jobId}.mp4`;
+      const videoPath = path.join(videoDir, videoFileName);
       
       console.log(`[VIDEO_WORKER] 🎬 Video output path: ${videoPath}`);
       console.log(`[VIDEO_WORKER] 📁 Video directory: ${videoDir}`);

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 class DataForSEOClient:
     """Client for the DataForSEO Related Keywords API."""
 
-    API_URL = "https://api.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live"
+    API_URL = "https://sandbox.dataforseo.com/v3/dataforseo_labs/google/related_keywords/live"
     MAX_RETRIES = 3
     RETRY_BACKOFF_BASE = 2  # seconds
 

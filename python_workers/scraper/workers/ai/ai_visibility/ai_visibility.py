@@ -23,7 +23,7 @@ from contextlib import contextmanager
 
 # Local imports
 from scraper.shared.fetcher import fetch_html
-from db import seo_internal_links, seo_ai_visibility, seo_ai_visibility_project, seo_ai_internal_links
+from db import seo_internal_links, seo_ai_visibility, seo_ai_visibility_project, seo_ai_internal_links, seoprojects
 
 # ==================== PHASE 2: AI-READY EXTRACTION LAYER ====================
 
@@ -4046,6 +4046,22 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
     print(f"[AI_VISIBILITY] Starting | jobId={job.jobId}")
     print(f"[AI_VISIBILITY] aiProjectId={aiProjectId}")
     print(f"[AI_VISIBILITY] projectId={job.projectId}")
+    
+    # CRITICAL LOG: Check if project keywords are accessed during AI visibility
+    if job.projectId and job.projectId != 'null':
+        try:
+            seo_project = seoprojects.find_one({"_id": ObjectId(job.projectId)})
+            if seo_project:
+                print(f"🔍 DEBUG: AI Visibility worker found SEO project:", {
+                    "projectId": job.projectId,
+                    "projectKeywords": seo_project.get("keywords", []),
+                    "projectKeywordsString": str(seo_project.get("keywords", [])),
+                    "projectName": seo_project.get("project_name", "unknown")
+                })
+            else:
+                print(f"🔍 DEBUG: AI Visibility worker - SEO project not found for projectId={job.projectId}")
+        except Exception as e:
+            print(f"🔍 DEBUG: AI Visibility worker - Error fetching SEO project: {e}")
     
     # === PHASE 1 SAFETY ADDITION ===
     # ENGINEER-LEVEL FIX: Use time-based timeout check instead of signals

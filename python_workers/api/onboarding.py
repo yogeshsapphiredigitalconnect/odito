@@ -385,6 +385,20 @@ def check_ranking(req: CheckRankingRequest):
     clean_domain = normalize_domain(req.domain)
     results: List[KeywordRank] = []
 
+    # CRITICAL LOG: Capture keywords received at Python worker
+    print(f"🔍 DEBUG: Python worker received keywords:", {
+        "request_keywords": req.keywords,
+        "keywords_type": type(req.keywords),
+        "keywords_length": len(req.keywords) if req.keywords else 0,
+        "keywords_string": str(req.keywords),
+        "full_request": {
+            "domain": req.domain,
+            "keywords": req.keywords,
+            "location_code": req.location_code,
+            "language_code": req.language_code
+        }
+    })
+
     headers = {
         "Authorization": _auth_header(),
         "Content-Type": "application/json",

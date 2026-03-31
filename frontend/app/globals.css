@@ -1011,6 +1011,16 @@
   --g2: linear-gradient(135deg,#9d4edd,#ff2d9b);
 }
 
+/* Hide scrollbar utility */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari */
+}
+
 /* Technical Checks Components */
 .fix-ai-btn {
   display: inline-flex; align-items: center; gap: 5px;
