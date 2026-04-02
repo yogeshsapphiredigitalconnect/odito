@@ -271,7 +271,7 @@ def execute_link_discovery(job: LinkDiscoveryJob):
         
         try:
             # Use new recursive sitemap discovery with built-in strict filtering
-            discovered_sitemap_urls, sitemap_discovery_stats = discover_all_sitemap_urls(
+            discovered_sitemap_urls, url_metadata, sitemap_discovery_stats = discover_all_sitemap_urls(
                 url,  # Use normalized main URL
                 max_depth=5,
                 max_sitemaps=50
@@ -292,6 +292,7 @@ def execute_link_discovery(job: LinkDiscoveryJob):
             # Fallback to basic extraction if recursive discovery fails
             try:
                 sitemap_urls = extract_links_from_sitemap(url)
+                url_metadata = {}  # Empty metadata for fallback
                 for sitemap_url in sitemap_urls:
                     normalized = normalize_url(sitemap_url)
                     all_internal_urls.add(normalized)
@@ -306,6 +307,7 @@ def execute_link_discovery(job: LinkDiscoveryJob):
                 }
             except Exception as fallback_error:
                 print(f"[WORKER] Fallback sitemap extraction also failed | jobId={job.jobId} | error=\"{str(fallback_error)}\"")
+                url_metadata = {}  # Empty metadata for fallback
                 sitemap_discovery_stats = {
                     'sitemaps_processed': 0,
                     'sitemap_indexes_found': 0,
@@ -370,13 +372,25 @@ def execute_link_discovery(job: LinkDiscoveryJob):
                 if normalized_link_url and normalized_link_url not in seen_internal:
                     seen_internal.add(normalized_link_url)
                     
-                    internal_docs.append({
+                    # Get metadata for this URL if available
+                    metadata = url_metadata.get(normalized_link_url, {})
+                    
+                    # Build document with optional type and sourceSitemap fields
+                    doc = {
                         "url": normalized_link_url,
                         "sourceUrl": url,  # Use normalized main URL as source
                         "seo_jobId": ObjectId(job.jobId),
                         "projectId": ObjectId(job.projectId),
                         "discoveredAt": datetime.utcnow()
-                    })
+                    }
+                    
+                    # Add type and sourceSitemap if available (backward compatibility)
+                    if "type" in metadata:
+                        doc["type"] = metadata["type"]
+                    if "sourceSitemap" in metadata:
+                        doc["sourceSitemap"] = metadata["sourceSitemap"]
+                    
+                    internal_docs.append(doc)
                     
                     if is_job_cancelled(job.jobId):
                         print(f"🛑 Job {job.jobId} cancelled during internal link processing")

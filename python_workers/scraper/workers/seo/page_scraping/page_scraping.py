@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 # Local imports
 
 from scraper.shared.orchestrator import scrape_page_data
-
+from scraper.shared.url_selector import get_top_urls
 # from scraper.shared.screenshots import clear_screenshot_registry, take_page_screenshot  # DISABLED
 
 from scraper.shared.utils import normalize_url, get_registrable_domain
@@ -291,11 +291,14 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
     try:
 
-        # Apply 25-page limit to scraping (URL discovery remains unlimited)
-        urls_to_scrape = job.urls[:25]  # Take only first 25 URLs for processing
+        # Use SAME deterministic type-based URL selection as Headless Worker
+        urls_to_scrape = get_top_urls(job.projectId, limit=25)
+        
         total_pages = len(urls_to_scrape)
         
-        print(f"[WORKER] PAGE_SCRAPING started | jobId={job.jobId} | totalUrls={len(job.urls)} | limitedTo={len(urls_to_scrape)}")
+        print(f"[DEBUG] Initial selected URLs: {len(urls_to_scrape)} URLs")
+        print(f"[DEBUG] URLs: {urls_to_scrape[:5]}...")  # Show first 5 for debugging
+        print(f"[WORKER] PAGE_SCRAPING started | jobId={job.jobId} | selectedUrls={total_pages} | sameLogicAsHeadless=true")
 
         
 
@@ -549,7 +552,11 @@ def execute_page_scraping_logic(job: PageScrapingJob):
         # Process URLs with ThreadPoolExecutor (max 6 workers as required)
 
         all_results = []
-
+        
+        # DEBUG: Verify URLs before scraping (no modifications should happen)
+        print(f"[DEBUG] Before scraping: {len(urls_to_scrape)} URLs ready for processing")
+        print(f"[DEBUG] Final URLs to scrape: {urls_to_scrape[:5]}...")  # Show first 5
+        
         with ThreadPoolExecutor(max_workers=6) as executor:
 
             # Submit only first 25 scraping tasks

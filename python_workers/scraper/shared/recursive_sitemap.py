@@ -14,6 +14,46 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Type priority for conflict resolution (lower number = higher priority)
+TYPE_PRIORITY = {
+    "main": 1,
+    "service": 2,
+    "blog": 3,
+    "category": 4,
+    "other": 99
+}
+
+def classify_sitemap_type(sitemap_url: str) -> str:
+    """
+    Classify sitemap type based on URL patterns.
+    
+    Args:
+        sitemap_url: Full sitemap URL
+        
+    Returns:
+        Type string: "main", "service", "blog", "category", or "other"
+    """
+    sitemap_lower = sitemap_url.lower()
+    
+    # Service patterns
+    if "service" in sitemap_lower:
+        return "service"
+    
+    # Blog patterns
+    if "blog" in sitemap_lower or "post" in sitemap_lower:
+        return "blog"
+    
+    # Main page patterns
+    if "page" in sitemap_lower or "standard" in sitemap_lower:
+        return "main"
+    
+    # Category patterns
+    if "category" in sitemap_lower:
+        return "category"
+    
+    # Default fallback
+    return "other"
+
 class RecursiveSitemapDiscovery:
     """Universal recursive sitemap discovery system for any CMS structure"""
     
@@ -38,6 +78,7 @@ class RecursiveSitemapDiscovery:
         
         # Tracking
         self.discovered_urls: Set[str] = set()
+        self.url_metadata: dict = {}  # url -> {"type": str, "sourceSitemap": str}
         self.processed_sitemaps: Set[str] = set()
         self.sitemap_count = 0
         self.depth_map = {}  # Track depth of each sitemap
@@ -368,6 +409,10 @@ class RecursiveSitemapDiscovery:
             internal_urls = []
             filtered_count = 0
             
+            # Classify this sitemap's type
+            sitemap_type_classification = classify_sitemap_type(sitemap_url)
+            logger.info(f"[TYPE-DETECT] sitemap={sitemap_url}, type={sitemap_type_classification}")
+            
             for url in urls:
                 if self.is_valid_internal_url(url):
                     normalized_url = self.normalize_url(url)
@@ -378,8 +423,27 @@ class RecursiveSitemapDiscovery:
                         continue
                     
                     if normalized_url not in self.discovered_urls:
+                        # First time seeing this URL
                         self.discovered_urls.add(normalized_url)
+                        self.url_metadata[normalized_url] = {
+                            "type": sitemap_type_classification,
+                            "sourceSitemap": sitemap_url
+                        }
                         internal_urls.append(normalized_url)
+                        logger.info(f"[URL-SAVE] url={normalized_url}, type={sitemap_type_classification}, sitemap={sitemap_url}")
+                    else:
+                        # URL already exists, apply priority logic
+                        existing_metadata = self.url_metadata.get(normalized_url, {})
+                        existing_type = existing_metadata.get("type", "other")
+                        
+                        # Keep the type with higher priority (lower number)
+                        if TYPE_PRIORITY.get(sitemap_type_classification, 99) < TYPE_PRIORITY.get(existing_type, 99):
+                            # Update with higher priority type
+                            self.url_metadata[normalized_url] = {
+                                "type": sitemap_type_classification,
+                                "sourceSitemap": sitemap_url
+                            }
+                            logger.info(f"[URL-PRIORITY-UPDATE] url={normalized_url}, old_type={existing_type}, new_type={sitemap_type_classification}")
             
             logger.info(f"[DISCOVERY] Added {len(internal_urls)} internal URLs from {sitemap_url} ({filtered_count} filtered)")
             self.stats['total_urls'] += len(internal_urls)
@@ -462,12 +526,12 @@ class RecursiveSitemapDiscovery:
         logger.info(f"[DISCOVERY] Initial sitemap discovery found {len(sitemaps)} valid business sitemaps")
         return sitemaps
     
-    def discover_all_urls(self) -> Set[str]:
+    def discover_all_urls(self) -> Tuple[Set[str], dict]:
         """
         Main method to discover all URLs from recursive sitemap processing
         
         Returns:
-            Set of unique internal URLs
+            Tuple of (urls_set, url_metadata_dict)
         """
         start_time = time.time()
         logger.info(f"[DISCOVERY] Starting recursive sitemap discovery for {self.base_url}")
@@ -477,7 +541,7 @@ class RecursiveSitemapDiscovery:
         
         if not initial_sitemaps:
             logger.warning(f"[DISCOVERY] No sitemaps found for {self.base_url}")
-            return set()
+            return set(), {}
         
         # Process sitemaps recursively
         for sitemap_url in initial_sitemaps:
@@ -499,7 +563,7 @@ class RecursiveSitemapDiscovery:
         logger.info(f"[DISCOVERY] Failed sitemaps: {self.stats['failed_sitemaps']}")
         logger.info(f"[DISCOVERY] Max recursion depth used: {self.stats['recursion_depth_used']}")
         
-        return self.discovered_urls
+        return self.discovered_urls, self.url_metadata
     
     def get_statistics(self) -> dict:
         """Get discovery statistics"""
@@ -512,7 +576,7 @@ class RecursiveSitemapDiscovery:
         }
 
 
-def discover_all_sitemap_urls(base_url: str, max_depth: int = 5, max_sitemaps: int = 50) -> Tuple[Set[str], dict]:
+def discover_all_sitemap_urls(base_url: str, max_depth: int = 5, max_sitemaps: int = 50) -> Tuple[Set[str], dict, dict]:
     """
     Convenience function to discover all URLs from sitemaps
     
@@ -522,13 +586,13 @@ def discover_all_sitemap_urls(base_url: str, max_depth: int = 5, max_sitemaps: i
         max_sitemaps: Maximum sitemaps to process
         
     Returns:
-        Tuple of (urls_set, statistics_dict)
+        Tuple of (urls_set, url_metadata_dict, statistics_dict)
     """
     discovery = RecursiveSitemapDiscovery(base_url, max_depth, max_sitemaps)
-    urls = discovery.discover_all_urls()
+    urls, url_metadata = discovery.discover_all_urls()
     stats = discovery.get_statistics()
     
-    return urls, stats
+    return urls, url_metadata, stats
 
 
 # Example usage and testing

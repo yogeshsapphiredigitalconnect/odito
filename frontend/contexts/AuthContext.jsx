@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasProjects, setHasProjects] = useState(null); // null = not checked yet
 
   useEffect(() => {
     // Check if user is authenticated on app load
@@ -77,9 +78,38 @@ export function AuthProvider({ children }) {
     } finally {
       apiService.removeToken();
       setUser(null);
+      setHasProjects(null); // Clear project cache on logout
       // Clear payment intent on logout
       clearPaymentIntent();
     }
+  };
+
+  const checkProjectExistence = async () => {
+    // If we already know the result, return it
+    if (hasProjects !== null) {
+      return hasProjects;
+    }
+
+    try {
+      console.log('🔍 AuthContext: Checking project existence...');
+      const response = await apiService.getProjects(1, 1);
+      const projects = response?.data?.projects || [];
+      const projectExists = projects.length > 0;
+      
+      setHasProjects(projectExists);
+      console.log('📊 AuthContext: Projects check result', { projectExists, count: projects.length });
+      
+      return projectExists;
+    } catch (error) {
+      console.error('❌ AuthContext: Failed to check projects', error);
+      setHasProjects(false);
+      return false;
+    }
+  };
+
+  const clearProjectCache = () => {
+    setHasProjects(null);
+    localStorage.removeItem('user_projects_cache');
   };
 
   const value = {
@@ -87,6 +117,9 @@ export function AuthProvider({ children }) {
     isLoading,
     isInitialized,
     isAuthenticated: !!user,
+    hasProjects,
+    checkProjectExistence,
+    clearProjectCache,
     login,
     register,
     logout,

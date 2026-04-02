@@ -23,7 +23,7 @@ from contextlib import contextmanager
 
 # Local imports
 from scraper.shared.fetcher import fetch_html
-from db import seo_internal_links, seo_ai_visibility, seo_ai_visibility_project, seo_ai_internal_links, seoprojects
+from db import seo_ai_visibility, seo_ai_visibility_project, seoprojects
 
 # ==================== PHASE 2: AI-READY EXTRACTION LAYER ====================
 
@@ -4024,6 +4024,266 @@ def analyze_single_url(url: str, job: AIVisibilityJob, aiProjectId: str = None) 
             'error': str(e)
         }
 
+def analyze_single_url_with_html(url: str, raw_html: str, job: AIVisibilityJob, aiProjectId: str = None) -> dict:
+    """Optimized version: Analyze a single URL using provided HTML (no database fetch)"""
+    try:
+        # Check cancellation before processing each URL
+        if is_job_cancelled(job.jobId):
+            return None
+        
+        # === CRITICAL FIX: Use aiProjectId from job if not provided ===
+        if not aiProjectId:
+            aiProjectId = job.aiProjectId or job.projectId
+        
+        print(f"[AI_VISIBILITY] Analyzing URL with provided HTML: {url}")
+        
+        # Validate HTML content
+        if not raw_html:
+            return {
+                'projectId': ObjectId(aiProjectId),
+                'ai_jobId': ObjectId(job.jobId),
+                'url': url,
+                'http_status_code': 0,
+                'response_time_ms': 0,
+                'error': 'No HTML provided',
+                'skipped': True
+            }
+        
+        # Check if content is actually HTML (basic check)
+        if not raw_html or ('<!DOCTYPE' not in raw_html and '<html' not in raw_html.lower()):
+            return {
+                'projectId': ObjectId(aiProjectId),
+                'ai_jobId': ObjectId(job.jobId),
+                'url': url,
+                'http_status_code': 200,  # Page exists but content is not HTML
+                'response_time_ms': 0,
+                'error': 'Content is not HTML',
+                'skipped': True
+            }
+        
+        print(f"[AI_VISIBILITY] Using provided HTML for {url} ({len(raw_html)} chars)")
+        
+        # Set default status_code and response_time (since we don't have page_data)
+        status_code = 200
+        response_time_ms = 0
+        
+        # === PART 3: PERFORMANCE GUARDS ===
+        # Check HTML size
+        html_size = len(raw_html.encode('utf-8'))
+        MAX_HTML_SIZE = 5 * 1024 * 1024  # 5MB
+        
+        if html_size > MAX_HTML_SIZE:
+            print(f"[PERFORMANCE_GUARD] HTML too large: {html_size} bytes > {MAX_HTML_SIZE} bytes")
+            return {
+                'projectId': ObjectId(aiProjectId),
+                'ai_jobId': ObjectId(job.jobId),
+                'url': url,
+                'http_status_code': status_code,
+                'response_time_ms': response_time_ms,
+                'error': f'HTML too large: {html_size} bytes',
+                'performance_guard_triggered': 'html_size'
+            }
+        
+        # === CRITICAL FIX: Parse HTML to create soup object ===
+        soup = BeautifulSoup(raw_html, 'html.parser')
+        
+        # DOM node cap guard
+        MAX_DOM_NODES = 15000
+        dom_nodes = len(soup.find_all())
+        
+        if dom_nodes > MAX_DOM_NODES:
+            print(f"[PERFORMANCE_GUARD] Too many DOM nodes: {dom_nodes} > {MAX_DOM_NODES}")
+            soup.decompose()
+            return {
+                'projectId': ObjectId(aiProjectId),
+                'ai_jobId': ObjectId(job.jobId),
+                'url': url,
+                'http_status_code': status_code,
+                'response_time_ms': response_time_ms,
+                'error': f'Too many DOM nodes: {dom_nodes}',
+                'performance_guard_triggered': 'dom_nodes'
+            }
+        
+        print(f"[PERFORMANCE_GUARD] DOM nodes: {dom_nodes} (within limit {MAX_DOM_NODES})")
+        
+        # Extract comprehensive AI visibility signals
+        ai_signals = extract_comprehensive_signals(raw_html, url)
+        
+        # Calculate entity density and mentions AFTER parsed_entities is populated
+        # Use parsed_entities from ai_signals for accurate entity counting
+        parsed_entities = ai_signals.get('parsed_entities', [])
+        entity_graph = ai_signals.get('unified_entity_graph', {})
+        
+        # Get title and meta description for broader entity search
+        page_title = soup.title.string if soup.title else ""
+        meta_desc_tag = soup.find('meta', attrs={'name': 'description'})
+        meta_desc = meta_desc_tag.get('content', '') if meta_desc_tag else ""
+        
+        # Use main_text for entity density calculation (will be available later)
+        main_text = ""  # Placeholder, will be updated after main_content extraction
+        expanded_text = f"{page_title} {meta_desc} {main_text}"
+        entity_metrics = calculate_entity_density(entity_graph, expanded_text, 0, ai_signals)  # word_count will be updated later
+        
+        print(f"[ENTITY_METRICS_FIX] Calculated entity_metrics with {len(parsed_entities)} parsed_entities")
+        print(f"[ENTITY_METRICS_FIX] Entity count: {entity_metrics.get('entity_count', 0)}")
+        print(f"[ENTITY_METRICS_FIX] Entity mentions: {entity_metrics.get('primary_entity_mentions_in_text', 0)}")
+        
+        # === PHASE 2: AI-READY EXTRACTION LAYER ===
+        # Extract main content for accurate analysis
+        main_content = extract_main_content(soup, url)
+        
+        # === CRITICAL FIX: Handle None main_content gracefully ===
+        if not main_content:
+            print("[PHASE2] Main content extraction returned None - using fallback")
+            main_content = {
+                'main_content_text': '',
+                'content_extraction_method': 'failed',
+                'nav_keyword_counts': {},
+                'isolation_warnings': ['Main content extraction failed']
+            }
+        
+        main_text = main_content.get('main_content_text', '')
+        
+        # Extract heading hierarchy
+        heading_metrics = extract_heading_hierarchy(soup)
+        
+        # Extract paragraph structure metrics
+        paragraph_metrics = extract_paragraph_metrics(main_text)
+        
+        # Extract readability metrics
+        readability_metrics = calculate_flesch_readability(main_text)
+        
+        # Detect FAQ content
+        faq_metrics = detect_faq_content(soup, main_text)
+        
+        # Calculate real word count early to use in metrics
+        word_count = extract_real_word_count(ai_signals, raw_html)
+        
+        # Recalculate entity_metrics with actual main_text and word_count
+        # FIX: Use full visible text for entity mention counting, not just main_content
+        
+        # Remove script, style, and other non-content elements (same as word count)
+        for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+            element.decompose()
+        
+        # Get visible text (same as word count)
+        visible_text = soup.get_text(separator=' ', strip=True)
+        
+        # Clean up text (same as word count)
+        import re
+        cleaned_text = re.sub(r'\s+', ' ', visible_text)
+        
+        expanded_text = f"{page_title} {meta_desc} {cleaned_text}"
+        print(f"[ENTITY_FIX] Using full visible text for mention counting: {len(cleaned_text)} chars")
+        
+        entity_metrics = calculate_entity_density(entity_graph, expanded_text, word_count, ai_signals)
+        
+        print(f"[ENTITY_METRICS_RECALC] Recalculated entity_metrics with word_count={word_count}")
+        print(f"[ENTITY_METRICS_RECALC] Final entity count: {entity_metrics.get('entity_count', 0)}")
+        print(f"[ENTITY_METRICS_RECALC] Final entity mentions: {entity_metrics.get('primary_entity_mentions_in_text', 0)}")
+        
+        # Extract readability metrics
+        readability_metrics = calculate_flesch_readability(main_text)
+        
+        # SURGICAL FIX: Calculate paragraph count from full DOM for consistency
+        # Get all paragraph elements from the entire page, not just main_content
+        all_paragraphs = soup.find_all('p')
+        shared_paragraph_count = len(all_paragraphs)
+        
+        print("=== PARAGRAPH COUNT DEBUG - PIPELINE B ===")
+        print(f"method used: soup.find_all('p') - full DOM <p> tags")
+        print(f"raw paragraph elements found: {len(all_paragraphs)}")
+        print(f"paragraph_count assigned: {shared_paragraph_count}")
+        print("=== END PIPELINE B ===")
+        print(f"[PARAGRAPH_FIX] Using full DOM paragraph count: {shared_paragraph_count}")
+        
+        # === CRITICAL FIX: Update ai_signals with recalculated metrics ===
+        # This ensures the final output has consistent values
+        ai_signals.update({
+            'paragraph_count': shared_paragraph_count,
+            'entity_metrics': entity_metrics,
+            'word_count': word_count,
+            'main_content_metrics': main_content,
+            'heading_metrics': heading_metrics,
+            'paragraph_metrics': paragraph_metrics,
+            'readability_metrics': readability_metrics,
+            'faq_metrics': faq_metrics
+        })
+        
+        # === FINAL OUTPUT CONSTRUCTION ===
+        # Use CANONICAL_SIGNALS as the single source of truth for final output
+        CANONICAL_SIGNALS = [
+            "content_signals",
+            "entity_signals", 
+            "schema_signals",
+            "metadata_signals",
+            "image_signals",
+            "video_signals",
+            "organization_signals",
+            "page_type_signals",
+            "relationship_signals",
+            "entity_graph",
+            "parsed_entities",
+            "unified_entity_graph",
+            "architecture_violations",
+            "integrity_metrics",
+            "entity_coverage",
+            "entity_density",
+            "entity_per_1000_words",
+            "primary_entity_mentions_in_text",
+            "main_content_metrics",
+            "heading_metrics",
+            "paragraph_metrics", 
+            "readability_metrics",
+            "faq_metrics",
+            "content_quality_score",
+            "ai_readiness_score",
+            "entity_density_score",
+            "schema_completeness_score",
+            "overall_page_score",
+            "ai_snippet_probability",
+            "ai_citation_rate",
+            "conversational_content",
+            "entity_coverage",
+            "knowledge_graph_presence",
+            "voice_search_readiness",
+            "lazy_loading_detected",
+            "primary_entity_mentions_in_text"
+        ]
+        
+        final_output = {
+            'projectId': ObjectId(aiProjectId),  # 🧠 Always use AI project ID for output
+            'ai_jobId': ObjectId(job.jobId),
+            'url': url,
+            'http_status_code': status_code,
+            'response_time_ms': response_time_ms,
+            'extraction_timestamp': datetime.utcnow()
+        }
+        
+        # Spread base signals to ensure all nested structures are still preserved 
+        # (as expected by DB schema, like quality_flags, content_metrics, etc)
+        for key, value in ai_signals.items():
+            if key not in CANONICAL_SIGNALS:
+               final_output[key] = value
+        
+        # Explicitly map CANONICAL_SIGNALS to guarantee they are the single source of truth
+        for signal in CANONICAL_SIGNALS:
+            if signal in ai_signals:
+                final_output[signal] = ai_signals[signal]
+        
+        return final_output
+        
+    except Exception as e:
+        print(f"Error analyzing {url}: {e}")
+        return {
+            'projectId': ObjectId(aiProjectId),  # 🧠 Always use AI project ID for output
+            'ai_jobId': ObjectId(job.jobId),
+            'url': url,
+            'http_status_code': 0,
+            'response_time_ms': 0,
+            'error': str(e)
+        }
+
 # === PHASE 1 SAFETY ADDITION ===
 # Job timeout protection - ENGINEER-LEVEL FIX
 # Use time-based timeout instead of signal.alarm for cross-platform compatibility
@@ -4077,134 +4337,83 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
         fetcher.SELENIUM_AVAILABLE = False
         
         try:
-            # Determine collection based on AI project isStandalone status
-            internal_links = []
-            collection_used = "unknown"
+            # === CRITICAL FIX: Use ONLY Page Scraper output (seo_page_data) as single source of truth ===
+            print(f"[AI] Using Page Scraper data only - SINGLE SOURCE OF TRUTH")
             
-            if aiProjectId:
-                # Fetch AI project to check isStandalone status
-                print(f"[WORKER] Fetching AI project | aiProjectId={aiProjectId}")
+            # Import seo_page_data collection
+            from db import seo_page_data
+            
+            # Determine project ID for query
+            project_object_id = None
+            if job.projectId and job.projectId != 'null':
+                project_object_id = ObjectId(job.projectId)
+            elif aiProjectId:
+                # For AI projects, get the associated SEO project ID
                 ai_project = seo_ai_visibility_project.find_one({"_id": ObjectId(aiProjectId)})
-                
-                if not ai_project:
-                    print(f"[WORKER] ERROR: AI project not found | aiProjectId={aiProjectId}")
-                    return {
-                        "status": "error",
-                        "jobId": job.jobId,
-                        "message": f"AI project not found: {aiProjectId}",
-                        "stats": {"pages_processed": 0}
-                    }
-                
-                is_standalone = ai_project.get("isStandalone", False)
-                print(f"[WORKER] AI project status | isStandalone={is_standalone}")
-                
-                if is_standalone:
-                    # Standalone AI project - use seo_ai_internal_links
-                    collection_used = "seo_ai_internal_links"
-                    print(f"[WORKER] Using standalone AI project data | aiProjectId={aiProjectId}")
-                    print(f"[WORKER] Querying seo_ai_internal_links collection")
-                    internal_links_cursor = seo_ai_internal_links.find({
-                        "aiProjectId": ObjectId(aiProjectId)
-                    }).limit(50)
-                else:
-                    # Non-standalone AI project - use seo_internal_links with SEO project ID
+                if ai_project:
                     seo_project_id = ai_project.get("seoProjectId")
-                    if not seo_project_id:
-                        print(f"[WORKER] ERROR: Non-standalone AI project missing seoProjectId | aiProjectId={aiProjectId}")
-                        return {
-                            "status": "error",
-                            "jobId": job.jobId,
-                            "message": f"Non-standalone AI project missing seoProjectId: {aiProjectId}",
-                            "stats": {"pages_processed": 0}
-                        }
-                    
-                    collection_used = "seo_internal_links"
-                    print(f"[WORKER] Using non-standalone AI project data | aiProjectId={aiProjectId} | seo_project_id={seo_project_id}")
-                    print(f"[WORKER] Querying seo_internal_links collection with seo_jobId from TECHNICAL_DOMAIN")
-                    # Get source_job_id from TECHNICAL_DOMAIN job input_data
-                    input_data = getattr(job, 'input_data', {}) or {}
-                    source_job_id = input_data.get('source_job_id')
-                    if source_job_id:
-                        internal_links_cursor = seo_internal_links.find({
-                            "seo_jobId": ObjectId(source_job_id)  # Use source_job_id from TECHNICAL_DOMAIN job
-                        }).limit(50)
-                    else:
-                        # Fallback if no source_job_id found
-                        print(f"[WORKER] WARNING: No source_job_id found, using seo_project_id fallback")
-                        internal_links_cursor = seo_internal_links.find({
-                            "projectId": ObjectId(seo_project_id)
-                        }).limit(50)
-                
-                internal_links = list(internal_links_cursor)
-                
-                # Apply 25-page limit to AI analysis (URL discovery remains unlimited)
-                links_to_analyze = internal_links[:25]  # Take only first 25 URLs for processing
-                
-                print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links | limitedTo={len(links_to_analyze)}")
-                
-            elif job.projectId and job.projectId != 'null':
-                # No aiProjectId but has projectId - use seo_internal_links
-                collection_used = "seo_internal_links"
-                print(f"[WORKER] Using existing SEO project data | projectId={job.projectId}")
-                print(f"[WORKER] Querying seo_internal_links collection with seo_jobId")
-                input_data = getattr(job, 'input_data', {}) or {}
-                source_job_id = input_data.get('source_job_id')
-                if source_job_id:
-                    internal_links_cursor = seo_internal_links.find({
-                        "seo_jobId": ObjectId(source_job_id)
-                    }).limit(50)
-                else:
-                    # Fallback to old query method if no source_job_id
-                    internal_links_cursor = seo_internal_links.find({
-                        "projectId": ObjectId(job.projectId)
-                    }).limit(50)
-                
-                internal_links = list(internal_links_cursor)
-                
-                # Apply 25-page limit to AI analysis (URL discovery remains unlimited)
-                links_to_analyze = internal_links[:25]  # Take only first 25 URLs for processing
-                
-                print(f"[WORKER] Collection selected: {collection_used} | Found {len(internal_links)} links | limitedTo={len(links_to_analyze)}")
-                
-            else:
-                print(f"[WORKER] No project data available | projectId={job.projectId} | aiProjectId={aiProjectId}")
-                internal_links = []
-                collection_used = "none"
+                    if seo_project_id:
+                        project_object_id = ObjectId(seo_project_id)
             
-            # Apply 25-page limit to AI analysis (URL discovery remains unlimited)
-            links_to_analyze = internal_links[:25] if internal_links else []  # Take only first 25 URLs for processing
-            
-            if not links_to_analyze:
-                print(f"[AI_VISIBILITY] No URLs found for job | jobId={job.jobId}")
+            if not project_object_id:
+                print(f"[AI] ERROR: No valid project ID found for Page Scraper data")
                 return {
-                    "status": "no_urls",
+                    "status": "error",
                     "jobId": job.jobId,
-                    "message": "No URLs found to analyze",
+                    "message": "No valid project ID found for Page Scraper data",
+                    "stats": {"pages_processed": 0}
+                }
+            
+            # Fetch pages ONLY from seo_page_data (Page Scraper output)
+            print(f"[AI] Querying seo_page_data collection for projectId={project_object_id}")
+            pages = list(
+                seo_page_data.find({
+                    "projectId": project_object_id,
+                    "extraction_status": "SUCCESS",
+                    "raw_html": { "$exists": True, "$ne": None }
+                })
+                .sort("url", 1)
+                .limit(25)
+            )
+            
+            print(f"[AI] Pages fetched from Page Scraper: {len(pages)}")
+            if pages:
+                print(f"[AI] URLs: {[p['url'] for p in pages[:5]]}{'...' if len(pages) > 5 else ''}")
+            
+            # Safety check
+            if not pages:
+                print(f"[AI] No scraped pages found in seo_page_data - aborting AI visibility")
+                return {
+                    "status": "no_pages",
+                    "jobId": job.jobId,
+                    "message": "No scraped pages found in seo_page_data collection",
                     "stats": {"pages_processed": 0}
                 }
             
             # === ENGINEER-LEVEL FIX ===
             # Add timeout checks in main processing loop
-            print(f"[WORKER] Starting analysis of {len(internal_links)} URLs")
-            print(f"[AI_VISIBILITY] Analyzing pages: {len(internal_links)}")
-            print(f"[AI_VISIBILITY] Using HTML from database - NO HTTP REQUESTS")
-            print(f"[AI_VISIBILITY] Pages loaded from database: {len(internal_links)}")
+            print(f"[AI] Starting analysis of {len(pages)} URLs from Page Scraper")
+            print(f"[AI_VISIBILITY] Analyzing pages: {len(pages)}")
+            print(f"[AI_VISIBILITY] Using HTML from Page Scraper data - NO HTTP REQUESTS")
+            print(f"[AI_VISIBILITY] Pages loaded from seo_page_data: {len(pages)}")
             
             all_results = []
             successful_pages = 0
             failed_pages = 0
             
             # === FIX: Use deterministic progress calculation ===
-            total_pages = len(links_to_analyze)
+            total_pages = len(pages)
             print(f"[AI_VISIBILITY] Total pages to analyze: {total_pages}")
             
             with ThreadPoolExecutor(max_workers=4) as executor:
-                # Submit only first 25 analysis tasks
+                # Submit analysis tasks for each page from seo_page_data
                 futures = []
-                for link_doc in links_to_analyze:
-                    url = link_doc.get('url') if isinstance(link_doc, dict) else str(link_doc)
-                    if url:
-                        futures.append(executor.submit(analyze_single_url, url, job, aiProjectId))
+                for page in pages:
+                    url = page["url"]
+                    raw_html = page["raw_html"]
+                    if url and raw_html:
+                        # Pass both url and raw_html to avoid secondary database fetch
+                        futures.append(executor.submit(analyze_single_url_with_html, url, raw_html, job, aiProjectId))
                 
                 # Collect results in submission order for deterministic progress
                 for i, future in enumerate(futures):

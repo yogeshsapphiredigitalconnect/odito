@@ -22,6 +22,7 @@ from bson.objectid import ObjectId
 
 # Import database collections
 from db import seo_page_data
+from scraper.shared.url_selector import get_top_urls
 
 
 # ---------------------------------------------------------------------------
@@ -391,12 +392,22 @@ def execute_headless_accessibility(job):
 
     print(f"[HEADLESS_A11Y] Starting | jobId={job_id} | projectId={project_id} | timestamp={datetime.now(timezone.utc).isoformat()}")
 
-    # STEP 2: Fetch URLs directly from database with fallback logic
+    # STEP 2: Get URLs using deterministic type-based selection
     urls = []
     
-    # First try: Get URLs from seo_page_data (scraped pages)
+    # First try: Use deterministic type-based selection from seo_internal_links
     try:
-        # Convert projectId to ObjectId for MongoDB query
+        print(f"[HEADLESS_A11Y] Using deterministic type-based URL selection | projectId={project_id} | jobId={job_id}")
+        
+        # Use the shared URL selector for consistent results
+        urls = get_top_urls(project_id, limit=25)
+        
+        print(f"[HEADLESS_A11Y] Deterministic selection complete | totalUrls={len(urls)} | jobId={job_id}")
+        
+    except Exception as selection_error:
+        print(f"[HEADLESS_A11Y] Deterministic selection failed, falling back to scraped pages | jobId={job_id} | error={str(selection_error)}")
+        
+        # Fallback to original logic
         project_id_obj = ObjectId(project_id)
         print(f"[HEADLESS_A11Y] Fetching URLs from seo_page_data | projectId={project_id} | jobId={job_id}")
         
@@ -411,25 +422,22 @@ def execute_headless_accessibility(job):
         
         print(f"[HEADLESS_A11Y] seo_page_data fetch complete | totalUrls={len(urls)} | jobId={job_id} | pagesFound={len(pages)}")
         
-    except Exception as db_error:
-        print(f"[HEADLESS_A11Y] seo_page_data fetch failed | jobId={job_id} | error={str(db_error)}")
-
-    # Second try: If no scraped pages found, fetch from seo_internal_links (discovered URLs)
-    if not urls:
-        try:
-            print(f"[HEADLESS_A11Y] No scraped pages found, trying seo_internal_links | projectId={project_id} | jobId={job_id}")
-            
-            # Import internal links collection
-            from db import seo_internal_links
-            
-            # Query by projectId to get all discovered internal links for this project
-            internal_links = list(seo_internal_links.find({"projectId": project_id_obj}))
-            urls = [link["url"] for link in internal_links if link.get("url")]
-            
-            print(f"[HEADLESS_A11Y] seo_internal_links fetch complete | totalUrls={len(urls)} | jobId={job_id} | linksFound={len(internal_links)}")
-            
-        except Exception as fallback_error:
-            print(f"[HEADLESS_A11Y] seo_internal_links fallback failed | jobId={job_id} | error={str(fallback_error)}")
+        # If still no URLs, try seo_internal_links fallback
+        if not urls:
+            try:
+                print(f"[HEADLESS_A11Y] No scraped pages found, trying seo_internal_links | projectId={project_id} | jobId={job_id}")
+                
+                # Import internal links collection
+                from db import seo_internal_links
+                
+                # Query by projectId to get all discovered internal links for this project
+                internal_links = list(seo_internal_links.find({"projectId": project_id_obj}))
+                urls = [link["url"] for link in internal_links if link.get("url")]
+                
+                print(f"[HEADLESS_A11Y] seo_internal_links fallback complete | totalUrls={len(urls)} | jobId={job_id} | linksFound={len(internal_links)}")
+                
+            except Exception as fallback_error:
+                print(f"[HEADLESS_A11Y] seo_internal_links fallback failed | jobId={job_id} | error={str(fallback_error)}")
 
     # Third try: Use URLs from job input if provided (legacy support)
     if not urls and hasattr(job, 'urls') and job.urls:
