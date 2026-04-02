@@ -14,7 +14,7 @@ import User from '../../user/model/User.js';
 const getDb = () => mongoose.connection.db;
 
 const jobService = new JobService();
-const jobDispatcher = new JobDispatcher();
+// Remove global jobDispatcher instantiation - will be created in functions
 
 // Debug: Verify Job model is imported
 LoggerUtil.debug('Job model loaded', { type: typeof Job });
@@ -79,6 +79,8 @@ const resetProjectCrawlData = async (projectId) => {
  */
 export const startScraping = async (req, res) => {
   try {
+    // Create JobDispatcher instance after environment variables are loaded
+    const jobDispatcher = new JobDispatcher();
     const { project_id } = req.body;
 
     if (!project_id) {
@@ -309,7 +311,10 @@ export const cancelAudit = async (req, res) => {
     LoggerUtil.info('Jobs marked as cancelled in database');
 
     // Notify Python workers to stop processing these jobs
-    const pythonWorkerUrl = process.env.PYTHON_WORKER_URL || 'http://localhost:8000';
+    const pythonWorkerUrl = process.env.PYTHON_WORKER_URL;
+    if (!pythonWorkerUrl) {
+      throw new Error('PYTHON_WORKER_URL environment variable is required');
+    }
     LoggerUtil.debug(`Notifying Python worker at: ${pythonWorkerUrl}`);
 
     for (const jobId of jobIds) {

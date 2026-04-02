@@ -4,6 +4,7 @@ import completeJobSafely from '../controller/jobCompletionHandler.js';
 import { JobService } from '../service/jobService.js';
 import auditProgressService from '../service/auditProgressService.js';
 import DomainTechnicalReport from '../model/DomainTechnicalReport.js';
+import { AIGeneratedVideoService } from '../../video/services/aiGeneratedVideo.service.js';
 
 const router = express.Router();
 const jobService = new JobService();
@@ -115,6 +116,37 @@ router.post('/update-status', async (req, res) => {
         percentage: 100,
         message: 'Video generated successfully'
       });
+
+      // 🎯 PART 2: UPDATE ON COMPLETION - Handle video job completion
+      if (updatedJob.jobType === 'VIDEO_GENERATION') {
+        console.log(`[VIDEO_ROUTES] 🎬 VIDEO COMPLETION DETECTED | jobId=${jobId}`);
+        console.log(`[VIDEO_ROUTES] UPDATE VIDEO DOC:`, { 
+          jobId, 
+          result_data: otherUpdateData.result_data,
+          userId: updatedJob.user_id,
+          projectId: updatedJob.project_id
+        });
+
+        try {
+          const videoData = {
+            userId: updatedJob.user_id,
+            projectId: updatedJob.project_id,
+            jobId: updatedJob._id,
+            videoUrl: otherUpdateData.result_data?.videoUrl || null,
+            videoFileName: otherUpdateData.result_data?.videoFileName || null,
+            status: otherUpdateData.result_data?.videoUrl ? 'RENDERED' : 'FAILED',
+            fileSize: otherUpdateData.result_data?.fileSize || null,
+            processingTime: otherUpdateData.result_data?.processingTime || null,
+            error: null
+          };
+
+          const updatedVideo = await AIGeneratedVideoService.saveVideo(videoData);
+          console.log(`[VIDEO_ROUTES] ✅ Video document updated | videoId=${updatedVideo._id} | status=${updatedVideo.status}`);
+        } catch (videoError) {
+          console.error(`[VIDEO_ROUTES] ❌ Failed to update video document | jobId=${jobId}:`, videoError);
+          // Don't fail the status update, just log the error
+        }
+      }
     }
 
     // Emit failure if job is failed
@@ -125,6 +157,37 @@ router.post('/update-status', async (req, res) => {
         percentage: 0,
         message: otherUpdateData.error?.message || 'Video generation failed'
       });
+
+      // 🎯 PART 3: HANDLE FAILURE CASE - Update video document to FAILED
+      if (updatedJob.jobType === 'VIDEO_GENERATION') {
+        console.log(`[VIDEO_ROUTES] ❌ VIDEO FAILURE DETECTED | jobId=${jobId}`);
+        console.log(`[VIDEO_ROUTES] UPDATE VIDEO DOC TO FAILED:`, { 
+          jobId, 
+          userId: updatedJob.user_id,
+          projectId: updatedJob.project_id,
+          error: otherUpdateData.error?.message
+        });
+
+        try {
+          const videoData = {
+            userId: updatedJob.user_id,
+            projectId: updatedJob.project_id,
+            jobId: updatedJob._id,
+            videoUrl: null,
+            videoFileName: null,
+            status: 'FAILED',
+            fileSize: null,
+            processingTime: null,
+            error: otherUpdateData.error || null
+          };
+
+          const failedVideo = await AIGeneratedVideoService.saveVideo(videoData);
+          console.log(`[VIDEO_ROUTES] ✅ Video document marked as FAILED | videoId=${failedVideo._id} | status=FAILED`);
+        } catch (videoError) {
+          console.error(`[VIDEO_ROUTES] ❌ Failed to update video document to FAILED | jobId=${jobId}:`, videoError);
+          // Don't fail the status update, just log the error
+        }
+      }
     }
 
     res.json({

@@ -42,7 +42,7 @@ export default function OnPageSEOPage({ projectId }) {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/page08`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/page08`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

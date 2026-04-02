@@ -11,7 +11,10 @@ from config.config import SOCIAL_DOMAINS
 def send_completion_callback(job_id, stats, result_data=None):
     """Send completion callback to Node.js (fire-and-forget)"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
         node_url = f"{node_backend_url}/api/jobs/{job_id}/complete"
         
         callback_payload = {"stats": stats}
@@ -35,7 +38,10 @@ def send_completion_callback(job_id, stats, result_data=None):
 def send_failure_callback(job_id, error_message):
     """Send failure callback to Node.js (fire-and-forget)"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
         node_fail_url = f"{node_backend_url}/api/jobs/{job_id}/fail"
         
         fail_payload = {"error": error_message}

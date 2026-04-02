@@ -1,6 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
-
+import API_BASE_URL from "@/lib/apiConfig";
 
 class ApiService {
 
@@ -9,7 +7,6 @@ class ApiService {
     this.baseURL = API_BASE_URL;
 
   }
-
 
 
   // Helper method to handle API responses

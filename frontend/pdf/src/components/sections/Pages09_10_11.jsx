@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, Badge, InsightBox } from '../layout';
+import API_BASE_URL from "@/lib/apiConfig";
 
 // ---- Page 9: Structured Data Analysis ----
 export function StructuredDataPage({ projectId }) {
@@ -31,7 +32,7 @@ export function StructuredDataPage({ projectId }) {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/page09`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/page09`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -268,7 +269,7 @@ export function TechnicalSEOPage({ projectId }) {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/page10`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/page10`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -422,7 +423,7 @@ export function CrawlabilityPage({ projectId }) {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/page11`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/page11`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

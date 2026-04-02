@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { useAuth } from '@/contexts/AuthContext';
 import { useProject } from '@/contexts/ProjectContext';
-import { generateScript, generateVideo, getJobStatus } from '@/services/aiVideoApi';
+import { generateScript, generateVideo, getJobStatus, getGeneratedVideo, downloadVideo } from '@/services/aiVideoApi';
 import { 
   Play, 
   Download, 
@@ -38,6 +38,12 @@ export default function AIVideoReport() {
   const [videoStatus, setVideoStatus] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
+  
+  // Video persistence state
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [existingVideoLoading, setExistingVideoLoading] = useState(false);
+  const [videoFileName, setVideoFileName] = useState('');
+  const [downloadLoading, setDownloadLoading] = useState(false);
   
   // Progress tracking state
   const [progress, setProgress] = useState(0);
@@ -168,8 +174,12 @@ export default function AIVideoReport() {
             setPollingInterval(null);
             setVideoLoading(false);
             setVideoUrl(result_data.videoUrl);
+            setVideoFileName(result_data.videoFileName || '');
+            setIsVideoReady(true);
             setLastProgressUpdate(null);
             localStorage.removeItem(`videoJob_${activeProject._id}`);
+            // Fetch the saved video record to ensure consistency
+            setTimeout(() => fetchExistingVideo(), 1000);
             return;
           }
           
@@ -243,9 +253,63 @@ export default function AIVideoReport() {
     };
   }, [pollingInterval]);
 
+  // Fetch existing video on component mount and project change
+  useEffect(() => {
+    if (activeProject && !videoLoading && !videoJobId) {
+      fetchExistingVideo();
+    }
+  }, [activeProject]);
+
+  // Fetch existing video function
+  const fetchExistingVideo = async () => {
+    if (!activeProject) return;
+    
+    setExistingVideoLoading(true);
+    try {
+      console.log('Fetching existing video for project:', activeProject._id);
+      const response = await getGeneratedVideo(activeProject._id);
+      
+      if (response && response.success && response.video) {
+        const { video } = response;
+        console.log('Found existing video:', video);
+        
+        if (video.status === 'RENDERED' && video.videoUrl) {
+          setVideoUrl(video.videoUrl);
+          setVideoFileName(video.videoFileName || '');
+          setIsVideoReady(true);
+          setVideoStatus('completed');
+          console.log('Video is ready for display', { videoUrl: video.videoUrl, fileName: video.videoFileName });
+        } else if (video.status === 'PROCESSING') {
+          console.log('Video is still processing, checking for job...');
+          // Optionally resume polling if there's an active job
+          if (video.jobId) {
+            setVideoJobId(video.jobId);
+            setVideoLoading(true);
+            setVideoStatus('processing');
+            startPolling(video.jobId);
+          }
+        } else if (video.status === 'FAILED') {
+          setVideoError('Previous video generation failed. Please try again.');
+        }
+      } else {
+        console.log('No existing video found for project');
+        setIsVideoReady(false);
+      }
+    } catch (error) {
+      console.error('Error fetching existing video:', error);
+      // Don't show error to user for 404 (no video exists)
+      if (!error.message.includes('404')) {
+        setVideoError('Failed to check for existing video');
+      }
+      setIsVideoReady(false);
+    } finally {
+      setExistingVideoLoading(false);
+    }
+  };
+
   // Handle page refresh - resume polling if there's an active job
   useEffect(() => {
-    if (activeProject && !videoLoading && !videoUrl) {
+    if (activeProject && !videoLoading && !videoUrl && !existingVideoLoading) {
       const storedJobId = localStorage.getItem(`videoJob_${activeProject._id}`);
       
       if (storedJobId) {
@@ -265,6 +329,8 @@ export default function AIVideoReport() {
               setProgress(0);
               setCurrentStep('');
               setLastProgressUpdate(null);
+              // Try fetching existing video instead
+              fetchExistingVideo();
               return;
             }
             
@@ -284,13 +350,15 @@ export default function AIVideoReport() {
             setProgress(0);
             setCurrentStep('');
             setLastProgressUpdate(null);
+            // Try fetching existing video instead
+            fetchExistingVideo();
           }
         };
         
         verifyJob();
       }
     }
-  }, [activeProject]); // Only run when activeProject changes
+  }, [activeProject, existingVideoLoading]); // Include existingVideoLoading to prevent race conditions
 
   // Copy to clipboard handler
   const handleCopyScript = () => {
@@ -301,6 +369,49 @@ export default function AIVideoReport() {
       }).catch((error) => {
         console.error('Failed to copy:', error);
       });
+    }
+  };
+
+  // Download video handler
+  const handleDownloadVideo = async () => {
+    if (!videoFileName) {
+      setVideoError('Video filename not available for download');
+      return;
+    }
+
+    setDownloadLoading(true);
+    try {
+      console.log('Starting video download:', videoFileName);
+      
+      // Call backend download API
+      const blob = await downloadVideo(videoFileName);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate dynamic filename with project name and timestamp
+      const projectName = activeProject?.project_name || activeProject?.name || 'video';
+      const cleanProjectName = projectName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const dynamicFilename = `${cleanProjectName}_video_${timestamp}.mp4`;
+      
+      link.download = dynamicFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up object URL
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Video download completed:', dynamicFilename);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      setVideoError(error.message || 'Failed to download video. Please try again.');
+    } finally {
+      setDownloadLoading(false);
     }
   };
 
@@ -331,8 +442,8 @@ export default function AIVideoReport() {
     console.log('Job state cleared successfully');
   };
 
-  // Show loading state while checking authentication and projects
-  if (isLoading || projectsLoading) {
+  // Show loading state while checking authentication, projects, and existing video
+  if (isLoading || projectsLoading || existingVideoLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -575,16 +686,17 @@ export default function AIVideoReport() {
                 </div>
               )}
 
-              {/* Generate Button - Hidden during processing */}
-              {!videoLoading && (
+              {/* Generate Button - Hidden during processing or when video is ready */}
+              {!videoLoading && !isVideoReady && (
                 <div>
                   <Button 
                     onClick={handleGenerateVideo}
                     size="lg"
                     className="w-full md:w-auto"
+                    disabled={existingVideoLoading}
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Generate Video
+                    {existingVideoLoading ? 'Checking...' : 'Generate Video'}
                   </Button>
                 </div>
               )}
@@ -592,7 +704,7 @@ export default function AIVideoReport() {
           </Card>
 
           {/* Video Display - Enhanced for completion */}
-          {videoUrl && (
+          {(videoUrl && isVideoReady) && (
             <Card className="p-6 border-2 border-green-200 bg-green-50/50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -616,9 +728,23 @@ export default function AIVideoReport() {
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Video
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownloadVideo}
+                    disabled={downloadLoading || !videoFileName}
+                  >
+                    {downloadLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Video
+                      </>
+                    )}
                   </Button>
                   <Button variant="outline" size="sm">
                     <Copy className="h-4 w-4 mr-2" />

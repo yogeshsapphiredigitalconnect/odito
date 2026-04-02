@@ -24,10 +24,18 @@ const startServer = async () => {
   const app = express();
   const server = createServer(app);
   
+  // Validate required environment variables
+  const requiredEnvVars = ['PORT', 'CORS_ORIGIN', 'MONGO_URI'];
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      throw new Error(`Required environment variable ${envVar} is not defined`);
+    }
+  }
+
   // Initialize Socket.IO for real-time progress updates
   const io = new Server(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+      origin: process.env.CORS_ORIGIN,
       credentials: true,
       methods: ['GET', 'POST']
     },
@@ -104,7 +112,7 @@ const startServer = async () => {
   app.use("/videos", express.static(videosDir));
 
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN,
     credentials: true,
   }));
 
@@ -204,7 +212,7 @@ const startServer = async () => {
     });
   });
 
-  const PORT = process.env.PORT || 5000;
+  const PORT = process.env.PORT;
 
   server.listen(PORT, () => {
     console.log(`✓ Server is listening on port ${PORT}`);

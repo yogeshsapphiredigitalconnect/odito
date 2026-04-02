@@ -10,6 +10,7 @@
 import { JobService } from '../service/jobService.js';
 import projectStatusService from '../service/projectStatusService.js';
 import chainingEngine from '../chainingEngine.js';
+import { AIGeneratedVideoService } from '../../video/services/aiGeneratedVideo.service.js';
 
 const jobService = new JobService();
 
@@ -92,6 +93,38 @@ export const completeJobSafely = async (req, res) => {
 async function handleJobCompletion(updatedJob, stats, requestId) {
   console.log(`[COMPLETION_HANDLER:${requestId}] handleJobCompletion called | jobType=${updatedJob.jobType} | jobId=${updatedJob._id}`);
   console.log(`[COMPLETION_HANDLER:${requestId}] Stats payload:`, JSON.stringify(stats, null, 2));
+  
+  // 🎥 VIDEO GENERATION: Save video metadata to ai_generated_videos collection
+  if (updatedJob.jobType === 'VIDEO_GENERATION') {
+    try {
+      console.log(`[VIDEO_STORAGE:${requestId}] Processing video generation completion | jobId=${updatedJob._id}`);
+      
+      const videoData = {
+        userId: updatedJob.user_id,
+        projectId: updatedJob.project_id,
+        jobId: updatedJob._id,
+        videoUrl: updatedJob.result_data?.videoUrl || null,
+        videoFileName: updatedJob.result_data?.videoFileName || null,
+        status: updatedJob.result_data?.videoUrl ? 'RENDERED' : 'FAILED',
+        fileSize: updatedJob.result_data?.fileSize || null,
+        processingTime: updatedJob.result_data?.processingTime || null,
+        error: (updatedJob.status === 'failed' && updatedJob.error) ? {
+          message: updatedJob.error.message,
+          stack: updatedJob.error.stack,
+          timestamp: updatedJob.error.timestamp
+        } : null
+      };
+      
+      console.log(`[VIDEO_STORAGE:${requestId}] VIDEO SAVE PAYLOAD:`, videoData);
+      
+      const savedVideo = await AIGeneratedVideoService.saveVideo(videoData);
+      console.log(`[VIDEO_STORAGE:${requestId}] ✅ Video metadata saved to ai_generated_videos | videoId=${savedVideo._id} | status=${savedVideo.status}`);
+      
+    } catch (videoError) {
+      console.error(`[VIDEO_STORAGE:${requestId}] ❌ Failed to save video metadata | jobId=${updatedJob._id}:`, videoError);
+      // Don't fail the job completion, just log the error
+    }
+  }
   
   await projectStatusService.updateForJobType(updatedJob, stats, requestId);
   console.log(`[COMPLETION_HANDLER:${requestId}] projectStatusService.updateForJobType completed`);

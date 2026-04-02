@@ -17,7 +17,7 @@ import SeoProject from '../app_user/model/SeoProject.js';
 import AIVisibilityProject from '../ai_visibility/model/AIVisibilityProject.js';
 
 const jobService = new JobService();
-const jobDispatcher = new JobDispatcher();
+// Remove global jobDispatcher instantiation - will be created in functions
 
 // ---------------------------------------------------------------------------
 // Maps: job type → creation function / dispatch function
@@ -47,18 +47,22 @@ const JOB_CREATION_MAP = {
   [JOB_TYPES.AI_VISIBILITY_SCORING]: (src) => jobService.createAndDispatchAiVisibilityScoringJob(src),
 };
 
-const JOB_DISPATCH_MAP = {
-  [JOB_TYPES.KEYWORD_RESEARCH]: (job) => jobDispatcher.dispatchKeywordResearchJob(job),
-  [JOB_TYPES.TECHNICAL_DOMAIN]: (job) => jobDispatcher.dispatchTechnicalDomainJob(job),
-  [JOB_TYPES.PAGE_SCRAPING]: (job) => jobDispatcher.dispatchPageScrapingJob(job),
-  [JOB_TYPES.PERFORMANCE_MOBILE]: (job) => jobDispatcher.dispatchPerformanceMobileJob(job),
-  [JOB_TYPES.PERFORMANCE_DESKTOP]: (job) => jobDispatcher.dispatchPerformanceDesktopJob(job),
-  [JOB_TYPES.HEADLESS_ACCESSIBILITY]: (job) => jobDispatcher.dispatchHeadlessAccessibilityJob(job),
-  [JOB_TYPES.PAGE_ANALYSIS]: (job) => jobDispatcher.dispatchPageAnalysisJob(job),
-  [JOB_TYPES.SEO_SCORING]: (job) => jobDispatcher.dispatchSeoScoringJob(job),
-  [JOB_TYPES.CRAWL_GRAPH]: (job) => jobDispatcher.dispatchCrawlGraphJob(job),
-  [JOB_TYPES.AI_VISIBILITY]: (job) => jobDispatcher.dispatchAiVisibilityJob(job),
-  [JOB_TYPES.AI_VISIBILITY_SCORING]: (job) => jobDispatcher.dispatchAiVisibilityScoringJob(job),
+// Function to create job dispatch map with local JobDispatcher instance
+const createJobDispatchMap = () => {
+  const jobDispatcher = new JobDispatcher();
+  return {
+    [JOB_TYPES.KEYWORD_RESEARCH]: (job) => jobDispatcher.dispatchKeywordResearchJob(job),
+    [JOB_TYPES.TECHNICAL_DOMAIN]: (job) => jobDispatcher.dispatchTechnicalDomainJob(job),
+    [JOB_TYPES.PAGE_SCRAPING]: (job) => jobDispatcher.dispatchPageScrapingJob(job),
+    [JOB_TYPES.PERFORMANCE_MOBILE]: (job) => jobDispatcher.dispatchPerformanceMobileJob(job),
+    [JOB_TYPES.PERFORMANCE_DESKTOP]: (job) => jobDispatcher.dispatchPerformanceDesktopJob(job),
+    [JOB_TYPES.HEADLESS_ACCESSIBILITY]: (job) => jobDispatcher.dispatchHeadlessAccessibilityJob(job),
+    [JOB_TYPES.PAGE_ANALYSIS]: (job) => jobDispatcher.dispatchPageAnalysisJob(job),
+    [JOB_TYPES.SEO_SCORING]: (job) => jobDispatcher.dispatchSeoScoringJob(job),
+    [JOB_TYPES.CRAWL_GRAPH]: (job) => jobDispatcher.dispatchCrawlGraphJob(job),
+    [JOB_TYPES.AI_VISIBILITY]: (job) => jobDispatcher.dispatchAiVisibilityJob(job),
+    [JOB_TYPES.AI_VISIBILITY_SCORING]: (job) => jobDispatcher.dispatchAiVisibilityScoringJob(job),
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -90,7 +94,7 @@ class ChainingEngine {
     console.log(`[CHAINING:${requestId}] config.next =`, JSON.stringify(config?.next));
     console.log(`[CHAINING:${requestId}] config.parallel =`, config?.parallel);
     console.log(`[CHAINING:${requestId}] JOB_CREATION_MAP keys =`, Object.keys(JOB_CREATION_MAP));
-    console.log(`[CHAINING:${requestId}] JOB_DISPATCH_MAP keys =`, Object.keys(JOB_DISPATCH_MAP));
+    console.log(`[CHAINING:${requestId}] JOB_DISPATCH_MAP keys =`, Object.keys(createJobDispatchMap()));
     console.log(`[CHAINING:${requestId}] === END CONFIG DEBUG ===`);
 
     // Special project status updates (moved from jobController)
@@ -126,7 +130,7 @@ class ChainingEngine {
             const nextType = config.next[i];
             console.log(`[CHAINING:${requestId}] [PARALLEL ITERATION ${i}] nextType=${nextType}`);
             console.log(`[CHAINING:${requestId}] [PARALLEL ITERATION ${i}] JOB_CREATION_MAP[${nextType}] exists:`, !!JOB_CREATION_MAP[nextType]);
-            console.log(`[CHAINING:${requestId}] [PARALLEL ITERATION ${i}] JOB_DISPATCH_MAP[${nextType}] exists:`, !!JOB_DISPATCH_MAP[nextType]);
+            console.log(`[CHAINING:${requestId}] [PARALLEL ITERATION ${i}] JOB_DISPATCH_MAP[${nextType}] exists:`, !!createJobDispatchMap()[nextType]);
           }
 
           await Promise.allSettled(
@@ -143,7 +147,7 @@ class ChainingEngine {
             const nextType = config.next[i];
             console.log(`[CHAINING:${requestId}] [SEQUENTIAL ITERATION ${i}] nextType=${nextType}`);
             console.log(`[CHAINING:${requestId}] [SEQUENTIAL ITERATION ${i}] JOB_CREATION_MAP[${nextType}] exists:`, !!JOB_CREATION_MAP[nextType]);
-            console.log(`[CHAINING:${requestId}] [SEQUENTIAL ITERATION ${i}] JOB_DISPATCH_MAP[${nextType}] exists:`, !!JOB_DISPATCH_MAP[nextType]);
+            console.log(`[CHAINING:${requestId}] [SEQUENTIAL ITERATION ${i}] JOB_DISPATCH_MAP[${nextType}] exists:`, !!createJobDispatchMap()[nextType]);
             console.log(`[CHAINING:${requestId}] [SEQUENTIAL ITERATION ${i}] Calling _createAndDispatchJob for nextType=${nextType}`);
             await this._createAndDispatchJob(nextType, updatedJob, sourceJob, stageFrom, config, requestId, false);
           }
@@ -287,7 +291,7 @@ class ChainingEngine {
     console.log(`[${logPrefix}:${requestId}] isFallback=${isFallback}`);
     console.log(`[${logPrefix}:${requestId}] stageConfig.atomicGuard=${stageConfig.atomicGuard}`);
     console.log(`[${logPrefix}:${requestId}] JOB_CREATION_MAP[${nextJobType}] exists:`, !!JOB_CREATION_MAP[nextJobType]);
-    console.log(`[${logPrefix}:${requestId}] JOB_DISPATCH_MAP[${nextJobType}] exists:`, !!JOB_DISPATCH_MAP[nextJobType]);
+    console.log(`[${logPrefix}:${requestId}] JOB_DISPATCH_MAP[${nextJobType}] exists:`, !!createJobDispatchMap()[nextJobType]);
     console.log(`[${logPrefix}:${requestId}] === CREATE DEBUG END ===`);
 
     const useAtomicGuard = isFallback
@@ -443,7 +447,7 @@ class ChainingEngine {
    * Uses JOB_DISPATCH_MAP to call the correct dispatcher method.
    */
   async _dispatchToWorker(jobType, job) {
-    const dispatchFn = JOB_DISPATCH_MAP[jobType];
+    const dispatchFn = createJobDispatchMap()[jobType];
     if (!dispatchFn) {
       throw new Error(`No dispatcher for job type: ${jobType}`);
     }

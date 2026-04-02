@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, InsightBox } from '../layout';
+import API_BASE_URL from "@/lib/apiConfig";
 
-export default function SEOHealthOverviewPage({ projectId }) {
+export default function Page06SEOHealth({ projectId }) {
   const [coverData, setCoverData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,7 +31,7 @@ export default function SEOHealthOverviewPage({ projectId }) {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/cover`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/cover`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

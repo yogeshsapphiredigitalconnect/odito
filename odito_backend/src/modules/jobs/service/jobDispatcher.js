@@ -6,7 +6,13 @@ const jobService = new JobService();
 
 class JobDispatcher {
   constructor() {
-    this.pythonBaseURL = 'http://127.0.0.1:8000';
+    // Validate required environment variables
+    const pythonWorkerUrl = process.env.PYTHON_WORKER_URL;
+    if (!pythonWorkerUrl) {
+      throw new Error('PYTHON_WORKER_URL environment variable is required');
+    }
+    
+    this.pythonBaseURL = pythonWorkerUrl;
     this.videoWorkerURL = 'http://127.0.0.1:8001';
     this.isProcessing = false;
     this.jobQueue = [];

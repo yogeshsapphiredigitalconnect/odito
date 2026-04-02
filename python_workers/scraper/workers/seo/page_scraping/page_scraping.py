@@ -62,7 +62,10 @@ def send_progress_update(job_id: str, percentage: int, step: str, message: str, 
 
     try:
 
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
 
         progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
 
@@ -721,44 +724,29 @@ def execute_page_scraping_logic(job: PageScrapingJob):
         # Send completion callback to Node.js (fire-and-forget)
 
         try:
-
             import requests
-
-            node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
-
+            # Validate required environment variables
+            node_backend_url = os.environ.get("NODE_BACKEND_URL")
+            if not node_backend_url:
+                raise Exception("NODE_BACKEND_URL is required")
             node_url = f"{node_backend_url}/api/jobs/{job.jobId}/complete"
 
             callback_payload = {"stats": stats, "result_data": result_data}
 
             
-
             # Fire-and-forget completion notification
-
             response = requests.post(node_url, json=callback_payload, timeout=30)
-
             response.raise_for_status()
 
-            
-
-            print(f"✅ Successfully notified Node.js of page scraping completion")
-
-            
+            print(f" Successfully notified Node.js of page scraping completion")
 
         except requests.exceptions.Timeout:
-
             # Fire-and-forget: timeout doesn't mean job failed
-
             pass
 
-            
-
         except Exception as callback_error:
-
             # Log but don't fail the job - completion is best-effort
-
-            print(f"⚠️ Failed to notify Node.js of completion (job still succeeded): {callback_error}")
-
-        
+            print(f" Failed to notify Node.js of completion (job still succeeded): {callback_error}")
 
         # Always return success - job execution is complete regardless of notification
 
@@ -780,7 +768,7 @@ def execute_page_scraping_logic(job: PageScrapingJob):
 
     except Exception as e:
 
-        print(f"❌ Job {job.jobId} failed: {str(e)}")
+        print(f" Job {job.jobId} failed: {str(e)}")
 
         
 
@@ -795,19 +783,22 @@ def execute_page_scraping_logic(job: PageScrapingJob):
         # Send failure callback to Node.js
 
         try:
-
             import requests
-
-            node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
-
+            # Validate required environment variables
+            node_backend_url = os.environ.get("NODE_BACKEND_URL")
+            if not node_backend_url:
+                raise Exception("NODE_BACKEND_URL is required")
             node_fail_url = f"{node_backend_url}/api/jobs/{job.jobId}/fail"
 
             fail_payload = {"error": str(e)}
 
-            requests.post(node_fail_url, json=fail_payload, timeout=10)
+            response = requests.post(node_fail_url, json=fail_payload, timeout=10)
+            response.raise_for_status()
 
+        except requests.exceptions.Timeout:
+            # Fire-and-forget: timeout doesn't mean job failed
+            pass
         except:
-
             pass
 
             

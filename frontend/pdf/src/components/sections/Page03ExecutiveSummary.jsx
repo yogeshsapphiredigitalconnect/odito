@@ -32,7 +32,7 @@ export default function ExecutiveSummaryPage({ projectId }) {
 
     const fetchExecutiveData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/executive`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/executive`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'

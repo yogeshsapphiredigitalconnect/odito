@@ -95,7 +95,10 @@ def send_progress_update(job_id: str, percentage: int, step: str, message: str, 
 
     try:
 
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
 
         progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
 
@@ -888,7 +891,10 @@ def send_completion_callback(job_id, stats, result_data=None):
 
     try:
 
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
 
         node_url = f"{node_backend_url}/api/jobs/{job_id}/complete"
 
@@ -932,7 +938,10 @@ def send_failure_callback(job_id, error_message):
 
     try:
 
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
 
         node_fail_url = f"{node_backend_url}/api/jobs/{job_id}/fail"
 
@@ -1192,7 +1201,10 @@ def send_crawl_summary(job_id, project_id, analysis_stats, analysis_duration_ms,
 
         # Send summary to Node.js
 
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
 
         summary_url = f"{node_backend_url}/api/jobs/{job_id}/summary"
 

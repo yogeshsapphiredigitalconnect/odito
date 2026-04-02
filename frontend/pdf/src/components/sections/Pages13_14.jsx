@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, Badge, InsightBox } from '../layout';
 
 // API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import API_BASE_URL from "@/lib/apiConfig";
 
 // ---- Helper Functions for Rating and Priority ----
 function getRating(metric, value) {

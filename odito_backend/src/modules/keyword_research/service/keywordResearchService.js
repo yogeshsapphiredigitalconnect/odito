@@ -3,7 +3,7 @@ import JobDispatcher from '../../jobs/service/jobDispatcher.js';
 import { JOB_TYPES, JOB_TYPE_CONFIG } from '../../jobs/constants/jobTypes.js';
 
 const jobService = new JobService();
-const jobDispatcher = new JobDispatcher();
+// Remove global jobDispatcher instantiation - will be created in functions
 
 class KeywordResearchService {
   /**
@@ -12,6 +12,8 @@ class KeywordResearchService {
    * @returns {Object} Created job document
    */
   async startKeywordResearch({ userId, projectId, keyword, depth = 2 }) {
+    // Create JobDispatcher instance after environment variables are loaded
+    const jobDispatcher = new JobDispatcher();
     // Create job via the shared JobService
     const job = await jobService.createJob({
       user_id: userId,

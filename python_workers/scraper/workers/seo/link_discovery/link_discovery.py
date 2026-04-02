@@ -77,7 +77,10 @@ def send_progress_update(job_id: str, percentage: int, step: str, message: str, 
 
     try:
 
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
 
         progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
 
@@ -683,44 +686,50 @@ def execute_link_discovery(job: LinkDiscoveryJob):
         # 6. Send completion callback to Node.js
 
         try:
-
-            node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
-
+            # Validate required environment variables
+            node_backend_url = os.environ.get("NODE_BACKEND_URL")
+            if not node_backend_url:
+                raise Exception("NODE_BACKEND_URL is required")
             node_url = f"{node_backend_url}/api/jobs/{job.jobId}/complete"
 
             callback_payload = {"stats": stats, "result_data": result_data}
 
-            
+            try:
+                response = requests.post(node_url, json=callback_payload, timeout=10)
+                response.raise_for_status()
+            except Exception as callback_error:
+                print(f"❌ Failed to notify Node.js: {callback_error}")
 
-            response = requests.post(node_url, json=callback_payload, timeout=10)
+                # Try to mark job as failed instead
+                try:
+                    node_backend_url = os.environ.get("NODE_BACKEND_URL")
+                    if not node_backend_url:
+                        raise Exception("NODE_BACKEND_URL is required")
+                    node_fail_url = f"{node_backend_url}/api/jobs/{job.jobId}/fail"
 
-            response.raise_for_status()
+                    fail_payload = {"error": str(callback_error), "stats": stats}
 
-            
+                    requests.post(node_fail_url, json=fail_payload, timeout=10)
+                except Exception as fail_error:
+                    print(f"❌ Failed to mark job as failed: {fail_error}")
 
             print(f"✅ Successfully notified Node.js of job completion")
 
-            
-
         except Exception as callback_error:
-
             print(f"❌ Failed to notify Node.js: {callback_error}")
 
             # Try to mark job as failed instead
-
             try:
-
-                node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
-
+                node_backend_url = os.environ.get("NODE_BACKEND_URL")
+                if not node_backend_url:
+                    raise Exception("NODE_BACKEND_URL is required")
                 node_fail_url = f"{node_backend_url}/api/jobs/{job.jobId}/fail"
 
                 fail_payload = {"error": str(callback_error), "stats": stats}
 
                 requests.post(node_fail_url, json=fail_payload, timeout=10)
-
-            except:
-
-                pass
+            except Exception as fail_error:
+                print(f"❌ Failed to mark job as failed: {fail_error}")
 
             raise HTTPException(status_code=500, detail="Failed to notify Node.js of completion")
 
@@ -759,14 +768,19 @@ def execute_link_discovery(job: LinkDiscoveryJob):
         # Send failure callback to Node.js
 
         try:
-
-            node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
-
+            node_backend_url = os.environ.get("NODE_BACKEND_URL")
+            if not node_backend_url:
+                raise Exception("NODE_BACKEND_URL is required")
             node_fail_url = f"{node_backend_url}/api/jobs/{job.jobId}/fail"
 
             fail_payload = {"error": str(e)}
 
-            requests.post(node_fail_url, json=fail_payload, timeout=10)
+            try:
+                requests.post(node_fail_url, json=fail_payload, timeout=10)
+            except Exception as fail_error:
+                print(f"❌ Failed to mark job as failed: {fail_error}")
+        except Exception as fail_error:
+            print(f"❌ Failed to mark job as failed: {fail_error}")
 
         except:
 

@@ -1,11 +1,19 @@
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
 import SeoRanking from '../model/SeoRanking.js';
 import mongoose from 'mongoose';
+import axios from 'axios';
 
 /**
  * Python worker URL — the FastAPI server running onboarding endpoints.
  */
-const PYTHON_WORKER_URL = process.env.PYTHON_WORKER_URL || 'http://localhost:8000';
+// Function to get Python worker URL with validation
+const getPythonWorkerUrl = () => {
+  const pythonWorkerUrl = process.env.PYTHON_WORKER_URL;
+  if (!pythonWorkerUrl) {
+    throw new Error('PYTHON_WORKER_URL environment variable is required');
+  }
+  return pythonWorkerUrl;
+};
 
 /**
  * Country → DataForSEO location code mapping (mirrors Python worker).
@@ -36,7 +44,7 @@ export const generateKeywords = async (req, res) => {
     LoggerUtil.info('Generate keywords request', { subType, location, country });
 
     // Forward to Python worker
-    const response = await fetch(`${PYTHON_WORKER_URL}/api/onboarding/generate-keywords`, {
+    const response = await fetch(`${getPythonWorkerUrl()}/api/onboarding/generate-keywords`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -124,7 +132,7 @@ export const checkRanking = async (req, res) => {
     });
 
     // Forward to Python worker
-    const response = await fetch(`${PYTHON_WORKER_URL}/api/onboarding/check-ranking`, {
+    const response = await fetch(`${getPythonWorkerUrl()}/api/onboarding/check-ranking`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

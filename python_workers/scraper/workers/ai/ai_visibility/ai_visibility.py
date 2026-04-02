@@ -906,7 +906,10 @@ def classify_intent(text) -> dict:
 def send_progress_update(job_id: str, percentage: int, step: str, message: str, subtext: str = None):
     """Send progress update to Node.js backend - SAFE VERSION"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
         progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
         
         payload = {
@@ -4490,7 +4493,10 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
             
             # Send completion callback to Node.js (fire-and-forget)
             try:
-                node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+                # Validate required environment variables
+                node_backend_url = os.environ.get("NODE_BACKEND_URL")
+                if not node_backend_url:
+                    raise Exception("NODE_BACKEND_URL is required")
                 node_url = f"{node_backend_url}/api/jobs/{job.jobId}/complete"
                 callback_payload = {"stats": stats, "result_data": {"pages_processed": len(all_results)}}
                 
@@ -4535,7 +4541,10 @@ def execute_ai_visibility(job: AIVisibilityJob, aiProjectId: Optional[str] = Non
         
         # Send failure callback to Node.js
         try:
-            node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+            # Validate required environment variables
+            node_backend_url = os.environ.get("NODE_BACKEND_URL")
+            if not node_backend_url:
+                raise Exception("NODE_BACKEND_URL is required")
             fail_url = f"{node_backend_url}/api/jobs/{job.jobId}/fail"
             fail_payload = {"error": str(e)}
             requests.post(fail_url, json=fail_payload, timeout=10)

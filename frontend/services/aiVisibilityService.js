@@ -2,9 +2,11 @@
  * AI Visibility Service - Handles all AI Visibility API calls
  * Follows clean architecture principles
  */
+import API_BASE_URL from "@/lib/apiConfig";
+
 class AIVisibilityService {
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    this.baseURL = API_BASE_URL;
   }
 
   /**

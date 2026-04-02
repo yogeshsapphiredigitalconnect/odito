@@ -31,7 +31,10 @@ def execute_technical_domain(job):
     job_id = job.jobId
     project_id = job.projectId
     domain = job.domain
-    node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+    # Validate required environment variables
+    node_backend_url = os.environ.get("NODE_BACKEND_URL")
+    if not node_backend_url:
+        raise Exception("NODE_BACKEND_URL is required")
     
     # Domain normalization: extract base hostname (without www)
     from urllib.parse import urlparse

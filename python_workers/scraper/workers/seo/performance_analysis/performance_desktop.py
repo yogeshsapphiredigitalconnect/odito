@@ -109,7 +109,10 @@ def detect_render_blocking_resources(raw_html: str, lighthouse_data: dict = None
 def send_progress_update(job_id: str, percentage: int, step: str, message: str, subtext: str = None):
     """Send progress update to Node.js backend"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
         progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
         
         payload = {
@@ -297,7 +300,10 @@ def execute_performance_desktop_logic(job):
 def send_completion_callback(job_id: str, stats: dict, result_data: dict):
     """Send completion callback to Node.js backend"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
         node_url = f"{node_backend_url}/api/jobs/{job_id}/complete"
         callback_payload = {"stats": stats, "result_data": result_data}
         
@@ -310,7 +316,10 @@ def send_completion_callback(job_id: str, stats: dict, result_data: dict):
         print(f"[ERROR] Failed to send PERFORMANCE_DESKTOP completion | jobId={job_id} | error=\"{str(callback_error)}\"")
         # Try to mark job as failed instead
         try:
-            node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+            # Validate required environment variables
+            node_backend_url = os.environ.get("NODE_BACKEND_URL")
+            if not node_backend_url:
+                raise Exception("NODE_BACKEND_URL is required")
             node_fail_url = f"{node_backend_url}/api/jobs/{job_id}/fail"
             fail_payload = {"error": str(callback_error), "stats": stats}
             requests.post(node_fail_url, json=fail_payload, timeout=10)
@@ -320,7 +329,10 @@ def send_completion_callback(job_id: str, stats: dict, result_data: dict):
 def send_failure_callback(job_id: str, error: str):
     """Send failure callback to Node.js backend"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        # Validate required environment variables
+        node_backend_url = os.environ.get("NODE_BACKEND_URL")
+        if not node_backend_url:
+            raise Exception("NODE_BACKEND_URL is required")
         node_fail_url = f"{node_backend_url}/api/jobs/{job_id}/fail"
         fail_payload = {"error": error}
         

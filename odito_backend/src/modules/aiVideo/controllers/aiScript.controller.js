@@ -5,6 +5,8 @@ import SeoProject from '../../app_user/model/SeoProject.js';
 import JobDispatcher from '../../jobs/service/jobDispatcher.js';
 import AIScript from '../models/aiScript.model.js';
 import { AiScriptService } from '../services/aiScript.service.js';
+import { AIGeneratedVideoService } from '../../video/services/aiGeneratedVideo.service.js';
+import { ObjectId } from 'mongodb';
 
 /**
  * AI Script Controller
@@ -371,6 +373,32 @@ export const generateVideo = async (req, res) => {
     });
 
     console.log(`[VIDEO_CTRL] Video generation job created: ${job._id}`);
+
+    // 🎯 PART 1: IMMEDIATE INSERT - Create PROCESSING video document
+    console.log(`[VIDEO_CTRL] INSERT VIDEO DOC:`, { userId, projectId, jobId: job._id });
+    
+    try {
+      const processingVideo = await AIGeneratedVideoService.saveVideo({
+        userId: userId,
+        projectId: projectId,
+        jobId: job._id.toString(),
+        videoUrl: null,
+        videoFileName: null,
+        status: 'PROCESSING',
+        fileSize: null,
+        processingTime: null,
+        error: null
+      });
+      
+      console.log(`[VIDEO_CTRL] ✅ PROCESSING video document created | videoId=${processingVideo._id} | status=PROCESSING`);
+    } catch (insertError) {
+      console.error(`[VIDEO_CTRL] ❌ Failed to create PROCESSING video document:`, insertError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to initialize video tracking',
+        error: insertError.message
+      });
+    }
 
     // Dispatch job to Video Worker immediately
     const jobDispatcher = new JobDispatcher();

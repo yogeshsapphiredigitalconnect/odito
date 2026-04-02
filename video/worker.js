@@ -20,7 +20,12 @@ class VideoWorker {
   constructor() {
     this.app = express();
     this.port = process.env.VIDEO_WORKER_PORT || 8001;
-    this.backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    // Validate required environment variables
+    const backendUrl = process.env.BACKEND_URL;
+    if (!backendUrl) {
+      throw new Error('BACKEND_URL environment variable is required');
+    }
+    this.backendUrl = backendUrl;
     this.audioService = new AudioService();
     
     // Dynamic backend path configuration
@@ -244,7 +249,7 @@ class VideoWorker {
           }
           
           // Validate audio file exists on disk
-          const filename = audioFile.audioPath.replace('http://localhost:5000/audio/', '').replace('.mp3', '');
+          const filename = audioFile.audioPath.replace(`${this.backendUrl}/audio/`, '').replace('.mp3', '');
           if (!this.audioService.audioExists(filename)) {
             throw new Error(`Audio file not found on disk for slide ${index + 1}: ${filename}`);
           }
@@ -293,24 +298,40 @@ class VideoWorker {
         });
         
         // Step 4: Update job with results
+        console.log(`[VIDEO_WORKER] 🎬 VIDEO RENDERED: ${videoPath}`);
+        console.log(`[VIDEO_WORKER] 📡 VIDEO URL: ${this.backendUrl}/videos/${videoFileName}`);
+        
+        const resultData = {
+          videoUrl: `${this.backendUrl}/videos/${videoFileName}`,
+          videoFileName: videoFileName,
+          audioFiles: audioFiles,
+          processingTime: Date.now(),
+          retryCount,
+          slidesGenerated: structuredSlides.length,
+          audioFilesGenerated: audioFiles.length,
+          providerUsed: 'per_slide_audio_generation',
+          slideBreakdown: {
+            originalSlides: 9,
+            newAiSlides: 3,
+            totalSlides: structuredSlides.length
+          }
+        };
+        
+        console.log(`[VIDEO_WORKER] SENDING DATA:`, JSON.stringify(resultData, null, 2));
+        
+        // 🧪 PART 5: WORKER LOGGING - Log video completion
+        console.log(`[VIDEO_WORKER] 🎬 VIDEO COMPLETE:`, {
+          jobId: sanitizedJobId,
+          projectId: sanitizedProjectId,
+          videoUrl: resultData.videoUrl,
+          videoFileName: resultData.videoFileName,
+          status: 'RENDERED'
+        });
+        
         await this.updateJobStatus(sanitizedJobId, 'completed', {
           progress: 100,
           currentStep: "Completed",
-          result_data: {
-            videoUrl: `http://localhost:5000/videos/${videoFileName}`,
-            videoFileName: videoFileName,
-            audioFiles: audioFiles,
-            processingTime: Date.now(),
-            retryCount,
-            slidesGenerated: structuredSlides.length,
-            audioFilesGenerated: audioFiles.length,
-            providerUsed: 'per_slide_audio_generation',
-            slideBreakdown: {
-              originalSlides: 9,
-              newAiSlides: 3,
-              totalSlides: structuredSlides.length
-            }
-          }
+          result_data: resultData
         });
         
         console.log(`[VIDEO_WORKER] Job completed | jobId=${sanitizedJobId} | attempts=${retryCount + 1}`);
@@ -1351,7 +1372,7 @@ class VideoWorker {
    * @returns {Promise<string>} Audio URL if accessible
    */
   async validateAudioUrl(projectId) {
-    const audioUrl = `http://localhost:5000/audio/${projectId}.mp3`;
+    const audioUrl = `${this.backendUrl}/audio/${projectId}.mp3`;
     
     console.log(`[VIDEO_WORKER] 🔍 Validating audio URL: ${audioUrl}`);
     

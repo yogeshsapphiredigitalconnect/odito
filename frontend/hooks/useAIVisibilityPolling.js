@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import API_BASE_URL from "@/lib/apiConfig";
 
 /**
  * Custom hook for polling AI Visibility analysis status
  * Handles polling logic with proper cleanup and memory leak prevention
  */
-export function useAIVisibilityPolling(analysisId, options = {}) {
+export const useAIVisibilityPolling = (analysisId, options = {}) => {
   const {
     interval = 3000, // 3 seconds
     onComplete,
@@ -22,7 +23,7 @@ export function useAIVisibilityPolling(analysisId, options = {}) {
     if (!analysisId) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/ai-visibility/${analysisId}`, {
+      const response = await fetch(`${API_BASE_URL}/ai-visibility/${analysisId}`, {
         headers: {
           'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
           'Content-Type': 'application/json'

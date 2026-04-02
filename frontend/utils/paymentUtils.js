@@ -5,6 +5,8 @@
  * No other files should directly call Stripe APIs.
  */
 
+import API_BASE_URL from "@/lib/apiConfig";
+
 const INTENT_KEY = 'odito_payment_intent';
 const RESUME_ALLOWED_KEY = 'odito_payment_resume_allowed';
 
@@ -18,7 +20,7 @@ const RESUME_ALLOWED_KEY = 'odito_payment_resume_allowed';
 export async function createPremiumCheckout(planType) {
   try {
     const token = localStorage.getItem('token');
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const apiUrl = API_BASE_URL;
     
     if (!token) {
       throw new Error('User not authenticated');

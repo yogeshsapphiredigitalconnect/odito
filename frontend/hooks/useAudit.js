@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import API_BASE_URL from "@/lib/apiConfig";
 
-export function useAudit() {
+export const useAudit = () => {
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -14,7 +15,7 @@ export function useAudit() {
         throw new Error('Authentication required')
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const apiUrl = API_BASE_URL;
 
       const response = await fetch(`${apiUrl}/seo/start`, {
         method: 'POST',

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import API_BASE_URL from "@/lib/apiConfig";
 
 /**
  * Safe polling hook with cleanup and abort control
@@ -9,7 +10,7 @@ import { useEffect, useRef } from 'react'
  * @param {Function} options.condition - Stop polling when this returns true
  * @param {Function} options.onError - Error callback
  */
-export function usePolling(pollFunction, options = {}) {
+export const usePolling = (endpoint, options = {}) => {
   const {
     interval = 2000,
     maxAttempts = 30,
@@ -97,7 +98,7 @@ export function useProfilePolling(onSuccess, onError) {
         throw new Error('No auth token found')
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const apiUrl = API_BASE_URL;
       
       const response = await fetch(`${apiUrl}/auth/profile`, {
         headers: {

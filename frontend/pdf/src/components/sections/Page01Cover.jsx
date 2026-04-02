@@ -46,7 +46,7 @@ export default function CoverPage({ projectId }) {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/pdf/${projectId}/cover`, {
+        const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/cover`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

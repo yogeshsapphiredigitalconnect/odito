@@ -67,7 +67,10 @@ def execute_keyword_research(job):
     project_id = ObjectId(job.projectId)  # FIXED: Convert to ObjectId
     keyword = job.keyword
     depth = job.depth or 2
-    node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+    # Validate required environment variables
+    node_backend_url = os.environ.get("NODE_BACKEND_URL")
+    if not node_backend_url:
+        raise Exception("NODE_BACKEND_URL is required")
 
     print(f"[KEYWORD_RESEARCH] Starting | jobId={job_id} | keyword=\"{keyword}\" | depth={depth} | timestamp={datetime.now(timezone.utc).isoformat()}")
 

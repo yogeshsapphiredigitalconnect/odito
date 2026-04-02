@@ -1,10 +1,12 @@
 import { io } from 'socket.io-client';
+import API_BASE_URL from "@/lib/apiConfig";
 
 class SocketService {
   constructor() {
     this.socket = null;
     this.connected = false;
     this.listeners = new Map(); // Store event listeners as Map<event, Set<callback>>
+    this.serverUrl = API_BASE_URL.replace('/api', '');
   }
 
   /**
@@ -17,12 +19,7 @@ class SocketService {
       return Promise.resolve(this.socket);
     }
 
-    const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    
-    // Remove /api suffix if present to connect to WebSocket server directly
-    const wsUrl = serverUrl.replace('/api', '');
-    
-    console.log('🔌 Connecting to WebSocket at:', wsUrl);
+    console.log('🔌 Connecting to WebSocket at:', this.serverUrl);
     
     const options = {
       transports: ['websocket', 'polling'],

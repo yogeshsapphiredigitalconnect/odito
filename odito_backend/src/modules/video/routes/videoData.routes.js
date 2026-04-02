@@ -6,11 +6,12 @@
 import express from 'express';
 import { getVideoData, getPageVideoData, getSlideTemplate } from '../controller/videoData.controller.js';
 import { ScoreOnlyResponseService } from '../../../services/scoreOnlyResponse.service.js';
+import aiGeneratedVideoRoutes from './aiGeneratedVideo.routes.js';
 
 const router = express.Router();
 
-// Apply score-only validation middleware to all routes
-router.use(ScoreOnlyResponseService.scoreOnlyMiddleware);
+// Apply score-only validation middleware to data routes only
+router.use('/data', ScoreOnlyResponseService.scoreOnlyMiddleware);
 
 /**
  * GET /api/video/data/:projectId
@@ -29,5 +30,11 @@ router.get('/data/:projectId/:pageType', getPageVideoData);
  * Get template example for a slide type (for testing)
  */
 router.get('/template/:slideType', getSlideTemplate);
+
+/**
+ * AI-Generated Video Management Routes
+ * Routes for managing AI-generated video metadata
+ */
+router.use('/ai-generated', aiGeneratedVideoRoutes);
 
 export default router;

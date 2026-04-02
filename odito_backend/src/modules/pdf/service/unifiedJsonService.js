@@ -62,7 +62,12 @@ export class UnifiedJsonService {
       LoggerUtil.info('Unified JSON service starting', { projectId });
       
       // 🔧 FIX: CREATE BASE URL AND ADD DEBUG LOGGING
-      const BASE_URL = "http://localhost:5000";
+      // Validate required environment variables
+      const backendUrl = process.env.BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error('BACKEND_URL environment variable is required');
+      }
+      const BASE_URL = backendUrl;
       console.log('UNIFIED SERVICE: Base URL:', BASE_URL);
       console.log('UNIFIED SERVICE: Project ID:', projectId);
       

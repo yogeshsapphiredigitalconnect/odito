@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader, PageFooter, SectionHeader, StatCard, InsightBox } from '../layout';
+import API_BASE_URL from "@/lib/apiConfig";
 
 // Simple API helper function for PDF app
 const getPDFPageData = async (projectId, page) => {
-  const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const token = localStorage.getItem('token');
   
   console.log('📄 PDF API Request:', { 
@@ -13,7 +13,7 @@ const getPDFPageData = async (projectId, page) => {
     hasToken: !!token 
   });
   
-  const response = await fetch(`${baseURL}/pdf/${projectId}/page${page}`, {
+  const response = await fetch(`${API_BASE_URL}/pdf/${projectId}/page${page}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

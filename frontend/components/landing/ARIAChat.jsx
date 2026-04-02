@@ -324,6 +324,7 @@ const ARIAChat = ({ onComplete }) => {
 
       // STEP 2: Trigger background tasks WITHOUT waiting
       // CRITICAL FIX: Pass the actual keywords used in API call to prevent stale closure data
+      console.log('🚨 API KEYWORDS (CALLER):', keywordsBeforeAPI);
       triggerBackgroundTasks(projectId, websiteUrl, keywordsBeforeAPI);
 
       // STEP 3: Immediate redirect to processing page
@@ -347,15 +348,23 @@ const ARIAChat = ({ onComplete }) => {
   };
 
   // ── Fire-and-forget background tasks ─────────────────────────────────────
-  const triggerBackgroundTasks = async (projectId, websiteUrl, correctKeywords) => {
+  const triggerBackgroundTasks = async (projectId, websiteUrl, keywords) => {
     try {
-      // CRITICAL FIX: Use the passed keywords instead of stale closure data
-      const keywordsForTasks = correctKeywords || projectData.selectedKeywords;
+      // STRICT VALIDATION: Ensure keywords are provided
+      if (!keywords || keywords.length === 0) {
+        throw new Error("Keywords missing in triggerBackgroundTasks");
+      }
+
+      // USE ONLY passed keywords - NO fallback logic
+      const keywordsForTasks = keywords;
+      
+      console.log('🚨 API KEYWORDS:', keywords);
+      console.log('🚨 TASK KEYWORDS:', keywordsForTasks);
       console.log('🔍 DEBUG: Keywords at background task start:', {
         projectId,
         keywordsForTasks,
         keywordsString: JSON.stringify(keywordsForTasks),
-        source: correctKeywords ? 'passed_parameter' : 'closure_fallback'
+        source: 'passed_parameter_only'
       });
 
       // Background task 1: Check rankings (non-blocking)

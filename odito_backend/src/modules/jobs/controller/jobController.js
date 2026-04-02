@@ -10,7 +10,7 @@ import axios from 'axios';
 import chainingEngine from '../chainingEngine.js';
 
 const jobService = new JobService();
-const jobDispatcher = new JobDispatcher();
+// Remove global jobDispatcher instantiation - will be created in functions
 
 /**
  * Complete a job (callback from Python worker)
@@ -86,6 +86,8 @@ export const completeJob = async (req, res) => {
  */
 export const failJob = async (req, res) => {
   try {
+    // Create JobDispatcher instance after environment variables are loaded
+    const jobDispatcher = new JobDispatcher();
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
