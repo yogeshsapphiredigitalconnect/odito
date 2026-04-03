@@ -724,6 +724,30 @@ class ApiService {
 
 
 
+  // Get AI visibility page issues
+
+  async getAIVisibilityPageIssues(projectId, pageUrl) {
+
+    const params = new URLSearchParams();
+
+    if (pageUrl) params.append('page_url', pageUrl);
+
+
+
+    const queryString = params.toString();
+
+    const endpoint = `/ai-visibility/projects/${projectId}/page-issues${queryString ? '?' + queryString : ''}`;
+
+
+
+    console.log('🔍 AI Visibility API Request:', endpoint, 'projectId:', projectId, 'pageUrl:', pageUrl);
+
+    return this.request(endpoint);
+
+  }
+
+
+
   // Page issues endpoints
 
   async getPageIssues(projectId, pageUrl) {

@@ -30,6 +30,6 @@ router.get('/:id/pages', getStandaloneAIVisibilityPages);
 router.get('/page-score', getPageScore);
 
 // NEW: Get page issues for AI visibility
-router.get('/page-issues', getAIVisibilityPageIssues);
+router.get('/projects/:projectId/page-issues', validateProjectAccess(), getAIVisibilityPageIssues);
 
 export default router;

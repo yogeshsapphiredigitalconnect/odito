@@ -377,6 +377,15 @@ export class AIVisibilityService {
    * Extracted from getAIVisibilityPageIssues controller function
    */
   static async getAIVisibilityPageIssues(project, pageUrl) {
+    // Add null safety checks
+    if (!project) {
+      throw new Error("Project is required for AI visibility page issues");
+    }
+    
+    if (!pageUrl) {
+      throw new Error("Page URL is required for AI visibility page issues");
+    }
+
     const projectId = project._id.toString();
     const userId = project.user_id.toString();
     
@@ -387,63 +396,127 @@ export class AIVisibilityService {
     const projectIdObj = new ObjectId(projectId);
     const decodedPageUrl = decodeURIComponent(pageUrl);
 
-    // Get AI-specific issues for this page
-    const pageIssues = await db.collection('ai_visibility_page_issues')
-      .find({
-        projectId: projectIdObj,
-        pageUrl: decodedPageUrl
-      })
-      .sort({ severity: -1, created_at: -1 })
-      .toArray();
+    try {
+      // Handle URL variations for better matching
+      const urlVariations = [
+        decodedPageUrl,
+        decodedPageUrl.replace(/\/$/, ''), // Remove trailing slash
+        decodedPageUrl + '/', // Add trailing slash
+        decodedPageUrl.replace(/^https?:\/\//, ''), // Remove protocol
+        decodedPageUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''), // Remove protocol and trailing slash
+        'https://' + decodedPageUrl.replace(/^https?:\/\//, ''), // Ensure https
+        'http://' + decodedPageUrl.replace(/^https?:\/\//, '') // Ensure http
+      ];
 
-    // Get general SEO issues for context
-    const seoIssues = await db.collection('seo_page_issues')
-      .find({
-        projectId: projectIdObj,
-        page_url: decodedPageUrl
-      })
-      .sort({ severity: -1 })
-      .toArray();
+      // Remove duplicates
+      const uniqueUrls = [...new Set(urlVariations)];
 
-    // Format AI issues
-    const formattedAIIssues = pageIssues.map(issue => ({
-      id: issue._id.toString(),
-      type: issue.issue_type || 'ai_visibility',
-      category: issue.category,
-      severity: issue.severity,
-      message: issue.message,
-      details: issue.details,
-      recommendation: issue.recommendation,
-      createdAt: issue.created_at
-    }));
+      LoggerUtil.debug('Searching for AI issues with URL variations', { 
+        originalUrl: decodedPageUrl, 
+        variations: uniqueUrls 
+      });
 
-    // Format SEO issues for context
-    const formattedSEOIssues = seoIssues.map(issue => ({
-      id: issue._id.toString(),
-      type: 'seo',
-      category: issue.category,
-      severity: issue.severity,
-      message: issue.issue_message,
-      ruleId: issue.rule_id,
-      createdAt: issue.created_at
-    }));
+      // Try to find AI issues with URL variations
+      let aiIssues = [];
+      for (const urlVariation of uniqueUrls) {
+        const issues = await db.collection('seo_ai_visibility_issues')
+          .find({
+            projectId: projectIdObj,
+            page_url: urlVariation
+          })
+          .sort({ severity: -1, created_at: -1 })
+          .toArray();
 
-    return {
-      success: true,
-      data: {
-        pageUrl: decodedPageUrl,
-        aiIssues: formattedAIIssues,
-        seoIssues: formattedSEOIssues,
-        summary: {
-          totalAIIssues: formattedAIIssues.length,
-          totalSEOIssues: formattedSEOIssues.length,
-          criticalCount: [...formattedAIIssues, ...formattedSEOIssues]
-            .filter(i => i.severity === 'critical').length,
-          warningCount: [...formattedAIIssues, ...formattedSEOIssues]
-            .filter(i => i.severity === 'warning').length
+        if (issues.length > 0) {
+          aiIssues = issues;
+          LoggerUtil.info('Found AI issues with URL variation', { 
+            matchedUrl: urlVariation, 
+            count: issues.length 
+          });
+          break;
         }
       }
-    };
+
+      // If no AI issues found, return empty result (no fallback to HTML analysis)
+      if (!aiIssues || aiIssues.length === 0) {
+        return {
+          success: true,
+          data: {
+            pageUrl: decodedPageUrl,
+            aiIssues: [],
+            seoIssues: [], // Remove SEO issues context for pure AI visibility
+            summary: {
+              totalAIIssues: 0,
+              totalSEOIssues: 0,
+              criticalCount: 0,
+              warningCount: 0
+            }
+          },
+          message: "No AI visibility issues found for this page"
+        };
+      }
+
+      // Format AI issues to match AI Search Audit structure
+      const formattedAIIssues = aiIssues.map(issue => ({
+        id: issue._id.toString(),
+        issueId: issue.rule_id, // e.g., 'aggregate_rating_schema'
+        type: 'ai_visibility',
+        category: issue.category,
+        severity: issue.severity,
+        message: issue.message,
+        score: issue.rule_score,
+        details: {
+          detected_value: issue.detected_value,
+          expected_value: issue.expected_value,
+          recommendation: issue.recommendation
+        },
+        createdAt: issue.created_at
+      }));
+
+      // Debug severity values in backend
+      LoggerUtil.debug('AI Issues Severity Values:', formattedAIIssues.map(i => i.severity));
+
+      // Calculate counts with case-insensitive matching
+      const normalizeSeverity = (severity) => {
+        if (!severity) return 'unknown';
+        return severity.toString().toLowerCase().trim();
+      };
+
+      const criticalCount = formattedAIIssues.filter(i => normalizeSeverity(i.severity) === 'critical').length;
+      const highCount = formattedAIIssues.filter(i => normalizeSeverity(i.severity) === 'high').length;
+      const warningCount = formattedAIIssues.filter(i => normalizeSeverity(i.severity) === 'warning').length;
+      const lowCount = formattedAIIssues.filter(i => normalizeSeverity(i.severity) === 'low').length;
+      const infoCount = formattedAIIssues.filter(i => normalizeSeverity(i.severity) === 'info').length;
+
+      LoggerUtil.info('AI Issues Counts Calculated', {
+        total: formattedAIIssues.length,
+        critical: criticalCount,
+        high: highCount,
+        warning: warningCount,
+        low: lowCount,
+        info: infoCount
+      });
+
+      return {
+        success: true,
+        data: {
+          pageUrl: decodedPageUrl,
+          aiIssues: formattedAIIssues,
+          seoIssues: [], // Remove SEO issues - focus purely on AI visibility
+          summary: {
+            totalAIIssues: formattedAIIssues.length,
+            totalSEOIssues: 0,
+            criticalCount: criticalCount + highCount, // Combine critical and high
+            warningCount: warningCount,
+            lowCount: lowCount,
+            infoCount: infoCount
+          }
+        }
+      };
+    } catch (dbError) {
+      LoggerUtil.error('Database error in getAIVisibilityPageIssues', dbError, { projectId, pageUrl: decodedPageUrl });
+      throw new Error(`Database error: ${dbError.message}`);
+    }
   }
 
   /**

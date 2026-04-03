@@ -472,6 +472,82 @@ class VideoWorker {
       
       console.log(`[VIDEO_WORKER] 📈 Extracted data - Project: ${projectName}, Overall Score: ${scores.overall}`);
       
+      // Helper function to categorize score status
+      function getScoreStatus(score) {
+        const normalizedScore = score || 0;
+        if (normalizedScore >= 75) return "strong";
+        if (normalizedScore >= 50) return "moderate";
+        return "weak";
+      }
+
+      // Helper function to group scores by category
+      function groupScores(scores) {
+        const groups = {
+          strong: [],
+          moderate: [],
+          weak: []
+        };
+
+        const metrics = [
+          { name: "Technical", key: "technicalHealth" },
+          { name: "Performance", key: "performance" },
+          { name: "SEO", key: "seo" },
+          { name: "AI Visibility", key: "aiVisibility" }
+        ];
+
+        metrics.forEach(metric => {
+          const score = scores[metric.key];
+          // Skip null/undefined scores
+          if (score !== null && score !== undefined && !isNaN(score)) {
+            const status = getScoreStatus(score);
+            groups[status].push({ name: metric.name, score });
+          }
+        });
+
+        return groups;
+      }
+
+      // Helper function to generate dynamic narration
+      function generateScoreNarration(scores) {
+        const overall = scores.overall || 0;
+        const groups = groupScores(scores);
+        
+        let narration = `Your overall score is ${overall} out of 100. `;
+        
+        // Add strong metrics
+        if (groups.strong.length > 0) {
+          const strongList = groups.strong.map(m => `${m.name} at ${m.score}`).join(" and ");
+          narration += `${strongList} ${groups.strong.length === 1 ? 'is' : 'are'} performing strongly. `;
+        }
+        
+        // Add moderate metrics
+        if (groups.moderate.length > 0) {
+          const moderateList = groups.moderate.map(m => `${m.name} at ${m.score}`).join(" and ");
+          narration += `${moderateList} show${groups.moderate.length === 1 ? 's' : ''} moderate performance. `;
+        }
+        
+        // Add weak metrics
+        if (groups.weak.length > 0) {
+          const weakList = groups.weak.map(m => `${m.name} at ${m.score}`).join(" and ");
+          if (groups.weak.length === 1) {
+            narration += `${weakList} is underperforming and needs attention. `;
+          } else {
+            narration += `${weakList} are underperforming and need immediate attention. `;
+          }
+        }
+        
+        // Add impact sentence based on weak metrics count
+        if (groups.weak.length >= 2) {
+          narration += "These gaps are severely limiting your growth and require urgent action.";
+        } else if (groups.weak.length === 1) {
+          narration += "This gap represents an improvement opportunity that could boost your overall performance.";
+        } else {
+          narration += "Your strong performance across all areas positions you well for continued success.";
+        }
+        
+        return narration;
+      }
+      
       // Create exactly 9 structured slides with clean data mapping
       const slides = [
         {
@@ -493,7 +569,7 @@ class VideoWorker {
           type: "scoreSummary",
           title: "Overall Score Analysis",
           subtitle: `Score: ${scores.overall || 0}/100`,
-          narration: `Four areas are pulling that score down. Technical is your strongest at ${scores.technicalHealth || 0}, but Performance at ${scores.performance || 0}, SEO at ${scores.seo || 0}, and AI Visibility at ${scores.aiVisibility || 0} are all below 50 — meaning speed, content signals, and future search readiness are all suffering simultaneously.`,
+          narration: generateScoreNarration(scores),
           data: {
             scores,
             overall: scores.overall || 0

@@ -157,43 +157,122 @@ export default function AISearchAuditIssuePage() {
     setPageDetailsError(null)
 
     try {
-      // Use the same API call as OnPagePage
-      const response = await apiService.getPageIssues(activeProject._id, url)
-      console.log('🔍 Page Issues API Response:', response)
+      // Use AI Visibility API for AI Search Audit context
+      console.log('🔍 AI Issues API called', { projectId: activeProject._id, url })
+      const response = await apiService.getAIVisibilityPageIssues(activeProject._id, url)
+      console.log('🔍 AI Page Issues API Response:', response)
       
       if (response.success) {
         const issuesData = response.data
-        const pageIssues = issuesData.issues || []
-        const pData = issuesData.page_data || {}
-        const pageMetadata = issuesData.page_metadata || {}
+        const aiIssues = issuesData.aiIssues || []
         
-        console.log('📊 Issues Data:', issuesData)
-        console.log('📄 Page Data:', pData)
-        console.log('📋 Page Metadata:', pageMetadata)
+        console.log('📊 AI Issues Data:', aiIssues)
+        console.log('📄 Issues Summary:', issuesData.summary)
+        
+        // Safety check for empty issues
+        if (!aiIssues || aiIssues.length === 0) {
+          console.log('📭 No AI issues found for this page')
+          setPageData({
+            url: url,
+            name: url.split('/').filter(Boolean).pop()?.replace(/-/g, ' ') || 'Page',
+            title: `AI Search Audit - ${url}`,
+            description: `AI visibility analysis for ${url}`,
+            statusCode: 200,
+            wordCount: 0,
+            loadTime: '0s',
+            issues: {
+              crit: 0,
+              warn: 0,
+              low: 0,
+              pass: 0,
+            },
+            issues_list: []
+          })
+          return
+        }
+        
+        // Map AI issues to the expected UI structure
+        const mappedIssues = aiIssues.map(issue => ({
+          id: issue.id,
+          issue_message: issue.message,
+          rule_id: issue.issueId, // e.g., 'aggregate_rating_schema'
+          severity: issue.severity,
+          category: issue.category,
+          issue_code: issue.issueId,
+          detected_value: issue.details?.detected_value,
+          expected_value: issue.details?.expected_value,
+          created_at: issue.createdAt,
+          score: issue.score
+        }))
+        
+        // Debug severity values and field structure
+        console.log('🔍 Issues Sample (first 3):', mappedIssues.slice(0, 3))
+        console.log('🔍 All Severity Values Found:', mappedIssues.map(i => i.severity))
+        console.log('🔍 Issue Fields Sample:', Object.keys(mappedIssues[0] || {}))
+        
+        // Handle multiple possible severity field names
+        const getSeverity = (issue) => {
+          const severity = (
+            issue.severity ||
+            issue.priority ||
+            issue.level ||
+            issue.impact ||
+            ''
+          ).toString().toLowerCase().trim();
+          
+          return severity;
+        };
+        
+        // Normalize all issues with proper severity extraction
+        const normalizedIssues = mappedIssues.map(issue => ({
+          ...issue,
+          normalizedSeverity: getSeverity(issue)
+        }));
+        
+        console.log('🔍 Normalized Severity Values:', normalizedIssues.map(i => i.normalizedSeverity))
+        
+        // Calculate counts with correct severity mapping
+        const issuesCount = normalizedIssues.length
+        const criticalCount = normalizedIssues.filter(i => i.normalizedSeverity === 'critical').length
+        const mediumCount = normalizedIssues.filter(i => i.normalizedSeverity === 'medium').length
+        const lowCount = normalizedIssues.filter(i => i.normalizedSeverity === 'low').length
+        const infoCount = normalizedIssues.filter(i => i.normalizedSeverity === 'info').length
+        const highCount = normalizedIssues.filter(i => i.normalizedSeverity === 'high').length
+        const warningCount = normalizedIssues.filter(i => i.normalizedSeverity === 'warning').length
+        
+        console.log('📊 Detailed Counts:', {
+          total: issuesCount,
+          critical: criticalCount,
+          medium: mediumCount,
+          low: lowCount,
+          info: infoCount,
+          high: highCount,
+          warning: warningCount
+        })
         
         const finalPageData = {
           url: url,
-          name: pData.title ? pData.title.split(' | ')[0] : derivePageNameFromUrl(url),
-          title: pData.title || deriveTitleFromUrl(url),
-          description: pData.meta_description || pageMetadata.meta_description || 'No meta description available',
-          statusCode: pData.status_code || pageMetadata.http_status_code || 200,
-          wordCount: pData.word_count || 0,
-          loadTime: pData.response_time ? `${Math.round(pData.response_time)}ms` : '0s',
+          name: url.split('/').filter(Boolean).pop()?.replace(/-/g, ' ') || 'Page',
+          title: `AI Search Audit - ${url}`,
+          description: `AI visibility analysis for ${url}`,
+          statusCode: 200,
+          wordCount: 0,
+          loadTime: '0s',
           issues: {
-            crit: pageIssues.filter(i => i.severity === 'critical' || i.severity === 'high').length,
-            warn: pageIssues.filter(i => i.severity === 'warning' || i.severity === 'medium').length,
-            low: pageIssues.filter(i => i.severity === 'low').length,
-            pass: pageIssues.filter(i => i.severity === 'pass' || i.severity === 'info').length,
+            crit: criticalCount + highCount, // Combine critical and high
+            warn: mediumCount + warningCount, // Use medium for main warning count
+            low: lowCount,
+            pass: infoCount,
           },
-          issues_list: pageIssues
+          issues_list: mappedIssues
         }
         
-        console.log('🎯 Final Page Data:', finalPageData)
+        console.log('🎯 Final AI Page Data:', finalPageData)
         setPageData(finalPageData)
       }
     } catch (err) {
-      console.error('Failed to load page details:', err)
-      setPageDetailsError(err.message)
+      console.error('Failed to load AI page details:', err)
+      setPageDetailsError(`Failed to load AI issues: ${err.message}`)
     } finally {
       setPageDetailsLoading(false)
     }
