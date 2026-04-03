@@ -382,6 +382,16 @@ SERP_API_URL = (
 def check_ranking(req: CheckRankingRequest):
     """Check ranking position for each keyword in Google top-100."""
 
+    # 🚨 STEP 1: VERIFY INPUT - VERY FIRST LINE
+    print("🚨 ENTRY req.keywords:", req.keywords)
+    print("🚨 TYPE:", type(req.keywords))
+    print("🚨 ENTRY RAW REQUEST:", {
+        "domain": req.domain,
+        "keywords": req.keywords,
+        "location_code": req.location_code,
+        "language_code": req.language_code
+    })
+
     clean_domain = normalize_domain(req.domain)
     results: List[KeywordRank] = []
 
@@ -406,7 +416,17 @@ def check_ranking(req: CheckRankingRequest):
 
     print(f"[ONBOARDING] check-ranking | domain=\"{req.domain}\" → clean=\"{clean_domain}\" | keywords={req.keywords}")
 
+    # 🚨 STEP 2: TRACK VARIABLE FLOW - BEFORE LOOP
+    print("🚨 STEP BEFORE LOOP:", req.keywords)
+    print("🚨 VARIABLE ID:", id(req.keywords))
+    print("🚨 IS SAME OBJECT?", req.keywords is req.keywords)
+
     for kw in req.keywords[:5]:  # Hard cap at 5
+        # 🚨 STEP 3: INSIDE LOOP - TRACK EACH KEYWORD
+        print("🚨 USING KEYWORD:", kw)
+        print("🚨 KEYWORD TYPE:", type(kw))
+        print("🚨 KEYWORD FROM INDEX:", req.keywords.index(kw) if kw in req.keywords else "NOT_FOUND")
+        
         rank = None
         try:
             print(f"[ONBOARDING] Checking keyword: \"{kw}\"")
@@ -419,6 +439,14 @@ def check_ranking(req: CheckRankingRequest):
                 "device": "desktop",
                 "os": "windows",
             }]
+
+            # 🚨 STEP 4: CHECK API PAYLOAD - WHAT'S SENT TO DATASEO
+            print("🚨 API PAYLOAD:", {
+                "keyword_being_sent": kw,
+                "keyword_in_payload": payload[0]["keyword"],
+                "full_payload": payload[0],
+                "payload_matches_kw": payload[0]["keyword"] == kw
+            })
 
             resp = requests.post(SERP_API_URL, json=payload, headers=headers, timeout=30)
 
@@ -450,6 +478,10 @@ def check_ranking(req: CheckRankingRequest):
 
             serp_results_found = 0
             domains_checked = []
+            rank = None  # 🚨 CRITICAL FIX: Initialize rank for each keyword
+            
+            print(f"[ONBOARDING] 🔍 SEARCHING FOR DOMAIN: \"{clean_domain}\" in keyword \"{kw}\"")
+            print(f"[ONBOARDING] 📋 ALL SERP RESULTS FOR \"{kw}\":")
             
             for result_item in first_task["result"]:
                 items = result_item.get("items", [])
@@ -483,11 +515,16 @@ def check_ranking(req: CheckRankingRequest):
                     # Normalize SERP domain for comparison
                     serp_domain_clean = normalize_domain(serp_domain)
                     
-                    # Debug logging
+                    # Get rank info
+                    rank_group = serp_item.get("rank_group")
+                    rank_absolute = serp_item.get("rank_absolute")
+                    
+                    # Debug logging - Show ALL results
+                    print(f"[ONBOARDING]   #{serp_results_found}: domain=\"{serp_domain_clean}\" | rank_group={rank_group} | rank_absolute={rank_absolute} | url=\"{serp_url[:60] if serp_url else 'N/A'}\"")
+                    
+                    # Store for domain checking
                     if serp_domain_clean:
                         domains_checked.append(serp_domain_clean)
-                    
-                    print(f"[ONBOARDING] SERP #{serp_results_found}: domain=\"{serp_domain_clean}\" | url=\"{serp_url[:80] if serp_url else 'N/A'}\"")
 
                     # Multiple matching strategies
                     is_match = False
@@ -515,17 +552,32 @@ def check_ranking(req: CheckRankingRequest):
                 if rank is not None:
                     break
 
+            print(f"[ONBOARDING] 📊 SUMMARY FOR \"{kw}\": Checked {len(domains_checked)} domains, found {len(set(domains_checked))} unique domains")
+
             if rank is None:
                 print(f"[ONBOARDING] ❌ NO MATCH for \"{kw}\" | checked {len(domains_checked)} domains: {domains_checked[:10]}")
                 if len(domains_checked) > 10:
                     print(f"[ONBOARDING] ... and {len(domains_checked) - 10} more domains")
+                print(f"[ONBOARDING] 📊 FINAL RESULT for \"{kw}\": NOT FOUND (rank=None)")
+            else:
+                print(f"[ONBOARDING] 📊 FINAL RESULT for \"{kw}\": RANK {rank}")
 
         except Exception as e:
             print(f"[ONBOARDING] SERP check failed for \"{kw}\" | error=\"{e}\"")
             import traceback
             print(f"[ONBOARDING] Traceback: {traceback.format_exc()}")
+            rank = None  # 🚨 CRITICAL FIX: Ensure rank is None on exception
 
+        print(f"[ONBOARDING] 🎯 KEYWORD COMPLETE: \"{kw}\" → rank {rank}")
         results.append(KeywordRank(keyword=kw, rank=rank))
+
+    # 🚨 STEP 5: FINAL TRACE - WHAT WAS ACTUALLY PROCESSED
+    print("🚨 FINAL TRACE COMPLETE:", {
+        "original_keywords": req.keywords,
+        "processed_keywords": [r.keyword for r in results],
+        "keywords_match": req.keywords == [r.keyword for r in results],
+        "results_count": len(results)
+    })
 
     print(f"[ONBOARDING] check-ranking complete | results={len(results)} | rankings_found={sum(1 for r in results if r.rank is not None)}")
     return CheckRankingResponse(results=results)

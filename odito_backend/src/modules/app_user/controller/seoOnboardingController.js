@@ -1,4 +1,9 @@
 import { LoggerUtil } from '../../../utils/LoggerUtil.js';
+import { 
+  getBestLocationCode, 
+  getLocationCodeFromGooglePlaces,
+  getCacheStatus 
+} from '../../../services/dataforseoLocationService.js';
 import SeoRanking from '../model/SeoRanking.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
@@ -94,7 +99,18 @@ export const generateKeywords = async (req, res) => {
 
 export const checkRanking = async (req, res) => {
   try {
-    const { domain, keywords, location, country = 'US', language = 'en' } = req.body;
+    const { domain, keywords, location, country = 'US', language = 'en', businessLocation } = req.body;
+
+    // 🚨 STEP 1: DEBUG INCOMING REQUEST
+    console.log("🚨 RANKING CHECK - INCOMING REQUEST:", {
+      domain,
+      keywords,
+      location,
+      country,
+      language,
+      businessLocation,
+      fullBody: req.body
+    });
 
     // CRITICAL LOG: Capture keywords received at ranking check
     console.log('🔍 DEBUG: Ranking check received keywords:', {
@@ -119,9 +135,91 @@ export const checkRanking = async (req, res) => {
       });
     }
 
-    const locationCode = COUNTRY_TO_LOCATION_CODE[country?.toUpperCase()] || 2840;
+    // 🚨 STEP 2: LOCATION CODE EXTRACTION & FALLBACK LOGIC
+    let locationCode;
+    let mappingMethod;
+    let finalCountry = country;
 
-    LoggerUtil.info('Check ranking request', { domain, keywords, country, locationCode });
+    // Helper function: Extract location code from lat/lng with fallback
+    const getLocationCodeFromLatLng = (lat, lng, address) => {
+      console.log("🚨 EXTRACTING LOCATION FROM COORDINATES:", { lat, lng, address });
+      
+      // Simple fallback logic for now (can be enhanced with real API later)
+      if (address && address.toLowerCase().includes('india')) {
+        console.log("🚨 DETECTED INDIA FROM ADDRESS -> USING INDIA LOCATION CODE");
+        return 2036; // India location code
+      }
+      
+      // Default to US if no specific location detected
+      console.log("🚨 NO SPECIFIC LOCATION DETECTED -> USING US FALLBACK");
+      return 2840; // US location code
+    };
+
+    try {
+      // Priority 1: Business location from Google Places (most accurate)
+      if (businessLocation && businessLocation.lat && businessLocation.lng) {
+        console.log("🚨 USING BUSINESS LOCATION FOR MAPPING");
+        locationCode = getLocationCodeFromLatLng(
+          businessLocation.lat, 
+          businessLocation.lng, 
+          businessLocation.address
+        );
+        mappingMethod = 'business_location';
+        
+        // Update country based on address
+        if (businessLocation.address && businessLocation.address.toLowerCase().includes('india')) {
+          finalCountry = 'IN';
+        }
+      }
+      // Priority 2: Provided location object
+      else if (location && location.lat && location.lng) {
+        console.log("🚨 USING PROVIDED LOCATION FOR MAPPING");
+        locationCode = getLocationCodeFromLatLng(
+          location.lat, 
+          location.lng, 
+          location.address
+        );
+        mappingMethod = 'provided_location';
+        
+        // Update country based on address
+        if (location.address && location.address.toLowerCase().includes('india')) {
+          finalCountry = 'IN';
+        }
+      }
+      // Priority 3: Country-based fallback
+      else {
+        console.log("🚨 FALLING BACK TO COUNTRY-BASED MAPPING");
+        locationCode = COUNTRY_TO_LOCATION_CODE[country?.toUpperCase()] || 2840;
+        mappingMethod = 'country_fallback';
+        finalCountry = country;
+      }
+    } catch (error) {
+      console.error("🚨 ERROR IN LOCATION MAPPING, USING SAFE FALLBACK:", error);
+      locationCode = 2840; // Safe fallback to US
+      mappingMethod = 'error_fallback';
+      finalCountry = 'US';
+    }
+
+    // 🚨 STEP 3: VALIDATE LOCATION CODE IS DEFINED
+    if (!locationCode || typeof locationCode !== 'number') {
+      console.error("🚨 CRITICAL: locationCode is still undefined, using emergency fallback");
+      locationCode = 2840; // Emergency fallback
+      mappingMethod = 'emergency_fallback';
+    }
+
+    console.log("🚨 FINAL LOCATION CODE SELECTED:", {
+      locationCode,
+      mappingMethod,
+      finalCountry,
+      originalCountry: country,
+      isUsingUSFallback: locationCode === 2840 && finalCountry?.toUpperCase() !== 'US'
+    });
+
+    if (locationCode === 2840 && finalCountry?.toUpperCase() !== 'US') {
+      console.warn("⚠️ WARNING: Using US fallback for non-US country:", finalCountry);
+    }
+
+    LoggerUtil.info('Check ranking request', { domain, keywords, country: finalCountry, locationCode });
 
     // CRITICAL LOG: Capture keywords before sending to Python worker
     const cleanedKeywords = keywords.map(k => k.trim());
@@ -132,15 +230,35 @@ export const checkRanking = async (req, res) => {
     });
 
     // Forward to Python worker
+    const pythonPayload = {
+      domain: domain.trim(),
+      keywords: cleanedKeywords,
+      location_code: locationCode, // ✅ ALWAYS DEFINED NOW
+      language_code: language?.toLowerCase() || 'en'
+    };
+
+    // 🚨 STEP 4: FINAL PAYLOAD VALIDATION & DEBUG
+    console.log("🚨 PYTHON PAYLOAD READY:", {
+      payload: pythonPayload,
+      locationCodeValid: !!locationCode,
+      locationCodeType: typeof locationCode,
+      keywordsValid: !!cleanedKeywords && cleanedKeywords.length > 0,
+      domainValid: !!pythonPayload.domain
+    });
+
+    // 🚨 STEP 5: KEYWORDS SENT TO PYTHON WORKER
+    console.log("🚨 KEYWORDS SENT TO PYTHON:", {
+      originalKeywords: keywords,
+      cleanedKeywords,
+      pythonPayload,
+      payloadString: JSON.stringify(pythonPayload),
+      url: `${getPythonWorkerUrl()}/api/onboarding/check-ranking`
+    });
+
     const response = await fetch(`${getPythonWorkerUrl()}/api/onboarding/check-ranking`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        domain: domain.trim(),
-        keywords: cleanedKeywords,
-        location_code: locationCode,
-        language_code: language?.toLowerCase() || 'en'
-      })
+      body: JSON.stringify(pythonPayload)
     });
 
     if (!response.ok) {

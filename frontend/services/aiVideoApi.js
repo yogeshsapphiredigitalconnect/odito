@@ -171,14 +171,14 @@ class AIVideoService {
       console.log('[AI Video API] Video data retrieved:', response);
       return response;
     } catch (error) {
-      console.error(`[AI Video API] Get generated video error:`, error);
-      
       // Handle 404 gracefully - return null instead of throwing
       if (error.message.includes('404') || error.message.includes('No video found')) {
         console.log('[AI Video API] No video found (404)');
         return null;
       }
       
+      // Only log as error for non-404 cases
+      console.error(`[AI Video API] Get generated video error:`, error);
       throw error;
     }
   }

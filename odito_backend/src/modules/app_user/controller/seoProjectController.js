@@ -9,6 +9,16 @@ import mongoose from 'mongoose';
 
 // Create a new SEO project
 const createSeoProject = async (req, res) => {
+  // 🚨 STEP 1: FRONTEND → BACKEND REQUEST CHECK
+  console.log("🚨 BACKEND ENTRY RAW REQUEST:", {
+    headers: req.headers,
+    body: req.body,
+    keywords: req.body?.keywords,
+    keywordsType: typeof req.body?.keywords,
+    fullUrl: req.originalUrl,
+    method: req.method
+  });
+
   const { 
     project_name, 
     main_url, 

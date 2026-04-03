@@ -292,7 +292,7 @@ export default function AIVideoReport() {
           setVideoError('Previous video generation failed. Please try again.');
         }
       } else {
-        console.log('No existing video found for project');
+        console.log('No existing video found for project - this is normal if no video has been generated yet');
         setIsVideoReady(false);
       }
     } catch (error) {

@@ -82,6 +82,14 @@ const ARIAChat = ({ onComplete }) => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, flowState]);
 
+  // Debug: Log when custom keyword input UI is rendered
+  useEffect(() => {
+    if (flowState === FLOW_STATES.ASK_CUSTOM_KEYWORDS) {
+      console.log("🚨 RENDERING CUSTOM INPUT UI - ASK_CUSTOM_KEYWORDS state active");
+    }
+    console.log("🚨 FLOW STATE CHANGED TO:", flowState);
+  }, [flowState]);
+
   // ── Sub-type prompt per business type ────────────────────────────────
   const subTypePrompts = {
     'Service-based': 'Which type of service do you offer? (e.g., IT services, marketing, consulting)',
@@ -237,29 +245,50 @@ const ARIAChat = ({ onComplete }) => {
 
   // ── Keyword confirmation handler ────────────────────────────────────
   const handleKeywordConfirm = (confirmed) => {
+    console.log("🚨 KEYWORD CONFIRM CALLED with:", { confirmed, currentFlowState: flowState });
+    
     if (confirmed) {
+      console.log("🚨 USER ACCEPTED GENERATED KEYWORDS");
       setMessages(m => [
         ...m,
         { type: "user", text: "Yes, let's go with these!" },
         { type: "ai", text: "✅ Perfect! Setting up your project..." }
       ]);
-      startProjectAndRankingFlow();
+      // ✅ Pass generated keywords directly to avoid async state issues
+      startProjectAndRankingFlow(projectData.selectedKeywords);
     } else {
+      console.log("🚨 USER REJECTED GENERATED KEYWORDS - SWITCHING TO CUSTOM INPUT");
       setMessages(m => [
         ...m,
         { type: "user", text: "No, I want different keywords" },
         { type: "ai", text: "No problem! Enter up to 5 target keywords (comma-separated):" }
       ]);
+      console.log("🚨 FLOW STATE CHANGING TO:", FLOW_STATES.ASK_CUSTOM_KEYWORDS);
       setFlowState(FLOW_STATES.ASK_CUSTOM_KEYWORDS);
     }
   };
 
   // ── NON-BLOCKING: Create project → trigger background tasks → redirect ─────
-  const startProjectAndRankingFlow = async () => {
+  const startProjectAndRankingFlow = async (overrideKeywords = null) => {
     setFlowState(FLOW_STATES.CREATING_PROJECT);
     setIsCreating(true);
 
     try {
+      // ✅ STEP 0: Use override keywords or fall back to state
+      const finalKeywords = overrideKeywords || projectData.selectedKeywords || [];
+      
+      // 🚨 SAFETY CHECK: Ensure we have keywords
+      if (!finalKeywords || finalKeywords.length === 0) {
+        console.warn("❌ No keywords found for project creation");
+        setMessages(m => [...m, { type: "ai", text: "❌ No keywords available. Please start over." }]);
+        setIsCreating(false);
+        setFlowState(FLOW_STATES.ASK_BUSINESS_NAME);
+        return;
+      }
+
+      console.log("🚨 API USING KEYWORDS:", finalKeywords);
+      console.log("🚨 KEYWORDS SOURCE:", overrideKeywords ? "CUSTOM (override)" : "STATE (fallback)");
+
       // STEP 1: Validate & create the project
       const websiteUrl = projectData.websiteUrl;
       try { new URL(websiteUrl); } catch {
@@ -271,12 +300,19 @@ const ARIAChat = ({ onComplete }) => {
 
       const projectName = generateProjectName(websiteUrl);
       
-      // CRITICAL LOG: Capture keywords before API call
-      const keywordsBeforeAPI = projectData.selectedKeywords.filter(k => k.trim()).slice(0, 5);
+      // ✅ FIXED: Use finalKeywords instead of stale state
+      const keywordsBeforeAPI = finalKeywords.filter(k => k.trim()).slice(0, 5);
       console.log('🔍 DEBUG: Keywords before API call:', {
         selectedKeywords: projectData.selectedKeywords,
+        keywords: projectData.keywords,
         keywordsBeforeAPI,
-        keywordsLength: keywordsBeforeAPI.length
+        keywordsLength: keywordsBeforeAPI.length,
+        projectDataState: {
+          selectedKeywords: projectData.selectedKeywords,
+          keywords: projectData.keywords,
+          subType: projectData.subType,
+          businessType: projectData.businessType
+        }
       });
 
       // VALIDATION: Final keywords being sent to API
@@ -306,6 +342,14 @@ const ARIAChat = ({ onComplete }) => {
         })
       };
 
+      // 🚨 STEP 1: FRONTEND → BACKEND REQUEST
+      console.log("🚨 FRONTEND SENDING TO BACKEND:", {
+        apiUrl: '/api/projects',
+        payloadKeywords: projectPayload.keywords,
+        fullPayload: projectPayload,
+        payloadString: JSON.stringify(projectPayload)
+      });
+
       console.log('🔍 DEBUG: Project payload being sent:', {
         payloadKeywords: projectPayload.keywords,
         payloadKeywordsString: JSON.stringify(projectPayload.keywords)
@@ -325,7 +369,16 @@ const ARIAChat = ({ onComplete }) => {
       // STEP 2: Trigger background tasks WITHOUT waiting
       // CRITICAL FIX: Pass the actual keywords used in API call to prevent stale closure data
       console.log('🚨 API KEYWORDS (CALLER):', keywordsBeforeAPI);
-      triggerBackgroundTasks(projectId, websiteUrl, keywordsBeforeAPI);
+      
+      // Pass business location for dynamic location mapping
+      const businessLocationData = projectData.verifiedBusiness ? {
+        address: projectData.verifiedBusiness.address,
+        lat: projectData.verifiedBusiness.location?.lat,
+        lng: projectData.verifiedBusiness.location?.lng
+      } : null;
+      
+      console.log('🚨 BUSINESS LOCATION FOR MAPPING:', businessLocationData);
+      triggerBackgroundTasks(projectId, websiteUrl, keywordsBeforeAPI, businessLocationData);
 
       // STEP 3: Immediate redirect to processing page
       const redirectUrl = `/processing/${projectId}`;
@@ -348,7 +401,7 @@ const ARIAChat = ({ onComplete }) => {
   };
 
   // ── Fire-and-forget background tasks ─────────────────────────────────────
-  const triggerBackgroundTasks = async (projectId, websiteUrl, keywords) => {
+  const triggerBackgroundTasks = async (projectId, websiteUrl, keywords, businessLocation = null) => {
     try {
       // STRICT VALIDATION: Ensure keywords are provided
       if (!keywords || keywords.length === 0) {
@@ -368,12 +421,15 @@ const ARIAChat = ({ onComplete }) => {
       });
 
       // Background task 1: Check rankings (non-blocking)
+      console.log('🚨 CALLING CHECK RANKING WITH BUSINESS LOCATION:', businessLocation);
+      
       apiService.checkRanking(
         websiteUrl,
         keywordsForTasks,
-        projectData.verifiedBusiness?.address || projectData.location,
+        businessLocation || projectData.verifiedBusiness?.address || projectData.location,
         projectData.country,
-        projectData.language
+        projectData.language,
+        businessLocation // Pass business location for backend mapping
       ).then(rankResponse => {
         console.log('🔍 DEBUG: Ranking check response:', {
           projectId,
@@ -459,22 +515,40 @@ const ARIAChat = ({ onComplete }) => {
           break;
 
         case FLOW_STATES.ASK_CUSTOM_KEYWORDS: {
+          console.log("🚨 PROCESSING CUSTOM KEYWORDS - USER RESPONSE:", userResponse);
+          
           const keywords = userResponse.split(',').map(k => k.trim()).filter(k => k);
+          console.log("🚨 PARSED KEYWORDS (RAW):", keywords);
+          
           // Deduplicate
           const unique = [...new Set(keywords.map(k => k.toLowerCase()))].map(k =>
             keywords.find(orig => orig.toLowerCase() === k) || k
           );
+          console.log("🚨 PARSED KEYWORDS (UNIQUE):", unique);
+          
           if (unique.length === 0) {
+            console.log("🚨 NO KEYWORDS ENTERED - SHOWING ERROR");
             setMessages(m => [...m, { type: "ai", text: "Please enter at least one keyword. (comma-separated)" }]);
             return;
           }
+          
           const finalKws = unique.slice(0, 5);
-          setProjectData(prev => ({ ...prev, selectedKeywords: finalKws, keywords: finalKws }));
+          console.log("🚨 SETTING CUSTOM KEYWORDS TO PROJECT DATA:", finalKws);
+          
+          setProjectData(prev => ({ 
+            ...prev, 
+            selectedKeywords: finalKws, 
+            keywords: finalKws 
+          }));
+          
           setMessages(m => [...m, {
             type: "ai",
             text: `✅ Got it! Using these keywords:\n\n${finalKws.map((k, i) => `${i + 1}. **${k}**`).join('\n')}\n\nSetting up your project...`
           }]);
-          startProjectAndRankingFlow();
+          
+          console.log("🚨 STARTING PROJECT AND RANKING FLOW WITH CUSTOM KEYWORDS");
+          console.log("🚨 PASSING KEYWORDS DIRECTLY TO AVOID ASYNC STATE BUG:", finalKws);
+          startProjectAndRankingFlow(finalKws);  // ✅ PASS KEYWORDS DIRECTLY
           break;
         }
 
@@ -581,7 +655,10 @@ const ARIAChat = ({ onComplete }) => {
         ✅ Yes, use these
       </button>
       <button
-        onClick={() => handleKeywordConfirm(false)}
+        onClick={() => {
+          console.log("🚨 ENTER MY OWN BUTTON CLICKED!");
+          handleKeywordConfirm(false);
+        }}
         style={{
           flex: 1, padding: '10px 16px',
           background: 'rgba(255,255,255,0.08)',
@@ -707,31 +784,49 @@ const ARIAChat = ({ onComplete }) => {
       </div>
 
       {/* Text input — hidden during button/loading states */}
-      {!hideInputStates.includes(flowState) && (
-        <div className="chat-input-row">
-          <input
-            className="chat-input"
-            placeholder={
-              flowState === FLOW_STATES.ASK_BUSINESS_NAME ? "Enter your business name..." :
-              flowState === FLOW_STATES.ASK_BUSINESS_LOCATION ? "Enter city or area..." :
-              flowState === FLOW_STATES.ASK_WEBSITE_URL ? "https://yourwebsite.com" :
-              flowState === FLOW_STATES.ASK_SUB_TYPE ? "e.g., IT services, digital marketing..." :
-              flowState === FLOW_STATES.ASK_CUSTOM_KEYWORDS ? "keyword1, keyword2, keyword3..." :
-              "Type your answer..."
-            }
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && send()}
-            disabled={isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings}
-          />
-          <button
-            onClick={send}
-            disabled={!input.trim() || isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings}
-            className="chat-send-btn"
-          >
-            {isCheckingRankings ? '📊' : isGeneratingKeywords ? '🔍' : isStartingAnalysis ? '🔄' : isCreating ? '⏳' : isSearchingBusiness ? '🔍' : '➤'}
-          </button>
-        </div>
+      {(() => {
+        console.log("🚨 INPUT VISIBILITY CHECK:", {
+          currentFlowState: flowState,
+          hideInputStates,
+          shouldShow: !hideInputStates.includes(flowState),
+          isAskCustomKeywords: flowState === FLOW_STATES.ASK_CUSTOM_KEYWORDS
+        });
+        return !hideInputStates.includes(flowState);
+      })() && (
+        <>
+          <div className="chat-input-row">
+            <input
+              className="chat-input"
+              placeholder={
+                flowState === FLOW_STATES.ASK_BUSINESS_NAME ? "Enter your business name..." :
+                flowState === FLOW_STATES.ASK_BUSINESS_LOCATION ? "Enter city or area..." :
+                flowState === FLOW_STATES.ASK_WEBSITE_URL ? "httpsyourwebsite.com" :
+                flowState === FLOW_STATES.ASK_SUB_TYPE ? "e.g., IT services, digital marketing..." :
+                flowState === FLOW_STATES.ASK_CUSTOM_KEYWORDS ? "keyword1, keyword2, keyword3..." :
+                "Type your answer..."
+              }
+              value={input}
+              onChange={(e) => {
+                console.log("🚨 USER TYPING IN CUSTOM INPUT:", e.target.value);
+                setInput(e.target.value);
+              }}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  console.log("🚨 USER PRESSED ENTER IN CUSTOM INPUT:", input);
+                  send();
+                }
+              }}
+              disabled={isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings}
+            />
+            <button
+              onClick={send}
+              disabled={!input.trim() || isCreating || isStartingAnalysis || isSearchingBusiness || isGeneratingKeywords || isCheckingRankings}
+              className="chat-send-btn"
+            >
+              {isCheckingRankings ? '📊' : isGeneratingKeywords ? '🔍' : isStartingAnalysis ? '🔄' : isCreating ? '⏳' : isSearchingBusiness ? '🔍' : '➤'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

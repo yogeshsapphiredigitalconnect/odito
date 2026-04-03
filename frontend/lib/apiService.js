@@ -1143,9 +1143,16 @@ class ApiService {
     }
   }
 
-  async checkRanking(domain, keywords, location, country = 'US', language = 'en') {
+  async checkRanking(domain, keywords, location, country = 'US', language = 'en', businessLocation = null) {
     const endpoint = '/seo/check-ranking';
-    const payload = { domain, keywords, location, country, language };
+    const payload = { 
+      domain, 
+      keywords, 
+      location, 
+      country, 
+      language,
+      businessLocation // Pass business location for dynamic mapping
+    };
     console.log('📊 Checking rankings:', { endpoint, payload });
 
     try {
