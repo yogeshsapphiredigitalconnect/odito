@@ -1,7 +1,7 @@
 import { AbsoluteFill, Sequence, interpolate, useCurrentFrame, Audio } from "remotion";
 import { theme } from "./theme";
 
-// Import all 14 required slides (matching worker output)
+// Import all 15 required slides (matching worker output)
 import { OverviewSlide } from "./slides/OverviewSlide";
 import { ScoreSummarySlide } from "./slides/ScoreSummarySlide";
 import { IssueDistributionSlide } from "./slides/IssueDistributionSlide";
@@ -11,6 +11,7 @@ import { LowIssuesSlide } from "./slides/LowIssuesSlide";
 import { TechnicalHighlightsSlide } from "./slides/TechnicalHighlightsSlide";
 import { PerformanceSummarySlide } from "./slides/PerformanceSummarySlide";
 import { PageSpeedSlide } from "./slides/PageSpeedSlide";
+import { KeywordSlide } from "./slides/KeywordSlide";
 import { AIAnalysisSlide } from "./slides/AIAnalysisSlide";
 import { AIScoreBreakdownSlide } from "./slides/AIScoreBreakdownSlide";
 import { AIDetailedMetricsSlide } from "./slides/AIDetailedMetricsSlide";
@@ -296,7 +297,7 @@ export const AuditVideo = (props: Record<string, unknown>) => {
         })()}
       </Sequence>
 
-      {/* SLIDE 10: AI ANALYSIS with per-slide audio */}
+      {/* SLIDE 10: KEYWORD PERFORMANCE with per-slide audio */}
       <Sequence from={slideTiming[9].from} durationInFrames={slideTiming[9].dur}>
         {(() => {
           const slide = slidesWithAudio[9];
@@ -309,8 +310,13 @@ export const AuditVideo = (props: Record<string, unknown>) => {
                 startFrom={0}
                 endAt={slideTiming[9].dur}
               />
-              <AIAnalysisSlide
-                data={slide.data || {}}
+              <KeywordSlide
+                data={slide.data || { 
+                  totalKeywords: 0,
+                  topRankings: [],
+                  opportunities: [],
+                  notRanking: []
+                }}
                 narration={slide.narration || ''}
                 brandColor="#7730ed"
                 agencyName="AuditIQ"
@@ -320,7 +326,7 @@ export const AuditVideo = (props: Record<string, unknown>) => {
         })()}
       </Sequence>
 
-      {/* SLIDE 11: AI CATEGORY BREAKDOWN with per-slide audio */}
+      {/* SLIDE 11: AI ANALYSIS with per-slide audio */}
       <Sequence from={slideTiming[10].from} durationInFrames={slideTiming[10].dur}>
         {(() => {
           const slide = slidesWithAudio[10];
@@ -333,8 +339,8 @@ export const AuditVideo = (props: Record<string, unknown>) => {
                 startFrom={0}
                 endAt={slideTiming[10].dur}
               />
-              <AIScoreBreakdownSlide
-                data={slide.data || { categories: {} }}
+              <AIAnalysisSlide
+                data={slide.data || {}}
                 narration={slide.narration || ''}
                 brandColor="#7730ed"
                 agencyName="AuditIQ"
@@ -344,7 +350,7 @@ export const AuditVideo = (props: Record<string, unknown>) => {
         })()}
       </Sequence>
 
-      {/* SLIDE 12: AI DETAILED METRICS with per-slide audio */}
+      {/* SLIDE 12: AI CATEGORY BREAKDOWN with per-slide audio */}
       <Sequence from={slideTiming[11].from} durationInFrames={slideTiming[11].dur}>
         {(() => {
           const slide = slidesWithAudio[11];
@@ -357,8 +363,8 @@ export const AuditVideo = (props: Record<string, unknown>) => {
                 startFrom={0}
                 endAt={slideTiming[11].dur}
               />
-              <AIDetailedMetricsSlide
-                data={slide.data || { detailedMetrics: {} }}
+              <AIScoreBreakdownSlide
+                data={slide.data || { categories: {} }}
                 narration={slide.narration || ''}
                 brandColor="#7730ed"
                 agencyName="AuditIQ"
@@ -368,7 +374,7 @@ export const AuditVideo = (props: Record<string, unknown>) => {
         })()}
       </Sequence>
 
-      {/* SLIDE 13: AI TOP ISSUES with per-slide audio */}
+      {/* SLIDE 13: AI DETAILED METRICS with per-slide audio */}
       <Sequence from={slideTiming[12].from} durationInFrames={slideTiming[12].dur}>
         {(() => {
           const slide = slidesWithAudio[12];
@@ -381,6 +387,30 @@ export const AuditVideo = (props: Record<string, unknown>) => {
                 startFrom={0}
                 endAt={slideTiming[12].dur}
               />
+              <AIDetailedMetricsSlide
+                data={slide.data || { detailedMetrics: {} }}
+                narration={slide.narration || ''}
+                brandColor="#7730ed"
+                agencyName="AuditIQ"
+              />
+            </>
+          );
+        })()}
+      </Sequence>
+
+      {/* SLIDE 14: AI TOP ISSUES with per-slide audio */}
+      <Sequence from={slideTiming[13].from} durationInFrames={slideTiming[13].dur}>
+        {(() => {
+          const slide = slidesWithAudio[13];
+          console.log('🎵 REMOTION: Rendering Slide 14 with audio:', slide.audio);
+          return (
+            <>
+              <Audio 
+                src={slide.audio} 
+                volume={1}
+                startFrom={0}
+                endAt={slideTiming[13].dur}
+              />
               <AITopIssuesSlide
                 data={slide.data || { topIssues: [] }}
                 narration={slide.narration || ''}
@@ -392,19 +422,19 @@ export const AuditVideo = (props: Record<string, unknown>) => {
         })()}
       </Sequence>
 
-      {/* SLIDE 14: CTA CLOSURE with per-slide audio */}
-      {slidesWithAudio[13] && (
-        <Sequence from={slideTiming[13].from} durationInFrames={slideTiming[13].dur}>
+      {/* SLIDE 15: CTA CLOSURE with per-slide audio */}
+      {slidesWithAudio[14] && (
+        <Sequence from={slideTiming[14].from} durationInFrames={slideTiming[14].dur}>
           {(() => {
-            const slide = slidesWithAudio[13];
-            console.log('🎵 REMOTION: Rendering Slide 14 with audio:', slide.audio);
+            const slide = slidesWithAudio[14];
+            console.log('🎵 REMOTION: Rendering Slide 15 with audio:', slide.audio);
             return (
               <>
                 <Audio 
                   src={slide.audio} 
                   volume={1}
                   startFrom={0}
-                  endAt={slideTiming[13].dur}
+                  endAt={slideTiming[14].dur}
                 />
                 <CTAClosureSlide
                   data={slide.data || { cards: [] }}

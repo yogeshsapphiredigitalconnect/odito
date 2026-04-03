@@ -44,11 +44,21 @@ export interface TechnicalData {
 }
 
 export interface KeywordData {
+  totalKeywords: number;
+  topRankings: Array<{
+    keyword: string;
+    rank: number;
+    status: string;
+  }>;
   opportunities: Array<{
     keyword: string;
-    position: number;
-    search_volume: number;
-    opportunity_type: "improve_rank" | "boost_ctr" | "maintain" | "new";
+    rank: number;
+    status: string;
+  }>;
+  notRanking: Array<{
+    keyword: string;
+    rank: number | null;
+    status: string;
   }>;
 }
 
@@ -108,8 +118,7 @@ export const adaptToNewFormat = (auditData: AuditData) => {
         checks: []
       },
       keywords: { 
-        opportunities: [],
-        total_keywords: 0, top3_count: 0, avg_position: 0
+        totalKeywords: 0, topRankings: [], opportunities: [], notRanking: []
       },
       ai: { 
         ai_score: 0, geo_score: 0, aeo_score: 0, aiseo_score: 0, 
@@ -316,44 +325,10 @@ export const adaptToNewFormat = (auditData: AuditData) => {
     },
 
     keywords: {
-      total_keywords: 156, // TODO: Add keyword data
-      top3_count: 12, // TODO: Add keyword ranking data
-      avg_position: 18.5, // TODO: Add average position data
-      opportunities: [
-        {
-          keyword: "seo audit software",
-          position: 11,
-          google_position: 11,
-          search_volume: 4400,
-          opportunity_type: "improve_rank" as const,
-          opportunity_tag: "High Potential",
-          google_prev: 15,
-          url: auditData.url,
-          gsc_ctr: 2.8
-        },
-        {
-          keyword: "website seo checker",
-          position: 15,
-          google_position: 15,
-          search_volume: 3200,
-          opportunity_type: "boost_ctr" as const,
-          opportunity_tag: "Quick Win",
-          google_prev: 22,
-          url: auditData.url,
-          gsc_ctr: 1.9
-        },
-        {
-          keyword: "technical seo analysis",
-          position: 9,
-          google_position: 9,
-          search_volume: 2100,
-          opportunity_type: "maintain" as const,
-          opportunity_tag: "Defend",
-          google_prev: 8,
-          url: auditData.url,
-          gsc_ctr: 4.2
-        },
-      ],
+      totalKeywords: auditData?.keywordData?.totalKeywords || 0,
+      topRankings: auditData?.keywordData?.topRankings || [],
+      opportunities: auditData?.keywordData?.opportunities || [],
+      notRanking: auditData?.keywordData?.notRanking || []
     },
 
     ai: {

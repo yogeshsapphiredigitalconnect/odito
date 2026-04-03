@@ -44,6 +44,24 @@ export interface AuditData {
     score: number;
     recommendations: string[];
   };
+  keywordData?: {
+    totalKeywords: number;
+    topRankings: Array<{
+      keyword: string;
+      rank: number;
+      status: string;
+    }>;
+    opportunities: Array<{
+      keyword: string;
+      rank: number;
+      status: string;
+    }>;
+    notRanking: Array<{
+      keyword: string;
+      rank: number | null;
+      status: string;
+    }>;
+  };
 }
 
 // ─── Data ────────────────────────────────────────────────────

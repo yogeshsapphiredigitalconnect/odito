@@ -54,7 +54,14 @@ export class NarrationGeneratorService {
         lcp: auditSnapshot.performanceMetrics?.lcp || '5.1',
         tbt: auditSnapshot.performanceMetrics?.tbt || '1960'
       },
-      issueDistribution: auditSnapshot.issueDistribution || {}
+      issueDistribution: auditSnapshot.issueDistribution || {},
+      // Add keyword data for dynamic narration
+      keywordData: auditSnapshot.keywordData || {
+        totalKeywords: 0,
+        topRankings: [],
+        opportunities: [],
+        notRanking: []
+      }
     };
   }
 
@@ -77,6 +84,7 @@ export class NarrationGeneratorService {
       this.generateIntro(data.projectName),
       this.generatePerformanceOverview(data.scores.overall),
       this.generateKeyIssues(data.topIssues.high, data.topIssues.medium),
+      this.generateKeywordInsights(data.keywordData),
       this.generatePerformanceInsights(data.scores, data.performanceMetrics),
       this.generateAIVisibility(data.scores.aiVisibility),
       this.generateActionPlan(),
@@ -185,6 +193,44 @@ export class NarrationGeneratorService {
     if (items.length === 1) return items[0];
     if (items.length === 2) return `${items[0]} and ${items[1]}`;
     return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+  }
+
+  /**
+   * Generate keyword performance insights
+   */
+  static generateKeywordInsights(keywordData) {
+    const totalKeywords = keywordData.totalKeywords || 0;
+    const topRankingsCount = keywordData.topRankings?.length || 0;
+    const opportunitiesCount = keywordData.opportunities?.length || 0;
+    const notRankingCount = keywordData.notRanking?.length || 0;
+
+    // No keywords tracked
+    if (totalKeywords === 0) {
+      return "Let's talk about your keyword strategy. Currently, you're not tracking any specific keywords in our system, which means you're missing out on valuable insights into how people are finding you online. Setting up keyword tracking would give you a clear picture of your search visibility.";
+    }
+
+    // All keywords not ranking
+    if (notRankingCount === totalKeywords) {
+      return `Looking at your keyword performance, we found that none of your ${totalKeywords} tracked keywords are currently ranking in the top 100 search results. While this might seem discouraging, it actually represents a significant opportunity. Each of these keywords, when properly optimized, could become a new stream of organic traffic and potential customers for your business.`;
+    }
+
+    // Mixed performance
+    if (topRankingsCount > 0 && opportunitiesCount > 0 && notRankingCount > 0) {
+      return `Your keyword performance shows a mixed but promising picture. ${topRankingsCount} of your keywords are already ranking well, which proves you can compete in search results. Meanwhile, ${opportunitiesCount} keywords are positioned just outside the top 30, representing immediate growth opportunities. The ${notRankingCount} keywords not yet ranking need targeted optimization to start appearing in search results.`;
+    }
+
+    // Strong performance
+    if (topRankingsCount > 0 && notRankingCount === 0) {
+      return `Excellent progress with your keyword strategy! All ${totalKeywords} of your tracked keywords are ranking, with ${topRankingsCount} achieving top positions. This strong foundation shows you're doing many things right and can be leveraged to capture even more search visibility and traffic.`;
+    }
+
+    // Growth opportunity focus
+    if (opportunitiesCount > 0) {
+      return `The exciting news is you have ${opportunitiesCount} keywords positioned just outside the top 30. These represent your immediate growth opportunities. With focused optimization, these could move to page one and significantly increase your organic traffic without requiring massive changes to your website.`;
+    }
+
+    // Default
+    return `You're tracking ${totalKeywords} keywords, and while some are performing well, others present opportunities for improvement. Let's explore how to optimize your keyword strategy for better search visibility.`;
   }
 }
 

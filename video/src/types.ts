@@ -74,19 +74,21 @@ export interface TechnicalData {
 }
 
 export interface KeywordData {
-  total_keywords: number;
-  top3_count: number;
-  avg_position: number;
+  totalKeywords: number;
+  topRankings: Array<{
+    keyword: string;
+    rank: number;
+    status: string;
+  }>;
   opportunities: Array<{
     keyword: string;
-    position: number;
-    google_position: number;
-    search_volume: number;
-    opportunity_type: "improve_rank" | "boost_ctr" | "maintain" | "new";
-    opportunity_tag: string;
-    google_prev: number;
-    url: string;
-    gsc_ctr: number;
+    rank: number;
+    status: string;
+  }>;
+  notRanking: Array<{
+    keyword: string;
+    rank: number | null;
+    status: string;
   }>;
 }
 

@@ -590,9 +590,26 @@ export class AiScriptService {
           : Number(aiObj.visibility ?? 0);
       const schemaMarkup = this.safeArray(aiObj.schemaMarkup);
       const recommendations = this.safeArray(auditData.recommendations).slice(0, 5);
+      
+      // 🔧 FIX: ADD COMPREHENSIVE KEYWORD DATA LOGGING
+      console.log('\n🔍 KEYWORD DATA DEBUGGING:');
+      console.log('auditData.keywords exists:', !!auditData.keywords);
+      console.log('auditData.keywords structure:', auditData.keywords);
+      console.log('auditData.keywords.totalKeywords:', auditData.keywords?.totalKeywords);
+      console.log('auditData.keywords.topRankings length:', auditData.keywords?.topRankings?.length);
+      console.log('auditData.keywords.opportunities length:', auditData.keywords?.opportunities?.length);
+      console.log('auditData.keywords.notRanking length:', auditData.keywords?.notRanking?.length);
+      
       const keywordsObj = this.safe(auditData.keywords, {});
       const topRankings = this.safeArray(keywordsObj.topRankings).slice(0, 5);
       const opportunities = this.safeArray(keywordsObj.opportunities).slice(0, 3);
+      const notRanking = this.safeArray(keywordsObj.notRanking).slice(0, 5);
+      
+      console.log('🔍 PROCESSED KEYWORD DATA:');
+      console.log('keywordsObj:', keywordsObj);
+      console.log('topRankings (first 5):', topRankings);
+      console.log('opportunities (first 3):', opportunities);
+      console.log('notRanking (first 5):', notRanking);
 
       // 🔧 STEP 7: VALIDATION CHECKS
       console.log('\n🔧 STEP 7: VALIDATION CHECKS');
@@ -664,7 +681,8 @@ export class AiScriptService {
         keywordData: {
           totalKeywords: this.safe(auditData.keywords?.totalKeywords, 0),
           topRankings: topRankings,
-          opportunities: opportunities
+          opportunities: opportunities,
+          notRanking: notRanking
         },
         
         // 🔧 STEP 8.5: BUILD ENHANCED AI ANALYSIS WITH PAGE19/PAGE22 DATA
@@ -676,6 +694,17 @@ export class AiScriptService {
           console.log('[AUDIT_SNAPSHOT] page19Data type:', typeof page19Data);
           console.log('[AUDIT_SNAPSHOT] page22Data type:', typeof page22Data);
           console.log('[AUDIT_SNAPSHOT] Condition (page19Data && page22Data):', !!(page19Data && page22Data));
+          
+          // 🔧 FIX: LOG KEYWORD DATA BEING ADDED TO SNAPSHOT
+          console.log('🔍 KEYWORD DATA ADDED TO auditSnapshot:', {
+            totalKeywords: this.safe(auditData.keywords?.totalKeywords, 0),
+            topRankingsCount: topRankings.length,
+            opportunitiesCount: opportunities.length,
+            notRankingCount: notRanking.length,
+            sampleTopRanking: topRankings[0],
+            sampleOpportunity: opportunities[0],
+            sampleNotRanking: notRanking[0]
+          });
           
           if (page19Data && page22Data) {
             // Build comprehensive aiAnalysis with Page19 and Page22 data
@@ -935,6 +964,7 @@ export class AiScriptService {
       const keywordsObj = this.safe(auditData.keywords, {});
       const topRankings = this.safeArray(keywordsObj.topRankings).slice(0, 5);
       const opportunities = this.safeArray(keywordsObj.opportunities).slice(0, 3);
+      const notRanking = this.safeArray(keywordsObj.notRanking).slice(0, 5);
 
       // Extract AI visibility data safely
       const aiObj = this.safe(auditData.ai, {});
@@ -1000,7 +1030,8 @@ export class AiScriptService {
         keywordData: {
           totalKeywords: this.safe(keywordsObj.totalKeywords, 0),
           topRankings: topRankings,
-          opportunities: opportunities
+          opportunities: opportunities,
+          notRanking: notRanking
         },
         aiVisibility: {
           score: Math.round(scores.aiVisibility || aiObj.visibility || 0),
@@ -1047,7 +1078,8 @@ export class AiScriptService {
         keywordData: {
           totalKeywords: 0,
           topRankings: [],
-          opportunities: []
+          opportunities: [],
+          notRanking: []
         },
         aiVisibility: {
           score: 0,

@@ -13,28 +13,41 @@ export class Page16Service {
    * @returns {Promise<Object>} - Keyword ranking analysis data
    */
   static async getKeywordRankingAnalysis(projectId) {
-    console.log("Page16 getKeywordRankingAnalysis projectId:", projectId);
+    console.log("🔍 PAGE16 SERVICE: Starting keyword ranking analysis");
+    console.log("🔍 PAGE16 SERVICE: Project ID:", projectId);
     
     try {
       // Validate projectId
       if (!projectId || typeof projectId !== 'string') {
+        console.error("❌ PAGE16 SERVICE: Invalid projectId format");
         throw new Error('INVALID_PROJECT_ID');
       }
 
+      console.log("✅ PAGE16 SERVICE: Project ID validation passed");
+
       // Convert to ObjectId for MongoDB query
       const projectObjectId = new mongoose.Types.ObjectId(projectId);
+      console.log("✅ PAGE16 SERVICE: Converted to ObjectId:", projectObjectId);
 
       // Get the latest ranking data for this project
+      console.log("🔍 PAGE16 SERVICE: Querying seo_rankings collection...");
       const SeoRanking = mongoose.model('SeoRanking');
       const rankingData = await SeoRanking
         .findOne({ project_id: projectObjectId })
         .sort({ created_at: -1 })
         .lean();
 
-      console.log("Found ranking data:", rankingData);
+      console.log("🔍 PAGE16 SERVICE: Raw DB query result:", {
+        found: !!rankingData,
+        hasKeywords: !!(rankingData && rankingData.keywords),
+        keywordsCount: rankingData?.keywords?.length || 0,
+        domain: rankingData?.domain,
+        createdAt: rankingData?.created_at
+      });
 
       // Handle case where no ranking data found
       if (!rankingData || !rankingData.keywords || rankingData.keywords.length === 0) {
+        console.warn("⚠️ PAGE16 SERVICE: No keyword ranking data found");
         return {
           success: false,
           error: {
@@ -43,6 +56,8 @@ export class Page16Service {
           }
         };
       }
+
+      console.log("✅ PAGE16 SERVICE: Found ranking data, processing keywords...");
 
       const keywords = rankingData.keywords;
       
@@ -55,6 +70,15 @@ export class Page16Service {
       const top10 = keywords.filter(k => k.rank !== null && k.rank <= 10).length;
       const nearTop10 = keywords.filter(k => k.rank !== null && k.rank >= 11 && k.rank <= 25).length;
 
+      console.log("🔍 PAGE16 SERVICE: Ranking metrics calculated:", {
+        totalKeywords,
+        rankingKeywords,
+        notRankingKeywords,
+        top3,
+        top10,
+        nearTop10
+      });
+
       // Process keywords for display
       const processedKeywords = keywords.map(k => ({
         keyword: k.keyword,
@@ -65,17 +89,14 @@ export class Page16Service {
       // Check if all keywords are not ranking
       const allNotRanking = notRankingKeywords === totalKeywords;
 
-      console.log("Keyword Ranking Analysis calculated:", {
-        totalKeywords,
-        rankingKeywords,
-        notRankingKeywords,
-        top3,
-        top10,
-        nearTop10,
-        allNotRanking
+      console.log("🔍 PAGE16 SERVICE: Keyword processing complete:", {
+        processedKeywordsCount: processedKeywords.length,
+        allNotRanking,
+        sampleTopRankings: processedKeywords.filter(k => k.rank <= 10).slice(0, 3),
+        sampleOpportunities: processedKeywords.filter(k => k.rank >= 11 && k.rank <= 30).slice(0, 3)
       });
 
-      return {
+      const result = {
         success: true,
         data: {
           totalKeywords,
@@ -95,8 +116,22 @@ export class Page16Service {
         }
       };
 
+      console.log("✅ PAGE16 SERVICE: Successfully processed keyword data:", {
+        success: result.success,
+        totalKeywords: result.data.totalKeywords,
+        topRankings: result.data.top10,
+        opportunities: result.data.nearTop10
+      });
+
+      return result;
+
     } catch (error) {
-      console.error('[PAGE16_SERVICE_ERROR]', error);
+      console.error('❌ PAGE16 SERVICE ERROR:', error);
+      console.error('❌ PAGE16 SERVICE ERROR DETAILS:', {
+        message: error.message,
+        stack: error.stack,
+        projectId
+      });
 
       // Handle specific error cases
       if (error.message === 'INVALID_PROJECT_ID') {

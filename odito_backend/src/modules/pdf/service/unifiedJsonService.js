@@ -5,6 +5,7 @@
 
 import { PDFAggregationService } from './pdfAggregationService.js';
 import { CoverPageService } from './coverPageService.js';
+import { Page16Service } from './page16Service.js';
 import { ExecutiveMapper } from '../mapper/sections/executive.mapper.js';
 import { PerformanceMapper } from '../mapper/sections/performance.mapper.js';
 import { KeywordsMapper } from '../mapper/sections/keywords.mapper.js';
@@ -118,6 +119,26 @@ export class UnifiedJsonService {
         console.warn('UNIFIED SERVICE: ProjectPerformanceService failed:', error.message);
       }
 
+      // 🔧 STEP 3: CALL PAGE16 SERVICE FOR KEYWORD DATA
+      console.log('UNIFIED SERVICE: Calling Page16 Service for keyword rankings');
+      let page16Data = {};
+      try {
+        const page16Result = await Page16Service.getKeywordRankingAnalysis(projectId);
+        if (page16Result.success) {
+          page16Data = {
+            success: true,
+            data: page16Result.data
+          };
+          console.log('UNIFIED SERVICE: Page16 Service SUCCESS - Keywords found:', page16Result.data.totalKeywords);
+        } else {
+          console.warn('UNIFIED SERVICE: Page16 Service returned no data:', page16Result.error?.message);
+          page16Data = { success: false, error: page16Result.error };
+        }
+      } catch (error) {
+        console.warn('UNIFIED SERVICE: Page16 Service failed:', error.message);
+        page16Data = { success: false, error: { message: error.message } };
+      }
+
       // 🔧 STEP 4: GET COVER DATA FOR SCORES (reuse existing computation)
       console.log('UNIFIED SERVICE: Getting cover data for scores');
       const coverResult = await CoverPageService.getCoverPageData(projectId);
@@ -191,6 +212,93 @@ export class UnifiedJsonService {
             : desktopScore || mobileScore || 0
       };
 
+      // 🔧 STEP 5D: PROCESS KEYWORD DATA FROM PAGE16 SERVICE
+      console.log('\n🔧 EXTRACTING KEYWORD DATA (REAL DATA FROM seo_rankings)');
+      let keywordData = {
+        totalKeywords: 0,
+        topRankings: [],
+        opportunities: [],
+        notRanking: []
+      };
+
+      if (page16Data.success && page16Data.data) {
+        const rawKeywordData = page16Data.data;
+        console.log('Raw Page16 data:', {
+          totalKeywords: rawKeywordData.totalKeywords,
+          keywordsCount: rawKeywordData.keywords?.length,
+          top10: rawKeywordData.top10,
+          top3: rawKeywordData.top3
+        });
+
+        // Extract total keywords
+        keywordData.totalKeywords = rawKeywordData.totalKeywords || 0;
+
+        // Classify keywords based on rank
+        if (rawKeywordData.keywords && Array.isArray(rawKeywordData.keywords)) {
+          const topRankings = [];
+          const opportunities = [];
+          const notRanking = [];
+
+          rawKeywordData.keywords.forEach(k => {
+            const keywordItem = {
+              keyword: k.keyword,
+              rank: k.rank,
+              status: k.status || 'ranking'
+            };
+
+            // Safe rank handling
+            const rank = k.rank;
+            
+            if (rank === null || rank === undefined || rank > 100) {
+              // Not ranking in top 100
+              notRanking.push(keywordItem);
+            } else if (rank <= 10) {
+              // Top rankings
+              topRankings.push(keywordItem);
+            } else if (rank >= 11 && rank <= 30) {
+              // Opportunities
+              opportunities.push(keywordItem);
+            } else {
+              // Ranking but > 30, treat as not ranking for opportunity analysis
+              notRanking.push(keywordItem);
+            }
+          });
+
+          // Sort and limit arrays
+          keywordData.topRankings = topRankings
+            .sort((a, b) => (a.rank || 0) - (b.rank || 0))
+            .slice(0, 5);
+
+          keywordData.opportunities = opportunities
+            .sort((a, b) => (a.rank || 0) - (b.rank || 0))
+            .slice(0, 5);
+
+          keywordData.notRanking = notRanking
+            .sort((a, b) => {
+              // Put null/undefined ranks first, then by rank descending
+              if (a.rank === null || a.rank === undefined) return -1;
+              if (b.rank === null || b.rank === undefined) return 1;
+              return b.rank - a.rank;
+            })
+            .slice(0, 5);
+        }
+
+        console.log('🔧 PROCESSED KEYWORD DATA:', {
+          totalKeywords: keywordData.totalKeywords,
+          topRankingsCount: keywordData.topRankings.length,
+          opportunitiesCount: keywordData.opportunities.length,
+          notRankingCount: keywordData.notRanking.length,
+          sampleTopRanking: keywordData.topRankings[0],
+          sampleOpportunity: keywordData.opportunities[0],
+          sampleNotRanking: keywordData.notRanking[0]
+        });
+      } else {
+        console.warn('⚠️ No keyword data available from Page16 service, using empty fallback');
+        if (page16Data.error) {
+          console.warn('Page16 error:', page16Data.error.message);
+        }
+      }
+
       // Get scores from cover data (nested under data.scores)
       const s = coverResult.data?.scores || {};
       const seo = Math.round(s.seoHealth || 0);
@@ -251,11 +359,14 @@ export class UnifiedJsonService {
             checkCount: technicalHighlights.checkCount
           },
           performance: performanceMetrics,
+          // 🔧 FIX: ADD REAL KEYWORD DATA FROM PAGE16 SERVICE
+          keywords: keywordData,
           recommendations: recommendations,
           pages: {
             page08: page08Data,
             page10: page10Data,
-            performance: page13Data
+            performance: page13Data,
+            page16: page16Data
           }
         },
         metadata: {
@@ -263,7 +374,7 @@ export class UnifiedJsonService {
           projectId,
           processingTime: Date.now() - startTime,
           version: '2.0.0',
-          dataSources: ['page08', 'page10', 'performance-api', 'cover-service']
+          dataSources: ['page08', 'page10', 'performance-api', 'cover-service', 'page16-keywords']
         }
       };
       
@@ -276,7 +387,14 @@ export class UnifiedJsonService {
         medium: unifiedResponse.data.issues.medium,
         total: unifiedResponse.data.issues.total,
         technicalChecks: unifiedResponse.data.technical.checkCount,
-        performanceScore: unifiedResponse.data.performance.desktopScore
+        performanceScore: unifiedResponse.data.performance.desktopScore,
+        // 🔧 FIX: ADD KEYWORD DATA VALIDATION
+        keywordData: {
+          totalKeywords: unifiedResponse.data.keywords.totalKeywords,
+          topRankingsCount: unifiedResponse.data.keywords.topRankings.length,
+          opportunitiesCount: unifiedResponse.data.keywords.opportunities.length,
+          notRankingCount: unifiedResponse.data.keywords.notRanking?.length || 0
+        }
       });
       console.log('═'.repeat(50));
       
@@ -287,11 +405,25 @@ export class UnifiedJsonService {
         console.log('✅ SUCCESS: Real data present in response');
       }
       
+      // 🔧 FIX: VALIDATE KEYWORD DATA
+      if (unifiedResponse.data.keywords.totalKeywords > 0) {
+        console.log('✅ SUCCESS: Real keyword data present in response');
+      } else {
+        console.warn('⚠️ WARNING: No keyword data found - check if Page16 service returned data');
+      }
+      
       LoggerUtil.info('Unified JSON report generated successfully', {
         projectId,
         processingTime: Date.now() - startTime,
         issuesCount: unifiedResponse.data.issues.total,
-        checksCount: unifiedResponse.data.technical.checkCount
+        checksCount: unifiedResponse.data.technical.checkCount,
+        // 🔧 FIX: ADD KEYWORD METRICS TO LOGGING
+        keywordMetrics: {
+          totalKeywords: unifiedResponse.data.keywords.totalKeywords,
+          topRankingsCount: unifiedResponse.data.keywords.topRankings.length,
+          opportunitiesCount: unifiedResponse.data.keywords.opportunities.length,
+          notRankingCount: unifiedResponse.data.keywords.notRanking?.length || 0
+        }
       });
       
       return unifiedResponse;
@@ -321,7 +453,14 @@ export class UnifiedJsonService {
           scores: { overall: 0, performance: 0, seo: 0, aiVisibility: 0, technicalHealth: 0 },
           recommendations: [],
           issues: { critical: 0, warnings: 0, informational: 0 },
-          issueDistribution: { total: 0, critical: 0, medium: 0, info: 0 }
+          issueDistribution: { total: 0, critical: 0, medium: 0, info: 0 },
+          // 🔧 FIX: ADD EMPTY KEYWORD DATA TO FALLBACK
+          keywords: {
+            totalKeywords: 0,
+            topRankings: [],
+            opportunities: [],
+            notRanking: []
+          }
         },
         metadata: {
           fetchedAt: new Date(),

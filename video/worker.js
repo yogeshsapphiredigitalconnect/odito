@@ -467,6 +467,15 @@ class VideoWorker {
       // Extract Core Web Vitals dynamically from performanceMetrics
       const coreWebVitals = this.extractCoreWebVitals(performanceMetrics);
       
+      // Extract keyword data from auditSnapshot
+      const keywordData = audit?.keywordData || {};
+      console.log(`[VIDEO_WORKER] 📊 Keyword data extracted:`, {
+        totalKeywords: keywordData.totalKeywords || 0,
+        topRankingsCount: keywordData.topRankings?.length || 0,
+        opportunitiesCount: keywordData.opportunities?.length || 0,
+        notRankingCount: keywordData.notRanking?.length || 0
+      });
+
       // Extract AI analysis
       const aiAnalysis = audit?.aiAnalysis || {};
       
@@ -656,7 +665,48 @@ class VideoWorker {
           type: "performanceSummary",
           title: "Performance Summary",
           subtitle: `Performance Score: ${performanceMetrics.pageSpeed || 0}`,
-          narration: `Grade ${this.getPerformanceGrade(performanceMetrics.pageSpeed || 0)}. 60% of your visitors are on mobile — and mobile scores just ${performanceMetrics.mobileScore || 0}. Unoptimized images and no compression are the culprits. Fix those two things and PageSpeed jumps 10 to 15 points immediately.`,
+          narration: (() => {
+            const pageSpeed = performanceMetrics.pageSpeed || 0;
+            const mobileScore = performanceMetrics.mobileScore || 0;
+            const desktopScore = performanceMetrics.desktopScore || 0;
+            
+            // Helper to categorize performance
+            const getPerformanceCategory = (score) => {
+              if (score >= 75) return "strong";
+              if (score >= 50) return "moderate";
+              return "weak";
+            };
+            
+            let narration = `Your performance score is ${pageSpeed}. `;
+            
+            // Compare mobile vs desktop
+            if (mobileScore < desktopScore) {
+              narration += `Mobile performance is lagging at ${mobileScore} compared to desktop at ${desktopScore}. `;
+            } else if (desktopScore < mobileScore) {
+              narration += `Desktop performance is lower at ${desktopScore} compared to mobile at ${mobileScore}. `;
+            } else {
+              narration += `Both mobile and desktop are similar at ${mobileScore}. `;
+            }
+            
+            // Add performance category analysis
+            const category = getPerformanceCategory(pageSpeed);
+            if (category === "weak") {
+              narration += "This indicates serious performance bottlenecks affecting load speed and user experience. ";
+            } else if (category === "moderate") {
+              narration += "This shows moderate performance with room for optimization. ";
+            } else {
+              narration += "This demonstrates strong performance across the board. ";
+            }
+            
+            // Add smart recommendation
+            if (pageSpeed < 50 || mobileScore < 50) {
+              narration += "Focus on optimizing heavy assets, enabling compression, and improving load efficiency for quick gains.";
+            } else {
+              narration += "Consider fine-tuning with caching strategies and minor optimizations for even better results.";
+            }
+            
+            return narration;
+          })(),
           data: {
             pageSpeed: performanceMetrics.pageSpeed || 0,
             mobileScore: performanceMetrics.mobileScore || 0,
@@ -670,15 +720,23 @@ class VideoWorker {
           subtitle: "User Experience Metrics",
           narration: `Your main content takes ${this.getLCPValue(coreWebVitals?.mobile)} seconds to appear on mobile — search engine guidelines recommend 2.5. That gap is where your visitors lose patience and leave. Desktop is better, but still problematic.`,
           data: coreWebVitals
+        },
+        {
+          id: 10,
+          type: "keywords",
+          title: "Keyword Performance",
+          subtitle: `${keywordData.totalKeywords || 0} Keywords Tracked`,
+          narration: this.generateKeywordNarration(keywordData),
+          data: keywordData
         }
       ];
 
-      // Add 4 NEW AI Analysis slides (10-13) - NO aiRecommendations slide
+      // Add 4 NEW AI Analysis slides (11-14) - NO aiRecommendations slide
       const newAiSlides = this.generateAISlides(aiAnalysis, scores);
       
-      // Add NEW CTA Closure slide (Slide 14)
+      // Add NEW CTA Closure slide (Slide 15)
       const slide14 = {
-        id: 14,
+        id: 15,
         type: "ctaClosure",
         title: "What's Next?",
         subtitle: "Take Action on Your SEO & AI Growth",
@@ -704,8 +762,8 @@ class VideoWorker {
       // Combine existing slides with new AI slides and CTA slide
       const allSlides = [...slides, ...newAiSlides, slide14];
       
-      if (allSlides.length < 13) {
-        throw new Error(`Minimum 13 slides required. Got ${allSlides.length}`);
+      if (allSlides.length < 14) {
+        throw new Error(`Minimum 14 slides required. Got ${allSlides.length}`);
       }
       
       // Validate each slide has required fields
@@ -715,7 +773,7 @@ class VideoWorker {
         }
       });
       
-      console.log(`[VIDEO_WORKER] ✅ Successfully created ${allSlides.length} structured slides (including 4 AI slides + 1 CTA)`);
+      console.log(`[VIDEO_WORKER] ✅ Successfully created ${allSlides.length} structured slides (including keyword slide + 4 AI slides + 1 CTA)`);
       return allSlides;
       
     } catch (error) {
@@ -771,7 +829,74 @@ class VideoWorker {
         type: "aiCategoryBreakdown",
         title: "AI Category Breakdown",
         subtitle: "AI Performance Distribution",
-        narration: `You have ${categories.aiImpact || 0}% AI Impact potential — the foundation is there. But Topical Authority is just ${categories.topicalAuthority || 0}%, meaning AI doesn't see you as an expert in anything specific yet. That's the core gap to close.`,
+        narration: (() => {
+            const aiImpact = categories.aiImpact || 0;
+            const citationProbability = categories.citationProbability || 0;
+            const llmReadiness = categories.llmReadiness || 0;
+            const aeoScore = categories.aeoScore || 0;
+            const topicalAuthority = categories.topicalAuthority || 0;
+            const voiceIntent = categories.voiceIntent || 0;
+            
+            // Helper to categorize score status
+            const getStatus = (score) => {
+              if (score >= 75) return "strong";
+              if (score >= 50) return "moderate";
+              return "weak";
+            };
+            
+            // Define all categories with their labels and scores
+            const allCategories = [
+              { name: "AI Impact", score: aiImpact },
+              { name: "Citation Probability", score: citationProbability },
+              { name: "LLM Readiness", score: llmReadiness },
+              { name: "AEO Score", score: aeoScore },
+              { name: "Topical Authority", score: topicalAuthority },
+              { name: "Voice Intent", score: voiceIntent }
+            ];
+            
+            // Group categories by status
+            const groups = {
+              strong: [],
+              moderate: [],
+              weak: []
+            };
+            
+            allCategories.forEach(category => {
+              const status = getStatus(category.score);
+              groups[status].push(category);
+            });
+            
+            let narration = "Your AI performance shows a mixed distribution across key areas. ";
+            
+            // Add strong categories
+            if (groups.strong.length > 0) {
+              const strongList = groups.strong.map(c => `${c.name} at ${c.score}`).join(" and ");
+              narration += `${strongList} ${groups.strong.length === 1 ? 'is' : 'are'} performing strongly. `;
+            }
+            
+            // Add moderate categories
+            if (groups.moderate.length > 0) {
+              const moderateList = groups.moderate.map(c => `${c.name} at ${c.score}`).join(" and ");
+              narration += `${moderateList} ${groups.moderate.length === 1 ? 'shows' : 'show'} moderate performance. `;
+            }
+            
+            // Add weak categories
+            if (groups.weak.length > 0) {
+              const weakList = groups.weak.map(c => `${c.name} at ${c.score}`).join(" and ");
+              narration += `${weakList} ${groups.weak.length === 1 ? 'is' : 'are'} underperforming and need attention. `;
+            }
+            
+            // Add final insight based on weak categories count
+            if (groups.weak.length >= 3) {
+              narration += "This indicates low AI readiness requiring comprehensive optimization.";
+            } else if (groups.weak.length >= 1) {
+              narration += "Improving these areas will strengthen your AI visibility and authority.";
+            } else {
+              narration += "You demonstrate strong AI optimization across all key areas.";
+            }
+            
+            return narration;
+          })(),
         data: {
           categories: {
             aiImpact: categories.aiImpact || 0,
@@ -790,7 +915,74 @@ class VideoWorker {
         type: "aiDetailedMetrics",
         title: "AI Detailed Metrics",
         subtitle: "Technical AI Readiness",
-        narration: `Schema coverage is ${detailedMetrics.schemaCoverage || 0}. But FAQ optimization at ${detailedMetrics.faqOptimization || 0}, conversational content at ${detailedMetrics.conversationalScore || 0}, and citation rate at ${detailedMetrics.aiCitationRate || 0} are all low — and those are exactly what AI systems scan when deciding who to quote as a source.`,
+        narration: (() => {
+            const schemaCoverage = detailedMetrics.schemaCoverage || 0;
+            const faqOptimization = detailedMetrics.faqOptimization || 0;
+            const conversationalScore = detailedMetrics.conversationalScore || 0;
+            const aiSnippetProbability = detailedMetrics.aiSnippetProbability || 0;
+            const aiCitationRate = detailedMetrics.aiCitationRate || 0;
+            const knowledgeGraph = detailedMetrics.knowledgeGraph || 0;
+            
+            // Helper to categorize score status
+            const getStatus = (score) => {
+              if (score >= 75) return "strong";
+              if (score >= 50) return "moderate";
+              return "weak";
+            };
+            
+            // Define all metrics with their labels and scores
+            const allMetrics = [
+              { name: "Schema Coverage", score: schemaCoverage },
+              { name: "FAQ Optimization", score: faqOptimization },
+              { name: "Conversational Score", score: conversationalScore },
+              { name: "AI Snippet Probability", score: aiSnippetProbability },
+              { name: "AI Citation Rate", score: aiCitationRate },
+              { name: "Knowledge Graph", score: knowledgeGraph }
+            ];
+            
+            // Group metrics by status
+            const groups = {
+              strong: [],
+              moderate: [],
+              weak: []
+            };
+            
+            allMetrics.forEach(metric => {
+              const status = getStatus(metric.score);
+              groups[status].push(metric);
+            });
+            
+            let narration = "Your technical AI readiness shows varied performance across key metrics. ";
+            
+            // Add strong metrics
+            if (groups.strong.length > 0) {
+              const strongList = groups.strong.map(m => `${m.name} at ${m.score}`).join(" and ");
+              narration += `${strongList} ${groups.strong.length === 1 ? 'is' : 'are'} performing strongly. `;
+            }
+            
+            // Add moderate metrics
+            if (groups.moderate.length > 0) {
+              const moderateList = groups.moderate.map(m => `${m.name} at ${m.score}`).join(" and ");
+              narration += `${moderateList} ${groups.moderate.length === 1 ? 'shows' : 'show'} moderate performance. `;
+            }
+            
+            // Add weak metrics
+            if (groups.weak.length > 0) {
+              const weakList = groups.weak.map(m => `${m.name} at ${m.score}`).join(" and ");
+              narration += `${weakList} ${groups.weak.length === 1 ? 'needs' : 'need'} improvement. `;
+            }
+            
+            // Add final AI impact insight
+            if (groups.weak.length >= 3) {
+              narration += "This indicates low AI visibility requiring comprehensive optimization.";
+            } else if (groups.weak.length >= 1) {
+              narration += "Addressing these areas presents an opportunity to enhance your AI search presence.";
+            } else {
+              narration += "You demonstrate strong AI readiness across all technical metrics.";
+            }
+            
+            return narration;
+          })(),
         data: {
           detailedMetrics: {
             schemaCoverage: detailedMetrics.schemaCoverage || 0,
@@ -1669,6 +1861,41 @@ class VideoWorker {
     } catch (error) {
       console.error(`[VIDEO_WORKER] Failed to update job status | jobId=${jobId}:`, error.message);
     }
+  }
+
+  /**
+   * Generate dynamic keyword narration based on performance
+   * @param {Object} keywordData - Keyword data from auditSnapshot
+   * @returns {string} Dynamic narration text
+   */
+  generateKeywordNarration(keywordData) {
+    const totalKeywords = keywordData.totalKeywords || 0;
+    const topRankingsCount = keywordData.topRankings?.length || 0;
+    const opportunitiesCount = keywordData.opportunities?.length || 0;
+    const notRankingCount = keywordData.notRanking?.length || 0;
+
+    // All keywords not ranking
+    if (notRankingCount === totalKeywords && totalKeywords > 0) {
+      return `Currently, none of your ${totalKeywords} tracked keywords are ranking in the top 100 search results. This represents a significant opportunity, as each keyword optimized properly could unlock new streams of organic traffic and potential customers for your business.`;
+    }
+
+    // Mixed performance
+    if (topRankingsCount > 0 && opportunitiesCount > 0 && notRankingCount > 0) {
+      return `Your keyword performance shows mixed results. ${topRankingsCount} keywords are already ranking well, while ${opportunitiesCount} present strong growth opportunities. The ${notRankingCount} keywords not yet ranking need targeted optimization to start appearing in search results.`;
+    }
+
+    // Strong performance
+    if (topRankingsCount > 0 && notRankingCount === 0) {
+      return `Excellent progress! All ${totalKeywords} of your tracked keywords are ranking, with ${topRankingsCount} achieving top positions. This strong foundation can be leveraged to capture even more search visibility and traffic.`;
+    }
+
+    // Growth opportunity focus
+    if (opportunitiesCount > 0) {
+      return `You have ${opportunitiesCount} keywords positioned just outside the top 10, representing immediate growth opportunities. With focused optimization, these could move to page one and significantly increase your organic traffic.`;
+    }
+
+    // Default/fallback
+    return `You're tracking ${totalKeywords} keywords. Some are performing well while others present opportunities for improvement. Let's explore how to optimize your keyword strategy for better search visibility.`;
   }
 
   start() {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PageFooter } from '../layout';
+import API_BASE_URL from '@/lib/apiConfig';
 
 function ScoreCard({ value, label }) {
   return (

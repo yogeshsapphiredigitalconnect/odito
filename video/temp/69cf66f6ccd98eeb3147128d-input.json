@@ -26,15 +26,15 @@
         }
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-1.mp3",
-      "duration": 10.07746,
-      "durationInFrames": 302
+      "duration": 10.03102,
+      "durationInFrames": 301
     },
     {
       "id": 2,
       "type": "scoreSummary",
       "title": "Overall Score Analysis",
       "subtitle": "Score: 57/100",
-      "narration": "Four areas are pulling that score down. Technical is your strongest at 70, but Performance at 69, SEO at 60, and AI Visibility at 30 are all below 50 — meaning speed, content signals, and future search readiness are all suffering simultaneously.",
+      "narration": "Your overall score is 57 out of 100. Technical at 70 and Performance at 69 and SEO at 60 show moderate performance. AI Visibility at 30 is underperforming and needs attention. This gap represents an improvement opportunity that could boost your overall performance.",
       "data": {
         "scores": {
           "overall": 57,
@@ -46,8 +46,8 @@
         "overall": 57
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-2.mp3",
-      "duration": 15.32517,
-      "durationInFrames": 460
+      "duration": 17.600726,
+      "durationInFrames": 528
     },
     {
       "id": 3,
@@ -65,8 +65,8 @@
         "total": 819
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-3.mp3",
-      "duration": 9.798821,
-      "durationInFrames": 294
+      "duration": 9.98458,
+      "durationInFrames": 300
     },
     {
       "id": 4,
@@ -77,6 +77,13 @@
       "data": {
         "issues": [
           {
+            "issue": "Links without descriptive text found",
+            "severity": "high",
+            "pages": 25,
+            "count": 25,
+            "recommendation": "Address within 7 days - high priority for SEO improvement"
+          },
+          {
             "issue": "H1 length is 10 characters (should be 20–70)",
             "severity": "high",
             "pages": 25,
@@ -84,14 +91,7 @@
             "recommendation": "Address within 7 days - high priority for SEO improvement"
           },
           {
-            "issue": "8 accessibility violations found: 8 unique types (1 critical, 4 serious, 3 moderate)",
-            "severity": "high",
-            "pages": 25,
-            "count": 25,
-            "recommendation": "Address within 7 days - high priority for SEO improvement"
-          },
-          {
-            "issue": "Focus trap detected during keyboard navigation",
+            "issue": "Social sharing not fully optimized — missing: og:title, og:description, og:image, twitter:card",
             "severity": "high",
             "pages": 25,
             "count": 25,
@@ -103,8 +103,8 @@
         "hasZeroIssues": false
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-4.mp3",
-      "duration": 11.099138,
-      "durationInFrames": 333
+      "duration": 10.727619,
+      "durationInFrames": 322
     },
     {
       "id": 5,
@@ -115,21 +115,21 @@
       "data": {
         "issues": [
           {
-            "issue": "h4 is all uppercase: TOLL FREE NUMBER",
+            "issue": "Apple touch icon is missing",
             "severity": "medium",
             "pages": 25,
             "count": 25,
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           },
           {
-            "issue": "OG tags do not contain primary keyword",
+            "issue": "Contact info not found in structured data (E-E-A-T)",
             "severity": "medium",
             "pages": 25,
             "count": 25,
             "recommendation": "Plan to fix within 30 days - moderate SEO impact"
           },
           {
-            "issue": "Schema description does not contain keyword",
+            "issue": "h2 is all lowercase: career popup",
             "severity": "medium",
             "pages": 25,
             "count": 25,
@@ -141,8 +141,8 @@
         "hasZeroIssues": false
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-5.mp3",
-      "duration": 11.935057,
-      "durationInFrames": 358
+      "duration": 12.213696,
+      "durationInFrames": 366
     },
     {
       "id": 6,
@@ -157,8 +157,8 @@
         "hasZeroIssues": true
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-6.mp3",
-      "duration": 11.145578,
-      "durationInFrames": 334
+      "duration": 10.40254,
+      "durationInFrames": 312
     },
     {
       "id": 7,
@@ -294,23 +294,23 @@
         }
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-7.mp3",
-      "duration": 11.935057,
-      "durationInFrames": 358
+      "duration": 12.306576,
+      "durationInFrames": 369
     },
     {
       "id": 8,
       "type": "performanceSummary",
       "title": "Performance Summary",
       "subtitle": "Performance Score: 69",
-      "narration": "Grade D. 60% of your visitors are on mobile — and mobile scores just 66. Unoptimized images and no compression are the culprits. Fix those two things and PageSpeed jumps 10 to 15 points immediately.",
+      "narration": "Your performance score is 69. Mobile performance is lagging at 66 compared to desktop at 76. This shows moderate performance with room for optimization. Consider fine-tuning with caching strategies and minor optimizations for even better results.",
       "data": {
         "pageSpeed": 69,
         "mobileScore": 66,
         "desktopScore": 76
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-8.mp3",
-      "duration": 13.978413,
-      "durationInFrames": 419
+      "duration": 14.953651,
+      "durationInFrames": 449
     },
     {
       "id": 9,
@@ -335,8 +335,50 @@
         }
       },
       "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-9.mp3",
-      "duration": 12.770975,
-      "durationInFrames": 383
+      "duration": 12.817415,
+      "durationInFrames": 385
+    },
+    {
+      "id": 10,
+      "type": "keywords",
+      "title": "Keyword Performance",
+      "subtitle": "5 Keywords Tracked",
+      "narration": "Currently, none of your 5 tracked keywords are ranking in the top 100 search results. This represents a significant opportunity, as each keyword optimized properly could unlock new streams of organic traffic and potential customers for your business.",
+      "data": {
+        "totalKeywords": 5,
+        "topRankings": [],
+        "opportunities": [],
+        "notRanking": [
+          {
+            "keyword": "best Healthcare - eye related service",
+            "rank": null,
+            "status": "not_ranking"
+          },
+          {
+            "keyword": "local Healthcare - eye related service",
+            "rank": null,
+            "status": "not_ranking"
+          },
+          {
+            "keyword": "professional Healthcare - eye related service",
+            "rank": null,
+            "status": "not_ranking"
+          },
+          {
+            "keyword": "Healthcare - eye related service services",
+            "rank": null,
+            "status": "not_ranking"
+          },
+          {
+            "keyword": "Healthcare - eye related service",
+            "rank": null,
+            "status": "not_ranking"
+          }
+        ]
+      },
+      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-10.mp3",
+      "duration": 14.675011,
+      "durationInFrames": 440
     },
     {
       "id": 10,
@@ -349,16 +391,16 @@
         "summary": "Moderate AI visibility. Your brand has limited presence in AI-generated search results.",
         "hasKnowledgeGraph": true
       },
-      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-10.mp3",
-      "duration": 26.377868,
-      "durationInFrames": 791
+      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-11.mp3",
+      "duration": 25.82059,
+      "durationInFrames": 775
     },
     {
       "id": 11,
       "type": "aiCategoryBreakdown",
       "title": "AI Category Breakdown",
       "subtitle": "AI Performance Distribution",
-      "narration": "You have 82% AI Impact potential — the foundation is there. But Topical Authority is just 27%, meaning AI doesn't see you as an expert in anything specific yet. That's the core gap to close.",
+      "narration": "Your AI performance shows a mixed distribution across key areas. AI Impact at 82 is performing strongly. Citation Probability at 10 and LLM Readiness at 30 and AEO Score at 11 and Topical Authority at 27 and Voice Intent at 18 are underperforming and need attention. This indicates low AI readiness requiring comprehensive optimization.",
       "data": {
         "categories": {
           "aiImpact": 82,
@@ -369,16 +411,16 @@
           "voiceIntent": 18
         }
       },
-      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-11.mp3",
-      "duration": 12.213696,
-      "durationInFrames": 366
+      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-12.mp3",
+      "duration": 23.359274,
+      "durationInFrames": 701
     },
     {
       "id": 12,
       "type": "aiDetailedMetrics",
       "title": "AI Detailed Metrics",
       "subtitle": "Technical AI Readiness",
-      "narration": "Schema coverage is 66. But FAQ optimization at 12, conversational content at 15, and citation rate at 14 are all low — and those are exactly what AI systems scan when deciding who to quote as a source.",
+      "narration": "Your technical AI readiness shows varied performance across key metrics. Schema Coverage at 66 shows moderate performance. FAQ Optimization at 12 and Conversational Score at 15 and AI Snippet Probability at 44 and AI Citation Rate at 14 and Knowledge Graph at 49 need improvement. This indicates low AI visibility requiring comprehensive optimization.",
       "data": {
         "detailedMetrics": {
           "schemaCoverage": 66,
@@ -389,9 +431,9 @@
           "knowledgeGraph": 49
         }
       },
-      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-12.mp3",
-      "duration": 13.421134,
-      "durationInFrames": 403
+      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-13.mp3",
+      "duration": 27.167347,
+      "durationInFrames": 815
     },
     {
       "id": 13,
@@ -402,34 +444,34 @@
       "data": {
         "topIssues": [
           {
-            "title": "Google Maps Embed Correct",
+            "title": "Phone E164 Format",
             "score": 0,
             "status": "info",
             "category": "general",
             "recommendation": "Address citation_probability issue affecting 25 pages"
           },
           {
-            "title": "Aggregate Rating Schema",
+            "title": "Opening Hours Specification",
             "score": 0,
             "status": "info",
             "category": "general",
             "recommendation": "Address topical_authority issue affecting 25 pages"
           },
           {
-            "title": "Address Identical",
+            "title": "Event Schema",
             "score": 0,
             "status": "info",
             "category": "general",
-            "recommendation": "Address citation_probability issue affecting 25 pages"
+            "recommendation": "Address topical_authority issue affecting 25 pages"
           }
         ]
       },
-      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-13.mp3",
-      "duration": 11.888617,
-      "durationInFrames": 357
+      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-14.mp3",
+      "duration": 12.538776,
+      "durationInFrames": 376
     },
     {
-      "id": 14,
+      "id": 15,
       "type": "ctaClosure",
       "title": "What's Next?",
       "subtitle": "Take Action on Your SEO & AI Growth",
@@ -450,12 +492,12 @@
           }
         ]
       },
-      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-14.mp3",
-      "duration": 15.928889,
-      "durationInFrames": 478
+      "audio": "http://localhost:5000/audio/69cf66f6ccd98eeb3147128d-slide-15.mp3",
+      "duration": 15.975329,
+      "durationInFrames": 479
     }
   ],
   "fps": 30,
-  "durationInFrames": 5637,
-  "totalDuration": 187.89587300000002
+  "durationInFrames": 6917,
+  "totalDuration": 230.57415000000003
 }
