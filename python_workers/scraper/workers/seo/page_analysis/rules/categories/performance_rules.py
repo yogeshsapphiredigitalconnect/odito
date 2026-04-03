@@ -117,20 +117,7 @@ class PageSpeedScoreRule(BaseSEORuleV2):
     description = "PageSpeed score should be ≥90"
 
     def evaluate(self, normalized, job_id, project_id, url):
-        perf_raw = normalized.get("performance")
-        if not perf_raw or not isinstance(perf_raw, dict):
-            return []
-        score, device = _get_best_performance_score(normalized)
-        if score is None:
-            return []  # No performance data available
-        
-        if score < 90:
-            return [self.create_issue(
-                job_id, project_id, url,
-                f"PageSpeed score is {score} (should be ≥90) - {device}",
-                score, "≥90",
-                data_key="performance"
-            )]
+        # Rule disabled - always return no issues
         return []
 
 

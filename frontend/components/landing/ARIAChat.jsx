@@ -46,7 +46,7 @@ const ARIAChat = ({ onComplete }) => {
   // ── State ────────────────────────────────────────────────────────────
   const [flowState, setFlowState] = useState(FLOW_STATES.ASK_BUSINESS_NAME);
   const [messages, setMessages] = useState([
-    { type: "ai", text: "👋 Hey! I'm ARIA, your AI SEO co-pilot. Let's uncover what's holding your site back — and what's possible. First, what's your business name?" }
+    { type: "ai", text: "👋 Hey! I'm ODITO, your AI SEO co-pilot. Let's uncover what's holding your site back — and what's possible. First, what's your business name?" }
   ]);
   const [input, setInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
