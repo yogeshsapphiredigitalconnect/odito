@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useKeywordData } from '@/hooks/useKeywordData';
 import { useKeywordFilter } from './hooks/useKeywordFilter';
+import { useProject } from '@/contexts/ProjectContext';
+import apiService from '@/lib/apiService';
 import StatsGrid from './components/StatsGrid';
 import VolumeChart from './components/VolumeChart';
 import FilterTabs from './components/FilterTabs';
 import KeywordTable from './components/KeywordTable';
 import DetailDrawer from './components/DetailDrawer';
+import UserAddedKeywords from './components/UserAddedKeywords';
 import './styles/keywords.css';
 
 export default function KeywordDashboard() {
@@ -14,6 +17,12 @@ export default function KeywordDashboard() {
   const [sort, setSort] = useState({ col: 'vol', dir: 'desc' });
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('generated');
+  const [userKeywords, setUserKeywords] = useState(null);
+  const [userKeywordsLoading, setUserKeywordsLoading] = useState(false);
+  const [userKeywordsError, setUserKeywordsError] = useState(null);
+  
+  const { activeProject } = useProject();
   
   const { 
     intelligence, 
@@ -38,6 +47,52 @@ export default function KeywordDashboard() {
 
     return () => clearTimeout(timeoutId);
   }, [sort.col, sort.dir, filter]); // Remove fetchKeywords from dependencies
+
+  // Fetch user keywords when User Added tab is active
+  useEffect(() => {
+    if (activeTab === 'useradded' && activeProject?._id) {
+      fetchUserKeywords();
+    }
+  }, [activeTab, activeProject?._id]);
+
+  const fetchUserKeywords = async () => {
+    if (!activeProject?._id) return;
+    
+    setUserKeywordsLoading(true);
+    setUserKeywordsError(null);
+    
+    try {
+      console.log('Fetching user keywords for project:', activeProject._id);
+      const response = await apiService.getProjectRankings(activeProject._id);
+      console.log('API response:', response);
+      
+      // Handle the response structure: { success: true, data: rankings }
+      const rankings = response.data?.data || response.data || [];
+      const rankingData = rankings[0]; // Get the most recent ranking
+      
+      console.log('Ranking data:', rankingData);
+      
+      if (rankingData) {
+        setUserKeywords(rankingData);
+      } else {
+        setUserKeywords(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user keywords:', error);
+      console.error('Error response:', error.response);
+      
+      // Handle different types of errors
+      if (error.response?.status === 404) {
+        setUserKeywordsError('No keyword rankings found for this project');
+      } else if (error.response?.status >= 500) {
+        setUserKeywordsError('Server error. Please try again later.');
+      } else {
+        setUserKeywordsError(error.message || 'Failed to load tracked keywords');
+      }
+    } finally {
+      setUserKeywordsLoading(false);
+    }
+  };
 
   // Calculate counts for filters from real data
   const keywordsArray = Array.isArray(keywords) ? keywords : [];
@@ -171,7 +226,7 @@ export default function KeywordDashboard() {
                 letterSpacing: '0.12em', 
                 textTransform: 'uppercase' 
               }}>
-                Live · DataForSEO · Google US
+                {activeTab === 'generated' ? 'Live · DataForSEO · Google US' : 'MANUAL TRACKING · GOOGLE US'}
               </span>
             </div>
             <div style={{ 
@@ -187,7 +242,7 @@ export default function KeywordDashboard() {
                 color: '#f0f4ff', 
                 lineHeight: 1.2 
               }}>
-                Keyword Intelligence
+                {activeTab === 'generated' ? 'Keyword Intelligence' : 'User Added Keywords'}
               </h1>
               <span style={{ 
                 fontSize: 11, 
@@ -195,7 +250,10 @@ export default function KeywordDashboard() {
                 color: '#5a6a82', 
                 fontFamily: "'DM Sans',sans-serif" 
               }}>
-                {intelligence?.total_keywords || 0} keywords
+                {activeTab === 'generated' 
+                  ? `${intelligence?.total_keywords || 0} keywords`
+                  : `${userKeywords?.keywords?.length || 0} keywords`
+                }
               </span>
             </div>
           </div>
@@ -205,35 +263,75 @@ export default function KeywordDashboard() {
             alignItems: 'center', 
             flexWrap: 'wrap' 
           }}>
-            <div style={{ position: 'relative' }}>
-              <input 
-                value={search} 
-                onChange={e => setSearch(e.target.value)} 
-                placeholder="Search keywords..."
-                style={{ 
-                  background: 'rgba(255,255,255,0.05)', 
-                  border: '1px solid rgba(255,255,255,0.09)', 
-                  borderRadius: 9, 
-                  padding: '8px 12px 8px 32px', 
-                  fontSize: 12, 
-                  color: '#f0f4ff', 
-                  outline: 'none', 
-                  width: 'min(200px, 100%)', 
-                  fontFamily: "'DM Sans',sans-serif" 
-                }} 
-              />
-              <span style={{ 
-                position: 'absolute', 
-                left: 10, 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: '#5a6a82', 
-                fontSize: 13 
-              }}>
-                ⌕
-              </span>
-            </div>
+            {activeTab === 'generated' && (
+              <div style={{ position: 'relative' }}>
+                <input 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  placeholder="Search keywords..."
+                  style={{ 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.09)', 
+                    borderRadius: 9, 
+                    padding: '8px 12px 8px 32px', 
+                    fontSize: 12, 
+                    color: '#f0f4ff', 
+                    outline: 'none', 
+                    width: 'min(200px, 100%)', 
+                    fontFamily: "'DM Sans',sans-serif" 
+                  }} 
+                />
+                <span style={{ 
+                  position: 'absolute', 
+                  left: 10, 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  color: '#5a6a82', 
+                  fontSize: 13 
+                }}>
+                  ⌕
+                </span>
+              </div>
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* MAIN TABS */}
+      <div style={{
+        display: 'flex',
+        gap: '2px',
+        padding: '0 20px',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: '#04070f'
+      }}>
+        <div
+          onClick={() => setActiveTab('generated')}
+          style={{
+            padding: '10px 18px',
+            fontSize: 13,
+            cursor: 'pointer',
+            color: activeTab === 'generated' ? '#22d3ee' : '#5a6a82',
+            borderBottom: activeTab === 'generated' ? '2px solid #22d3ee' : '2px solid transparent',
+            fontWeight: activeTab === 'generated' ? 500 : 400,
+            transition: 'color 0.15s'
+          }}
+        >
+          Generated
+        </div>
+        <div
+          onClick={() => setActiveTab('useradded')}
+          style={{
+            padding: '10px 18px',
+            fontSize: 13,
+            cursor: 'pointer',
+            color: activeTab === 'useradded' ? '#22d3ee' : '#5a6a82',
+            borderBottom: activeTab === 'useradded' ? '2px solid #22d3ee' : '2px solid transparent',
+            fontWeight: activeTab === 'useradded' ? 500 : 400,
+            transition: 'color 0.15s'
+          }}
+        >
+          User Added
         </div>
       </div>
 
@@ -242,45 +340,57 @@ export default function KeywordDashboard() {
         marginRight: selected ? "min(360px,100vw)" : 0, 
         flex: 1 
       }}>
+        {activeTab === 'generated' ? (
+          // GENERATED TAB CONTENT
+          <>
+            {/* Stats Grid */}
+            <StatsGrid intelligence={intelligence} />
 
-        {/* Stats Grid */}
-        <StatsGrid intelligence={intelligence} />
+            {/* Volume Chart */}
+            <VolumeChart 
+              keywords={keywords} 
+              selected={selected} 
+              onSelect={handleKeywordSelect} 
+            />
 
-        {/* Volume Chart */}
-        <VolumeChart 
-          keywords={keywords} 
-          selected={selected} 
-          onSelect={handleKeywordSelect} 
-        />
+            {/* Filter Tabs */}
+            <FilterTabs 
+              filter={filter} 
+              setFilter={setFilter} 
+              counts={counts} 
+              total={rows.length} 
+            />
 
-        {/* Filter Tabs */}
-        <FilterTabs 
-          filter={filter} 
-          setFilter={setFilter} 
-          counts={counts} 
-          total={rows.length} 
-        />
+            {/* Keyword Table */}
+            <KeywordTable 
+              rows={rows} 
+              sort={sort} 
+              toggleSort={toggleSort} 
+              selected={selected} 
+              setSelected={handleKeywordSelect} 
+              maxVol={maxVol} 
+              loading={loading.keywords}
+            />
 
-        {/* Keyword Table */}
-        <KeywordTable 
-          rows={rows} 
-          sort={sort} 
-          toggleSort={toggleSort} 
-          selected={selected} 
-          setSelected={handleKeywordSelect} 
-          maxVol={maxVol} 
-          loading={loading.keywords}
-        />
-
-        {/* Footer */}
-        <div style={{ 
-          marginTop: 12, 
-          fontSize: 11, 
-          color: '#3a4a5f', 
-          textAlign: 'center' 
-        }}>
-          DataForSEO Labs · Google US · March 2026 · Click any row to inspect
-        </div>
+            {/* Footer */}
+            <div style={{ 
+              marginTop: 12, 
+              fontSize: 11, 
+              color: '#3a4a5f', 
+              textAlign: 'center' 
+            }}>
+              DataForSEO Labs · Google US · March 2026 · Click any row to inspect
+            </div>
+          </>
+        ) : (
+          // USER ADDED TAB CONTENT
+          <UserAddedKeywords 
+            data={userKeywords}
+            loading={userKeywordsLoading}
+            error={userKeywordsError}
+            onRefresh={fetchUserKeywords}
+          />
+        )}
       </div>
 
       {/* Detail Drawer */}

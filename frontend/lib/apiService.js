@@ -1186,6 +1186,22 @@ class ApiService {
     }
   }
 
+  async getProjectRankings(projectId) {
+    const endpoint = `/seo/rankings/${projectId}`;
+    console.log('📊 Fetching project rankings:', { endpoint, projectId });
+
+    try {
+      const response = await this.request(endpoint, {
+        method: 'GET'
+      });
+      console.log('✅ Project rankings fetched:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Project rankings fetch error:', error);
+      throw error;
+    }
+  }
+
   async getKeywordRankingAnalysis(projectId) {
     const endpoint = `/pdf/${projectId}/page16`;
     console.log('📊 Getting keyword ranking analysis:', { endpoint, projectId });

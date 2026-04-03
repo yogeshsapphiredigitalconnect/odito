@@ -2,7 +2,8 @@ import express from 'express';
 import {
   generateKeywords,
   checkRanking,
-  saveRanking
+  saveRanking,
+  getProjectRankings
 } from '../controller/seoOnboardingController.js';
 import auth from '../../user/middleware/auth.js';
 
@@ -34,5 +35,13 @@ router.post('/check-ranking', checkRanking);
  * @body    { projectId: string, domain: string, location?: string, keywords: [{keyword,rank}] }
  */
 router.post('/save-ranking', saveRanking);
+
+/**
+ * @route   GET /api/seo/rankings/:projectId
+ * @desc    Get ranking results for a project
+ * @access  Private
+ * @param   projectId - Project ID
+ */
+router.get('/rankings/:projectId', getProjectRankings);
 
 export default router;

@@ -364,3 +364,60 @@ export const saveRanking = async (req, res) => {
     });
   }
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  4) GET /api/seo/rankings/:projectId - Get rankings for a project
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const getProjectRankings = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'projectId is required'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid projectId format'
+      });
+    }
+
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    LoggerUtil.info('Get project rankings request', { projectId });
+
+    const rankings = await SeoRanking
+      .find({ project_id: projectId, user_id: userId })
+      .sort({ created_at: -1 })
+      .limit(10)
+      .lean();
+
+    LoggerUtil.info('Rankings retrieved successfully', { 
+      projectId, 
+      rankingsCount: rankings.length 
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: rankings
+    });
+
+  } catch (error) {
+    LoggerUtil.error('Get project rankings error', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching rankings'
+    });
+  }
+};
