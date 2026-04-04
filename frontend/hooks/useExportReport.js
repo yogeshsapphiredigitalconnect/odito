@@ -52,6 +52,13 @@ export function useExportReport() {
 
       console.log(`[EXPORT] Starting ${type.toUpperCase()} export for project: ${projectId}`);
 
+      // Create a combined signal: user abort OR 120s timeout
+      const timeoutId = setTimeout(() => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      }, 120_000);
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -61,24 +68,26 @@ export function useExportReport() {
         signal: abortControllerRef.current.signal
       });
 
+      clearTimeout(timeoutId);
+
       // Handle non-OK responses
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
         
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
-          throw new Error(errorData.message || `Export failed with status: ${response.status}`);
+          throw new Error(errorData.message || errorData.error || `Export failed with status: ${response.status}`);
         } else {
-          throw new Error(`Export failed with status: ${response.status}`);
+          throw new Error(`Export failed with status: ${response.status}. Server may be unreachable.`);
         }
       }
 
       // Get the PDF blob
       const blob = await response.blob();
 
-      // Validate blob type
-      if (blob.type !== 'application/pdf') {
-        throw new Error('Invalid response format. Expected PDF.');
+      // Validate we actually got a PDF (or at least a non-empty response)
+      if (blob.size === 0) {
+        throw new Error('Server returned an empty response. PDF generation may have failed.');
       }
 
       // Create download link

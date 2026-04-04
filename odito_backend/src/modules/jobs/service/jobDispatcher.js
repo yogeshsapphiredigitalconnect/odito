@@ -85,24 +85,46 @@ class JobDispatcher {
       });
 
       // Direct HTTP call to Python worker
-      const response = await axios.post(`${this.pythonBaseURL}/api/jobs/link-discovery`, {
+      const dispatchUrl = `${this.pythonBaseURL}/api/jobs/link-discovery`;
+      const dispatchPayload = {
         jobId: job._id.toString(),
         projectId: job.project_id.toString(),
         userId: job.user_id.toString(),
         main_url: job.input_data.main_url
-      }, {
+      };
+
+      console.log(`🚀 [DISPATCH] Starting job dispatch | jobId=${job._id}`);
+      console.log(`🔍 [DISPATCH] Environment check:`);
+      console.log(`🔍 [DISPATCH] PYTHON_WORKER_URL: ${process.env.PYTHON_WORKER_URL}`);
+      console.log(`🔍 [DISPATCH] this.pythonBaseURL: ${this.pythonBaseURL}`);
+      console.log(`🚀 [DISPATCH] URL: ${dispatchUrl}`);
+      console.log(`🚀 [DISPATCH] Payload:`, JSON.stringify(dispatchPayload, null, 2));
+
+      console.log(`📤 [DISPATCH] Sending HTTP request to Python worker...`);
+      
+      const response = await axios.post(dispatchUrl, dispatchPayload, {
         timeout: 120000,
         headers: {
           'Content-Type': 'application/json'
         }
       });
 
+      console.log(`✅ [DISPATCH] Request successful | status=${response.status}`);
+      console.log(`✅ [DISPATCH] Response:`, JSON.stringify(response.data, null, 2));
+
       return {
         success: true,
         jobId: job._id
       };
     } catch (error) {
-      console.error(`[ERROR] LINK_DISCOVERY dispatch failed | jobId=${job._id} | reason="${error.message}"`);
+      console.error(`❌ [DISPATCH] Request failed | jobId=${job._id}`);
+      console.error(`❌ [DISPATCH] Error details:`, {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
 
       // Mark job as failed if dispatch fails
       await jobService.updateJobStatus(job._id, 'FAILED', {
@@ -112,7 +134,7 @@ class JobDispatcher {
 
       return {
         success: false,
-        message: 'Failed to dispatch job to Python worker',
+        jobId: job._id,
         error: error.message
       };
     }

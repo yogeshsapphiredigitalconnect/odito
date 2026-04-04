@@ -20,6 +20,7 @@ import aiVideoRoutes from '../modules/aiVideo/routes/aiVideo.routes.js';
 import videoDataRoutes from '../modules/video/routes/videoData.routes.js';
 import debugRoutes from '../modules/aiVideo/routes/debug.routes.js';
 import businessRoutes from '../modules/app_user/routes/businessRoutes.js';
+import externalRoutes from '../modules/external/routes/externalRoutes.js';
 
 const router = express.Router();
 
@@ -63,5 +64,7 @@ router.use('/ai-video', aiVideoRoutes);
 router.use('/video', videoDataRoutes);
 // Debug routes for AI script generation
 router.use('/debug', debugRoutes);
+// External onboarding routes (no auth required)
+router.use('/external', externalRoutes);
 
 export default router;

@@ -111,6 +111,15 @@ const startServer = async () => {
   console.log("🎬 Serving video files from:", videosDir);
   app.use("/videos", express.static(videosDir));
 
+  // Create and serve reports directory for PDF files
+  const reportsDir = path.join(__dirname, 'reports');
+  if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
+    console.log("📊 Created reports directory:", reportsDir);
+  }
+  console.log("📊 Serving PDF reports from:", reportsDir);
+  app.use("/reports", express.static(reportsDir));
+
   app.use(cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,

@@ -252,6 +252,19 @@ export class PDFRenderer {
   }
 
   /**
+   * Get PDF as blob (for API responses)
+   */
+  getBlob() {
+    if (!this.pdf) {
+      throw new Error('PDF not initialized');
+    }
+    
+    // Convert jsPDF to blob
+    const pdfOutput = this.pdf.output('blob');
+    return pdfOutput;
+  }
+
+  /**
    * NEW APPROACH: Clean up resources
    */
   cleanup() {

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import PDFRenderer from '../utils/pdfRenderer';
+import pdfGeneratorService from '../services/pdfGeneratorService';
 
 // Import all PDF page components
 import CoverPage from '../pdf/src/components/sections/Page01Cover';
@@ -87,106 +87,46 @@ export function useExportPDF() {
     setProgress(0);
     abortControllerRef.current = new AbortController();
 
-    // NEW APPROACH: No need to preload fonts - iframe handles font loading
-
-    const renderer = new PDFRenderer();
-
     try {
       console.log('[PDF EXPORT] Starting PDF export for project:', projectId);
 
-      // Verify projectId is available
-      console.log("PDF projectId in useExportPDF:", projectId);
+      // Use the service to generate PDF
+      const result = await pdfGeneratorService.generatePDF(projectId, reportType, (progress) => {
+        setProgress(progress);
+      });
 
-      // Initialize renderer
-      renderer.initialize();
-
-      // Create pages with projectId passed to Executive Summary
-      const pagesWithProjectId = [
-        { id: 'p01', component: <CoverPage projectId={projectId} /> },
-        { id: 'p02', component: <SectionDivider pageNum={2} sectionNum={1} title="Executive Summary" subtitle="Scores, issue overview and AI-generated analysis" /> },
-        { id: 'p03', component: <ExecutiveSummaryPage projectId={projectId} /> },
-        { id: 'p04', component: <KeyStrengthsPage /> },
-        { id: 'p05', component: <PriorityRoadmapPage /> },
-        { id: 'p06', component: <SEOHealthOverviewPage projectId={projectId} /> },
-        { id: 'p07', component: <SectionDivider pageNum={7} sectionNum={2} title="SEO Audit" subtitle="On-page, schema, technical and crawlability" /> },
-        { id: 'p08', component: <OnPageSEOPage projectId={projectId} /> },
-        { id: 'p09', component: <StructuredDataPage projectId={projectId} /> },
-        { id: 'p10', component: <TechnicalSEOPage projectId={projectId} /> },
-        { id: 'p11', component: <CrawlabilityPage projectId={projectId} /> },
-        { id: 'p12', component: <SectionDivider pageNum={12} sectionNum={3} title="Performance Analysis" subtitle="Core Web Vitals, Lighthouse and optimisation roadmap" /> },
-        { id: 'p13', component: <CoreWebVitalsPage projectId={projectId} /> },
-        { id: 'p14', component: <PerformanceOpportunitiesPage /> },
-        { id: 'p15', component: <SectionDivider pageNum={15} sectionNum={4} title="Keyword Analysis" subtitle="Rankings, positions and near-page-1 opportunities" /> },
-        { id: 'p16', component: <KeywordRankingPage projectId={projectId} /> },
-        { id: 'p17', component: <KeywordOpportunityPage /> },
-        { id: 'p18', component: <SectionDivider pageNum={18} sectionNum={5} title="AI Visibility" subtitle="GEO, AEO, AISEO — visibility across AI search platforms" /> },
-        { id: 'p19', component: <AIVisibilityOverviewPage projectId={projectId} /> },
-        { id: 'p20', component: <LLMVisibilityPage /> },
-        { id: 'p21', component: <LLMCitationForecastPage /> },
-        { id: 'p22', component: <AIContentReadinessPage projectId={projectId} /> },
-        { id: 'p23', component: <AIContentStrategyPage /> },
-        { id: 'p24', component: <KnowledgeGraphPage /> },
-        { id: 'p25', component: <SectionDivider pageNum={25} sectionNum={6} title="Action Plan & Forecast" subtitle="30-day roadmap, growth projection and methodology" /> },
-        { id: 'p26', component: <AIOptimisationPage /> },
-        { id: 'p27', component: <AIGrowthForecastPage /> },
-        { id: 'p28', component: <ActionPlanPage /> },
-        { id: 'p29', component: <AuditMethodologyPage /> },
-        { id: 'p30', component: <AboutOditoPage /> },
-      ];
-
-      // Render each page
-      for (let i = 0; i < pagesWithProjectId.length; i++) {
-        // Check if export was aborted
-        if (abortControllerRef.current?.signal.aborted) {
-          throw new Error('Export aborted');
-        }
-
-        const page = pagesWithProjectId[i];
-        
-        // Update progress
-        setProgress(Math.round(((i + 1) / pagesWithProjectId.length) * 100));
-
-        console.log(`[PDF EXPORT] Rendering page ${i + 1}/${pagesWithProjectId.length}`);
-
-        // Render component to canvas
-        const canvas = await renderer.renderComponent(page.component, i, pagesWithProjectId.length);
-
-        // Add to PDF
-        renderer.addCanvasToPDF(canvas, i === 0);
-
-        console.log(`[PDF EXPORT] Page ${i + 1}/${pagesWithProjectId.length} completed`);
-      }
-
+      // Convert blob to download
+      const url = URL.createObjectURL(result.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
       // Generate filename
       const timestamp = new Date().toISOString().split('T')[0];
       const filename = `report-export-${projectId}-${timestamp}.pdf`;
-
-      // Save PDF
-      renderer.save(filename);
+      link.download = filename;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up URL
+      URL.revokeObjectURL(url);
 
       console.log('[PDF EXPORT] PDF export completed successfully');
 
       return {
         success: true,
         filename,
-        pages: pagesWithProjectId.length
+        pages: result.pages
       };
 
     } catch (err) {
-      // Handle abort gracefully
-      if (err.message === 'Export aborted') {
-        console.log('[PDF EXPORT] Export cancelled');
-        return { success: false, cancelled: true };
-      }
-
       console.error('[PDF EXPORT] PDF export failed:', err.message);
       setError(err.message);
       throw err;
 
     } finally {
-      // Clean up renderer
-      renderer.cleanup();
-      
       setLoading(false);
       setProgress(0);
       isExportingRef.current = false;

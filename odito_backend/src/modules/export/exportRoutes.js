@@ -1,13 +1,25 @@
 import express from 'express';
-import { exportSEOReport, exportAIReport, getExportStatus, previewSEOReport, previewAIReport } from './exportController.js';
-import auth from '../user/middleware/auth.js';
+import { generatePDF } from './exportController.js';
+import auth from '../../modules/user/middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/projects/:id/export/seo', auth, exportSEOReport);
-router.post('/projects/:id/export/ai', auth, exportAIReport);
-router.get('/export/status', auth, getExportStatus);
-router.get('/projects/:id/export/seo/preview', auth, previewSEOReport);
-router.get('/projects/:id/export/ai/preview', auth, previewAIReport);
+// Generate PDF for a project
+// POST /api/export/projects/:projectId/export/:type
+router.post('/projects/:projectId/export/:type', auth, generatePDF);
+
+// Generate PDF for a project (GET support for browser testing)
+// GET /api/export/projects/:projectId/export/:type
+router.get('/projects/:projectId/export/:type', auth, generatePDF);
+
+// Export status endpoint
+// GET /api/export/status
+router.get('/status', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Backend PDF export system is operational',
+    timestamp: new Date().toISOString()
+  });
+});
 
 export default router;

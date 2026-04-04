@@ -255,6 +255,13 @@ const seoProjectSchema = new mongoose.Schema({
       type: Date,
       required: false
     }
+  },
+
+  // Project source tracking
+  source: {
+    type: String,
+    enum: ['web', 'external', 'api', 'migration'],
+    default: 'web'
   }
 
 }, {

@@ -25,6 +25,15 @@ const jobService = new JobService();
 // ---------------------------------------------------------------------------
 
 const JOB_CREATION_MAP = {
+  [JOB_TYPES.LINK_DISCOVERY]: (src) => jobService.createJob({
+    user_id: src.user_id,
+    seo_project_id: src.project_id,
+    jobType: JOB_TYPES.LINK_DISCOVERY,
+    input_data: {
+      main_url: src.input_data?.main_url || src.main_url
+    },
+    priority: JOB_TYPE_CONFIG[JOB_TYPES.LINK_DISCOVERY].priority
+  }),
   [JOB_TYPES.KEYWORD_RESEARCH]: (src) => jobService.createJob({
     user_id: src.user_id,
     seo_project_id: src.project_id,
@@ -51,6 +60,7 @@ const JOB_CREATION_MAP = {
 const createJobDispatchMap = () => {
   const jobDispatcher = new JobDispatcher();
   return {
+    [JOB_TYPES.LINK_DISCOVERY]: (job) => jobDispatcher.dispatchLinkDiscoveryJob(job),
     [JOB_TYPES.KEYWORD_RESEARCH]: (job) => jobDispatcher.dispatchKeywordResearchJob(job),
     [JOB_TYPES.TECHNICAL_DOMAIN]: (job) => jobDispatcher.dispatchTechnicalDomainJob(job),
     [JOB_TYPES.PAGE_SCRAPING]: (job) => jobDispatcher.dispatchPageScrapingJob(job),
@@ -88,7 +98,10 @@ class ChainingEngine {
     const jobType = updatedJob.jobType;
     const config = PIPELINE_CONFIG[jobType];
 
-    console.log(`[CHAINING:${requestId}] Starting job chaining | jobType=${jobType}`);
+    console.log(`[CHAINING:${requestId}] 🚀 Job completed: ${jobType}`);
+    console.log(`[CHAINING:${requestId}] 🔍 Config found:`, !!config);
+    console.log(`[CHAINING:${requestId}] 📋 Next jobs:`, config?.next || []);
+    console.log(`[CHAINING:${requestId}] 🔄 Parallel:`, config?.parallel);
     console.log(`[CHAINING:${requestId}] === RUNTIME CONFIG DEBUG ===`);
     console.log(`[CHAINING:${requestId}] config =`, JSON.stringify(config, null, 2));
     console.log(`[CHAINING:${requestId}] config.next =`, JSON.stringify(config?.next));

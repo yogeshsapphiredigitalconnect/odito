@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,13 +165,14 @@ const EyeBall = ({
 
 
 
-function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
+export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
   const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
@@ -178,11 +180,17 @@ function LoginPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
   const [isPurplePeeking, setIsPurplePeeking] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const purpleRef = useRef(null);
   const blackRef = useRef(null);
   const yellowRef = useRef(null);
   const orangeRef = useRef(null);
   const { login } = useAuth();
+
+  // Prevent hydration errors by only running animations on client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleGoogleLogin = async () => {
     try {
@@ -208,6 +216,8 @@ function LoginPage() {
 
   // Blinking effect for purple character
   useEffect(() => {
+    if (!isClient) return;
+    
     const getRandomBlinkInterval = () => Math.random() * 4000 + 3000; // Random between 3-7 seconds
 
     const scheduleBlink = () => {
@@ -324,21 +334,28 @@ function LoginPage() {
         // Show confirmation modal instead of redirecting to dashboard
         window.dispatchEvent(new CustomEvent('showPaymentConfirm'));
       } else {
-        // No payment intent, check if user has existing projects
-        alert(`Login successful! Welcome, ${result.user.firstName}!`);
-        if (typeof window !== 'undefined') {
-          try {
-            const response = await apiService.getProjects(1, 1);
-            const projects = response?.data?.projects || [];
-            
-            if (projects.length > 0) {
-              window.location.href = '/dashboard';
-            } else {
+        // No payment intent, check for redirect parameter first
+        const redirectUrl = searchParams.get('redirect');
+        if (redirectUrl) {
+          console.log('Redirecting to:', redirectUrl);
+          window.location.href = redirectUrl;
+        } else {
+          // No redirect, check if user has existing projects
+          alert(`Login successful! Welcome, ${result.user.firstName}!`);
+          if (typeof window !== 'undefined') {
+            try {
+              const response = await apiService.getProjects(1, 1);
+              const projects = response?.data?.projects || [];
+              
+              if (projects.length > 0) {
+                window.location.href = '/dashboard';
+              } else {
+                window.location.href = '/onboarding';
+              }
+            } catch (error) {
+              console.error("Failed to check user projects:", error);
               window.location.href = '/onboarding';
             }
-          } catch (error) {
-            console.error("Failed to check user projects:", error);
-            window.location.href = '/onboarding';
           }
         }
       }
@@ -700,4 +717,3 @@ function LoginPage() {
 
 
 
-export default LoginPage;

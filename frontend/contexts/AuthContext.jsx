@@ -149,7 +149,7 @@ function AuthContextInner({ value, children }) {
   useEffect(() => {
     console.log("AuthContext - Session changed:", session);
     
-    if (session?.backendToken && session?.backendUser) {
+    if (session && session?.backendToken && session?.backendUser) {
       console.log("AuthContext - Storing backend token and user");
       console.log("AuthContext - Backend user:", session.backendUser);
       

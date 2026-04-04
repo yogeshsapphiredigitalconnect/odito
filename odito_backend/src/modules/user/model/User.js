@@ -178,6 +178,13 @@ const userSchema = new mongoose.Schema({
       country: String
     }
   },
+  
+  // User source tracking
+  source: {
+    type: String,
+    enum: ['web', 'external', 'api', 'migration'],
+    default: 'web'
+  },
 }, {
   timestamps: true,
 });

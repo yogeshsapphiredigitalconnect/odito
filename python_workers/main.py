@@ -135,18 +135,25 @@ def claim_job(request: JobClaimRequest):
     try:
         print(f"🔄 Worker {request.worker_id} requesting job of type: {request.job_type}")
         
-        # Call Node.js backend to claim a job
+        # DEBUG: Add these prints
         node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        print(f"🔍 DEBUG: NODE_BACKEND_URL = '{node_backend_url}'")
+        
         node_url = f"{node_backend_url}/api/workers/claim"
+        print(f"🔍 DEBUG: Final node_url = '{node_url}'")
+        
         claim_payload = {
             "job_type": request.job_type,
             "worker_id": request.worker_id
         }
+        print(f"🔍 DEBUG: claim_payload = {claim_payload}")
         
         print(f"📡 Sending claim request to: {node_url}")
         print(f"📦 Payload: {claim_payload}")
         
         response = requests.post(node_url, json=claim_payload, timeout=10)
+        print(f"🔍 DEBUG: Response status = {response.status_code}")
+        print(f"🔍 DEBUG: Response text = {response.text}")
         response.raise_for_status()
         
         result = response.json()
@@ -176,13 +183,32 @@ def claim_job(request: JobClaimRequest):
             data=None
         )
 
-if __name__ == "__main__":
+def test_node_connection():
+    """Test connection to Node.js backend manually"""
+    import requests
     
-    # Get worker ID from command line args or generate one
+    node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+    test_url = f"{node_backend_url}/api/workers/claim"
+    test_payload = {"job_type": "LINK_DISCOVERY", "worker_id": "debug-test"}
+    
+    print(f"🧪 MANUAL TEST: URL = {test_url}")
+    print(f"🧪 MANUAL TEST: Payload = {test_payload}")
+    
+    try:
+        response = requests.post(test_url, json=test_payload, timeout=10)
+        print(f"🧪 MANUAL TEST: Status = {response.status_code}")
+        print(f"🧪 MANUAL TEST: Response = {response.text}")
+        print(f"🧪 MANUAL TEST: Headers = {dict(response.headers)}")
+    except Exception as e:
+        print(f"🧪 MANUAL TEST: Exception = {e}")
+
+if __name__ == "__main__":
+    test_node_connection()
+    
     worker_id = sys.argv[1] if len(sys.argv) > 1 else generate_worker_id()
     
     print(f"🤖 Starting Python worker with ID: {worker_id}")
     print("🚀 Worker ready to receive dispatched jobs from Node.js")
     
-    # Start FastAPI server (no polling loop needed)
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

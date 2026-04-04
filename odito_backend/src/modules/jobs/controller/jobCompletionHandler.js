@@ -11,6 +11,9 @@ import { JobService } from '../service/jobService.js';
 import projectStatusService from '../service/projectStatusService.js';
 import chainingEngine from '../chainingEngine.js';
 import { AIGeneratedVideoService } from '../../video/services/aiGeneratedVideo.service.js';
+import { sendEmail } from '../../../services/emailService.js';
+import { generateRealPDF } from '../../../services/pdfGeneratorService.js';
+import User from '../../user/model/User.js';
 
 const jobService = new JobService();
 
@@ -131,6 +134,63 @@ async function handleJobCompletion(updatedJob, stats, requestId) {
   
   await chainingEngine.process(updatedJob, stats, requestId);
   console.log(`[COMPLETION_HANDLER:${requestId}] chainingEngine.process completed`);
+
+  // 📧 EMAIL NOTIFICATION: Send report email for final job types
+  await sendReportEmailForFinalJob(updatedJob, requestId);
+}
+
+/**
+ * Send report email for final job types (SEO_SCORING, AI_VISIBILITY_SCORING)
+ * @param {Object} job - Completed job object
+ * @param {string} requestId - Request tracking ID
+ */
+async function sendReportEmailForFinalJob(job, requestId) {
+  // Only send email for final job types
+  const finalJobTypes = ['SEO_SCORING', 'AI_VISIBILITY_SCORING'];
+  
+  if (!finalJobTypes.includes(job.jobType)) {
+    console.log(`[EMAIL:${requestId}] Skipping email - not a final job type | jobType=${job.jobType}`);
+    return;
+  }
+
+  try {
+    console.log(`[EMAIL:${requestId}] Final job completed - preparing email | jobType=${job.jobType} | jobId=${job._id}`);
+    
+    // Get user information
+    const user = await User.findById(job.user_id).lean();
+    if (!user) {
+      console.error(`[EMAIL:${requestId}] User not found | userId=${job.user_id}`);
+      return;
+    }
+
+    console.log(`[EMAIL:${requestId}] Sending report email to: ${user.email}`);
+
+    // Generate real PDF from frontend report page
+    console.log(`[PDF:${requestId}] Generating PDF for project: ${job.project_id}`);
+    let pdfUrl;
+    try {
+      pdfUrl = await generateRealPDF(job.project_id, job);
+      console.log(`[PDF:${requestId}] ✅ PDF generated successfully: ${pdfUrl}`);
+    } catch (pdfError) {
+      console.error(`[PDF:${requestId}] ❌ PDF generation failed: ${pdfError.message}`);
+      // Fallback to placeholder URL if PDF generation fails
+      pdfUrl = `https://your-domain.com/api/reports/${job.project_id}/pdf?jobId=${job._id}`;
+      console.log(`[PDF:${requestId}] Using fallback URL: ${pdfUrl}`);
+    }
+    
+    // Send email with error handling
+    const emailSent = await sendEmail(user.email, pdfUrl, user.firstName);
+    
+    if (emailSent) {
+      console.log(`[EMAIL:${requestId}] ✅ Report email sent successfully | email=${user.email} | jobType=${job.jobType}`);
+    } else {
+      console.error(`[EMAIL:${requestId}] ❌ Failed to send report email | email=${user.email} | jobType=${job.jobType}`);
+    }
+    
+  } catch (error) {
+    console.error(`[EMAIL:${requestId}] ❌ Email sending failed | jobId=${job._id} | reason="${error.message}"`);
+    // Don't fail the job completion process due to email errors
+  }
 }
 
 export default completeJobSafely;
