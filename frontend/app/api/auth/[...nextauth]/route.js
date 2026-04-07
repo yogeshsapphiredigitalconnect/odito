@@ -2,10 +2,29 @@ import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
 const handler = NextAuth({
+  // Increase timeout for Google OAuth discovery
+  debug: process.env.NODE_ENV === 'development',
+  // Add global timeout configuration
+  maxAge: 60 * 60 * 24 * 7, // 7 days
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      },
+      httpOptions: {
+        timeout: 15000, // 15 seconds timeout
+      },
+      issuer: "https://accounts.google.com",
+      wellKnown: "https://accounts.google.com/.well-known/openid-configuration",
+      client: {
+        token_endpoint_auth_method: "client_secret_post",
+      }
     })
   ],
   session: {
@@ -109,6 +128,18 @@ const handler = NextAuth({
   pages: {
     signIn: "/login",
     error: "/login"
+  },
+  // Add error handling for network issues
+  events: {
+    async signIn(message) {
+      console.log("NextAuth signIn event:", message);
+    },
+    async signOut(message) {
+      console.log("NextAuth signOut event:", message);
+    },
+    async error(message) {
+      console.error("NextAuth error event:", message);
+    }
   }
 })
 

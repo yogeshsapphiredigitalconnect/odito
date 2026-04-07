@@ -35,7 +35,7 @@ class VideoWorker {
     console.log(`[VIDEO_WORKER] Backend public path: ${this.backendPublicPath}`);
     
     // MongoDB connection
-    this.mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/odito_dev';
+    this.mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/odito_dev';
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -154,6 +154,7 @@ class VideoWorker {
     try {
       await mongoose.connect(this.mongoUri);
       console.log('[VIDEO_WORKER] Connected to MongoDB');
+      console.log(`🔗 [VIDEO_WORKER] Connected to MongoDB database: ${mongoose.connection.name}`);
     } catch (error) {
       console.error('[VIDEO_WORKER] MongoDB connection failed:', error);
     }

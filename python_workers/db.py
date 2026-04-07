@@ -2,6 +2,10 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # connect to MongoDB using same URI as backend
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/odito_dev")
@@ -10,7 +14,10 @@ print(f"[DB DEBUG] Mongo URI: {MONGO_URI}")
 client = MongoClient(MONGO_URI)
 
 # Extract database name from URI or use default
-db_name = MONGO_URI.split("/")[-1] if "/" in MONGO_URI else "odito_dev"
+if "/" in MONGO_URI:
+    db_name = MONGO_URI.split("/")[-1].split("?")[0]  # Remove query parameters
+else:
+    db_name = "odito_dev"
 db = client[db_name]
 
 print(f"[DB DEBUG] Database name: {db_name}")
