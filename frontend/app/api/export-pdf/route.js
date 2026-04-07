@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import serverPDFGenerator from '@/services/serverPDFGenerator';
+import pdfGeneratorService from '@/services/pdfGeneratorService';
 
 /**
  * API endpoint to generate PDF for backend consumption
@@ -24,7 +24,7 @@ export async function GET(request) {
     console.log(`[API] Generating PDF for projectId: ${projectId}, reportType: ${reportType}`);
 
     // Generate PDF buffer using server-side generator
-    const pdfBuffer = await serverPDFGenerator.generatePDFBuffer(projectId, reportType);
+    const pdfBuffer = await pdfGeneratorService.generatePDFBuffer(projectId, reportType);
 
     // Empty PDF protection
     if (!pdfBuffer || pdfBuffer.length === 0) {
@@ -90,7 +90,7 @@ export async function POST(request) {
     console.log(`[API] Generating PDF for projectId: ${projectId}, reportType: ${reportType}`);
 
     // Generate PDF buffer using server-side generator
-    const pdfBuffer = await serverPDFGenerator.generatePDFBuffer(projectId, reportType);
+    const pdfBuffer = await pdfGeneratorService.generatePDFBuffer(projectId, reportType);
 
     // Empty PDF protection
     if (!pdfBuffer || pdfBuffer.length === 0) {

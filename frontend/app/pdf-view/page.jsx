@@ -1,9 +1,10 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function PDFView() {
+function PDFViewContent() {
   const searchParams = useSearchParams();
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +77,15 @@ export default function PDFView() {
       <SectionPage sectionNumber="01" title="Executive Summary" />
       <SummaryPage data={staticData} />
     </div>
+  );
+}
+
+// Export the page wrapped in Suspense
+export default function PDFView() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PDFViewContent />
+    </Suspense>
   );
 }
 

@@ -7,7 +7,7 @@ function SevBadge({ sev }) {
     : sev === "info" ? "▸ " : ""
   return (
     <span className={`sev-badge ${sev}`}>
-      {dot}{sev.toUpperCase()}
+      {dot}{sev ? sev.toUpperCase() : ''}
     </span>
   )
 }

@@ -1,8 +1,6 @@
 "use client"
 
-
-
-import { useState, useEffect } from "react"
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { useAuth } from "@/contexts/AuthContext"
@@ -19,9 +17,7 @@ import IssueDetailView from "@/components/dashboard/issues/IssueDetailView"
 
 import PageDetailView from "./components/PageDetailView"
 
-
-
-export default function OnPagePage() {
+function OnPagePageContent() {
 
   const { user, isLoading: authLoading } = useAuth()
 
@@ -432,5 +428,14 @@ export default function OnPagePage() {
 
   )
 
+}
+
+// Export the page wrapped in Suspense
+export default function OnPagePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OnPagePageContent />
+    </Suspense>
+  )
 }
 
