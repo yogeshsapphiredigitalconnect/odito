@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { JobService } from '../service/jobService.js';
 import AIScript from '../../aiVideo/models/aiScript.model.js';
+import { getEnvVar } from '../../../config/env.js';
 
 const jobService = new JobService();
 
@@ -13,7 +14,7 @@ class JobDispatcher {
     }
     
     this.pythonBaseURL = pythonWorkerUrl;
-    this.videoWorkerURL = 'http://127.0.0.1:8001';
+    this.videoWorkerURL = getEnvVar('VIDEO_WORKER_URL');
     this.isProcessing = false;
     this.jobQueue = [];
   }

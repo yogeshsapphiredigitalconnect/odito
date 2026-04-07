@@ -1,44 +1,19 @@
 /**
  * AI Visibility Service - Handles all AI Visibility API calls
- * Follows clean architecture principles
+ * Follows clean architecture principles - PRODUCTION READY
  */
-import API_BASE_URL from "@/lib/apiConfig";
+import apiClient from '@/utils/apiClient';
 
 class AIVisibilityService {
   constructor() {
-    this.baseURL = API_BASE_URL;
+    // No baseURL needed - using centralized API client
   }
 
   /**
-   * Handle API responses with proper error handling
-   */
-  async handleResponse(response) {
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    return data;
-  }
-
-  /**
-   * Generic request method with authentication
+   * Generic request method - using centralized API client
    */
   async request(endpoint, options = {}) {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    const response = await fetch(`${this.baseURL}${endpoint}`, config);
-    return this.handleResponse(response);
+    return apiClient.request(endpoint, options);
   }
 
   /**

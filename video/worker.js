@@ -35,7 +35,9 @@ class VideoWorker {
     console.log(`[VIDEO_WORKER] Backend public path: ${this.backendPublicPath}`);
     
     // MongoDB connection
-    this.mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/odito_dev';
+    const { getDatabaseConfig } = require('./config/env.js');
+    const dbConfig = getDatabaseConfig();
+    this.mongoUri = dbConfig.uri;
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -1581,7 +1583,9 @@ class VideoWorker {
             console.log(`[VIDEO_WORKER] 📅 Created at: ${stats.birthtime}`);
             
             // Return HTTP URL for video access
-            const videoUrl = `http://localhost:5000/videos/${projectId}.mp4`;
+            const { getMediaUrls } = require('./config/env.js');
+            const mediaUrls = getMediaUrls();
+            const videoUrl = `${mediaUrls.video}/${projectId}.mp4`;
             console.log(`[VIDEO_WORKER] 📡 Video URL: ${videoUrl}`);
             
             resolve(videoUrl);
@@ -1761,7 +1765,9 @@ class VideoWorker {
             console.log(`[VIDEO_WORKER] 📅 Created at: ${stats.birthtime}`);
             
             // Return HTTP URL for video access
-            const videoUrl = `http://localhost:5000/videos/${projectId}.mp4`;
+            const { getMediaUrls } = require('./config/env.js');
+            const mediaUrls = getMediaUrls();
+            const videoUrl = `${mediaUrls.video}/${projectId}.mp4`;
             console.log(`[VIDEO_WORKER] 📡 Video URL: ${videoUrl}`);
             
             resolve(videoUrl);

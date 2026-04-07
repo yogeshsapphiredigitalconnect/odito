@@ -1,11 +1,18 @@
-require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
-const crypto = require('crypto');
+require('dotenv').config({ path: __dirname + '/.env' });
 
 /**
- * 🎯 PRODUCTION-READY AUDIO SERVICE
+ * PRODUCTION AUDIO SERVICE
+ * Uses ElevenLabs TTS with comprehensive error handling
+ */
+
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { getMediaUrls } = require('../config/env.js');
+
+/**
+ * PRODUCTION-READY AUDIO SERVICE
  * Handles ElevenLabs API issues and provides working fallbacks
  */
 
@@ -118,7 +125,7 @@ class ProductionAudioService {
       // Validate the generated file
       this.validateAudioFile(outputPath);
       
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `${getMediaUrls().audio}/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[PRODUCTION_AUDIO_SERVICE] ❌ Audio generation failed:`, error.message);
@@ -446,7 +453,7 @@ class ProductionAudioService {
    */
   getAudioUrl(projectId) {
     if (this.audioExists(projectId)) {
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `${getMediaUrls().audio}/${projectId}.mp3`;
     }
     return null;
   }

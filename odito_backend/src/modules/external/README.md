@@ -83,7 +83,7 @@ src/modules/external/
 ## Usage
 
 ```bash
-curl -X POST http://localhost:5000/api/external/onboard \
+curl -X POST https://your-domain.com/api/external/onboard \
   -H "Content-Type: application/json" \
   -d '{"email": "test@example.com"}'
 ```

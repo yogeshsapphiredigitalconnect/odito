@@ -128,13 +128,13 @@ if (result.success) {
 ### API Usage
 ```bash
 # Get full AI-ready report
-curl "http://localhost:3000/api/pdf/unified/123/full-report?format=clean"
+curl "https://your-domain.com/api/pdf/unified/123/full-report?format=clean"
 
 # Get only specific sections
-curl "http://localhost:3000/api/pdf/unified/123/full-report?sections=project,scores,ai"
+curl "https://your-domain.com/api/pdf/unified/123/full-report?sections=project,scores,ai"
 
 # Get AI summary
-curl "http://localhost:3000/api/pdf/unified/123/ai-summary"
+curl "https://your-domain.com/api/pdf/unified/123/ai-summary"
 ```
 
 ## 🔍 Technical Details

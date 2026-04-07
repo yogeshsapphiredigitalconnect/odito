@@ -21,7 +21,9 @@ def get_db_connection():
     if db_client is None:
         # Use same connection string as main
         import os
-        mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/odito_dev")
+        from env_config import get_config
+        config = get_config()
+        mongo_uri = config.get('database.uri')
         db_client = MongoClient(mongo_uri)
         db = db_client.get_database()
     return db

@@ -6,9 +6,12 @@
 
 import axios from 'axios';
 
+import { getApiUrls } from '../config/env.js';
+
 class PythonWorkerService {
   constructor() {
-    this.baseUrl = process.env.PYTHON_WORKER_URL || 'http://localhost:8000/api';
+    const apiUrls = getApiUrls();
+    this.baseUrl = apiUrls.pythonWorker;
     this.timeout = 300000; // 5 minutes
   }
 

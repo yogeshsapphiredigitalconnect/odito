@@ -1,13 +1,15 @@
 require('dotenv').config({ path: __dirname + '/.env' });
 
 /**
- * 🎯 WORKING AUDIO SERVICE WITH OPENAI FALLBACK
+ * WORKING AUDIO SERVICE WITH OPENAI FALLBACK
  * Uses ElevenLabs when available, falls back to OpenAI TTS
  */
 
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { getMediaUrls } = require('../config/env.js');
 
 class WorkingAudioService {
   constructor() {
@@ -101,7 +103,7 @@ class WorkingAudioService {
       console.log(`[WORKING_AUDIO_SERVICE] ✅ Real voice audio saved using ${providerUsed}: ${outputPath}`);
       console.log(`[WORKING_AUDIO_SERVICE] 📊 Provider used: ${providerUsed}, Size: ${audioBuffer.length} bytes`);
       
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `${getMediaUrls().audio}/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[WORKING_AUDIO_SERVICE] ❌ Audio generation failed:`, error.message);
@@ -255,7 +257,7 @@ class WorkingAudioService {
    */
   getAudioUrl(projectId) {
     if (this.audioExists(projectId)) {
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `${getMediaUrls().audio}/${projectId}.mp3`;
     }
     return null;
   }

@@ -1,13 +1,15 @@
 require('dotenv').config({ path: __dirname + '/.env' });
 
 /**
- * 🎯 SMART AUDIO SERVICE WITH AUTO-VOICE DETECTION
- * Automatically finds available voices and handles permission issues
+ * SMART AUDIO SERVICE WITH OPENAI FALLBACK
+ * Uses ElevenLabs when available, falls back to OpenAI TTS
  */
 
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { getMediaUrls } = require('../config/env.js');
 
 class SmartAudioService {
   constructor() {
@@ -176,7 +178,7 @@ class SmartAudioService {
       console.log(`[SMART_AUDIO_SERVICE] 📊 Size: ${audioBuffer.length} bytes`);
       console.log(`[SMART_AUDIO_SERVICE] 🎵 Voice used: ${bestVoiceId}`);
       
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `${getMediaUrls().audio}/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[SMART_AUDIO_SERVICE] ❌ Audio generation failed:`, error.message);
@@ -288,7 +290,7 @@ class SmartAudioService {
    */
   getAudioUrl(projectId) {
     if (this.audioExists(projectId)) {
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      return `${getMediaUrls().audio}/${projectId}.mp3`;
     }
     return null;
   }

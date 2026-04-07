@@ -6,10 +6,19 @@ import logging
 import random
 import string
 from datetime import datetime
+from pathlib import Path
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv()
+
+# Import centralized config
+import env_config as centralized_config
+from env_config import get_config, validate_environment
+
+# Validate environment on startup
+validate_environment()
+config = get_config()
 
 # Third-party imports
 import requests
@@ -85,7 +94,7 @@ class JobCompletion(BaseModel):
 def send_progress_update(job_id: str, percentage: int, step: str, message: str, subtext: str = None):
     """Send progress update to Node.js backend"""
     try:
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        node_backend_url = config.get_service_url('node_backend')
         progress_url = f"{node_backend_url}/api/jobs/{job_id}/progress"
         
         payload = {
@@ -136,7 +145,7 @@ def claim_job(request: JobClaimRequest):
         print(f"🔄 Worker {request.worker_id} requesting job of type: {request.job_type}")
         
         # DEBUG: Add these prints
-        node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+        node_backend_url = config.get_service_url('node_backend')
         print(f"🔍 DEBUG: NODE_BACKEND_URL = '{node_backend_url}'")
         
         node_url = f"{node_backend_url}/api/workers/claim"
@@ -187,7 +196,7 @@ def test_node_connection():
     """Test connection to Node.js backend manually"""
     import requests
     
-    node_backend_url = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+    node_backend_url = config.get_service_url('node_backend')
     test_url = f"{node_backend_url}/api/workers/claim"
     test_payload = {"job_type": "LINK_DISCOVERY", "worker_id": "debug-test"}
     

@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import { generateProjectPDF } from './puppeteerPdfService.js';
 import User from '../modules/user/model/User.js';
 import mongoose from 'mongoose';
+import { getServiceUrls } from '../config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,8 +77,8 @@ export async function generateRealPDF(projectId, jobIdOrJob) {
   console.error(`🖨️  [PDF_GENERATOR] Last error: ${lastError?.message}`);
 
   // Return a fallback URL so the email still sends (with a link to generate manually)
-  const backendPort = process.env.PORT || 5000;
-  const fallbackUrl = `http://localhost:${backendPort}/api/export/projects/${projectId}/export/seo`;
+  const serviceUrls = getServiceUrls();
+  const fallbackUrl = `${serviceUrls.backend}/api/export/projects/${projectId}/export/seo`;
   console.log(`🖨️  [PDF_GENERATOR] ⚠️  Using fallback URL: ${fallbackUrl}`);
 
   return fallbackUrl;

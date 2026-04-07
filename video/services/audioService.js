@@ -4,6 +4,7 @@ const path = require('path');
 const axios = require('axios');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
+const { getMediaUrls } = require('../config/env.js');
 
 /**
  * Enhanced Audio Service with Retry Logic, Fallbacks, and Caching
@@ -159,7 +160,8 @@ class AudioService {
       console.log(`[AUDIO_SERVICE] 🎵 Audio duration will be calculated based on text length and speech rate`);
       
       // Return PUBLIC URL for Remotion compatibility
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      const mediaUrls = getMediaUrls();
+      return `${mediaUrls.audio}/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[AUDIO_SERVICE] ❌ Audio generation failed for ${projectId}:`, error.message);
@@ -441,7 +443,8 @@ class AudioService {
     const outputPath = path.join(this.OUTPUT_DIR, `${projectId}.mp3`);
     fs.copyFileSync(cachePath, outputPath);
     // Return HTTP URL for backend access
-    return `http://localhost:5000/audio/${projectId}.mp3`;
+    const mediaUrls = getMediaUrls();
+    return `${mediaUrls.audio}/${projectId}.mp3`;
   }
 
   /**
@@ -571,7 +574,8 @@ class AudioService {
    */
   getAudioUrl(projectId) {
     if (this.audioExists(projectId)) {
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      const mediaUrls = getMediaUrls();
+      return `${mediaUrls.audio}/${projectId}.mp3`;
     }
     return null;
   }
@@ -693,7 +697,8 @@ class AudioService {
       console.log(`[AUDIO_SERVICE] ✅ Valid silent audio created: ${outputPath} (${stats.size} bytes, ${durationSeconds} seconds)`);
       
       // Return PUBLIC URL for Remotion compatibility
-      return `http://localhost:5000/audio/${projectId}.mp3`;
+      const mediaUrls = getMediaUrls();
+      return `${mediaUrls.audio}/${projectId}.mp3`;
       
     } catch (error) {
       console.error(`[AUDIO_SERVICE] ❌ Failed to create silent audio:`, error.message);
@@ -730,7 +735,8 @@ class AudioService {
         // Check if slide audio already exists
         if (this.audioExists(slideProjectId)) {
           console.log(`[AUDIO_SERVICE] ✅ Using existing audio for slide ${slideIndex} (${slideProjectId})`);
-          const audioPath = `http://localhost:5000/audio/${slideProjectId}.mp3`;
+          const mediaUrls = getMediaUrls();
+          const audioPath = `${mediaUrls.audio}/${slideProjectId}.mp3`;
           const duration = await this.getAudioDuration(audioPath);
           audioFiles.push({
             slideIndex,
@@ -794,7 +800,8 @@ class AudioService {
         console.log(`[AUDIO_SERVICE] ✅ Slide ${slideIndex} audio saved using ${providerUsed}: ${outputPath}`);
         
         // Get audio duration
-        const audioPath = `http://localhost:5000/audio/${slideProjectId}.mp3`;
+        const mediaUrls = getMediaUrls();
+        const audioPath = `${mediaUrls.audio}/${slideProjectId}.mp3`;
         const duration = await this.getAudioDuration(audioPath);
         
         console.log(`[AUDIO_SERVICE] ⏱️ Slide ${slideIndex} duration: ${duration.toFixed(2)}s`);

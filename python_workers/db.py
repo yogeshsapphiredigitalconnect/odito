@@ -3,21 +3,37 @@ from bson.objectid import ObjectId
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from env_config import get_config
 
 # Load environment variables from .env file
 load_dotenv()
 
 # connect to MongoDB using same URI as backend
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/odito_dev")
+config = get_config()
+MONGO_URI = config.get('database.uri')
 print(f"[DB DEBUG] Mongo URI: {MONGO_URI}")
 
 client = MongoClient(MONGO_URI)
 
 # Extract database name from URI or use default
-if "/" in MONGO_URI:
-    db_name = MONGO_URI.split("/")[-1].split("?")[0]  # Remove query parameters
+# MongoDB Atlas URIs often don't include database name in the path
+# The database name is typically specified separately or uses a default
+if "?" in MONGO_URI:
+    # Remove query parameters and check if there's a database name
+    uri_without_query = MONGO_URI.split("?")[0]
+    
+    # Check if there's a database name in the path
+    if "/" in uri_without_query:
+        path_parts = uri_without_query.split("/")
+        # For mongodb+srv://, the database name would be after the host (index 3)
+        if len(path_parts) > 3 and path_parts[3]:
+            db_name = path_parts[3]
+        else:
+            db_name = "odito"  # Default database name
+    else:
+        db_name = "odito"
 else:
-    db_name = "odito_dev"
+    db_name = "odito"
 db = client[db_name]
 
 print(f"[DB DEBUG] Database name: {db_name}")

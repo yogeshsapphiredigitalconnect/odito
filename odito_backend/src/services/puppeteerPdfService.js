@@ -24,9 +24,11 @@ const __dirname = path.dirname(__filename);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
+import { getEnvVar, getServiceUrls } from '../config/env.js';
+
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FRONTEND_URL = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const FRONTEND_URL = getEnvVar('CORS_ORIGIN');
 const REPORTS_DIR = path.join(__dirname, '..', '..', 'reports');
 
 // Timeouts
@@ -257,8 +259,8 @@ export async function generateProjectPDF(projectId, userId, options = {}) {
 
     const fileSize = fs.statSync(filePath).size;
     const elapsedMs = Date.now() - startTime;
-    const backendPort = process.env.PORT || 5000;
-    const publicUrl = `http://localhost:${backendPort}/reports/${fileName}`;
+    const serviceUrls = getServiceUrls();
+    const publicUrl = `${serviceUrls.backend}/reports/${fileName}`;
 
     console.log(`[PUPPETEER_PDF] ════════════════════════════════════════════`);
     console.log(`[PUPPETEER_PDF] ✅ PDF GENERATION COMPLETE`);

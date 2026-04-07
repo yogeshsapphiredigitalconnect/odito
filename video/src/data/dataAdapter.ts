@@ -100,7 +100,7 @@ export const adaptToNewFormat = (auditData: AuditData) => {
       overview: { 
         scores: { seo_health: 0, ai_visibility: 0, performance: 0, authority: 0 }, 
         issues_summary: { critical: 0, warning: 0, info: 0, passed: 0 },
-        site: { name: "Unknown Site", domain: "localhost" },
+        site: { name: "Unknown Site", domain: "example.com" },
         pages_crawled: 0,
         audit_date: new Date().toLocaleDateString()
       },
@@ -230,7 +230,7 @@ export const adaptToNewFormat = (auditData: AuditData) => {
       },
       site: {
         name: auditData.projectName || "Agency Platform",
-        domain: auditData.url ? (auditData.url.startsWith('http') ? new URL(auditData.url).hostname : auditData.url) : 'localhost',
+        domain: auditData.url ? (auditData.url.startsWith('http') ? new URL(auditData.url).hostname : auditData.url) : 'example.com',
       },
       pages_crawled: 312, // TODO: Add pages crawled data
       audit_date: new Date().toLocaleDateString(),

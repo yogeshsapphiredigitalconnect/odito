@@ -19,9 +19,11 @@ sys.path.append('./scraper/workers/ai/ai_visibility')  # ai visibility
 sys.path.append('./scraper/workers/ai/ai_scoring_v2')  # scoring v2
 
 # Database setup
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/odito_dev')
+from env_config import get_config
+config = get_config()
+MONGO_URI = config.get('database.uri')
 client = MongoClient(MONGO_URI)
-db = client[MONGO_URI.split('/')[-1] if '/' in MONGO_URI else 'odito_dev']
+db = client[config.get('database.db_name')]
 
 # Collections
 seo_ai_visibility = db['seo_ai_visibility']
@@ -89,9 +91,11 @@ def execute_ai_visibility(project_id, job_id):
     try:
         # First, create the AI project record for standalone mode
         from pymongo import MongoClient
-        MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/odito_dev')
+        from env_config import get_config
+        config = get_config()
+        MONGO_URI = config.get('database.uri')
         client = MongoClient(MONGO_URI)
-        db = client[MONGO_URI.split('/')[-1] if '/' in MONGO_URI else 'odito_dev']
+        db = client[config.get('database.db_name')]
         seo_ai_visibility_project = db['seo_ai_visibility_project']
         
         # Create standalone AI project record
