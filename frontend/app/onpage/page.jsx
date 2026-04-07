@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { useAuth } from "@/contexts/AuthContext"

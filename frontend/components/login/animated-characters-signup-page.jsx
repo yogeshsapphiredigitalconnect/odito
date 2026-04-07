@@ -188,7 +188,7 @@ function SignupPage() {
   const handleGoogleSignup = async () => {
     try {
       await signIn("google", { 
-        callbackUrl: window.location.origin + "/dashboard",
+        callbackUrl: window.location.origin + "/auth/callback",
         redirect: true 
       });
     } catch (error) {

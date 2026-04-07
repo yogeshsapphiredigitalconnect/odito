@@ -114,7 +114,8 @@ const register = async (userData) => {
     console.warn('Failed to send OTP email, but user was created');
   }
 
-  const token = generateToken(user._id, false); // Registration always uses 1-day token
+  // DO NOT issue token for unverified users - they must verify email first
+  const token = null; // No token until email is verified
 
   return {
     user: {
@@ -128,7 +129,7 @@ const register = async (userData) => {
       credits: formatCreditsForFrontend(user),
       subscription: user.subscription
     },
-    token,
+    token, // null until email verified
     message: 'Registration successful. Please check your email for OTP verification.',
   };
 };

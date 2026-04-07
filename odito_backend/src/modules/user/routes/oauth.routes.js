@@ -320,6 +320,8 @@ router.post("/google/callback", async (req, res) => {
       oauthProviderId: googleId
     });
 
+    let isNewUser = false;
+      
     if (!user) {
       user = await User.findOne({ email: email });
 
@@ -338,6 +340,7 @@ router.post("/google/callback", async (req, res) => {
       } else {
         // Create new user
         console.log("BACKEND OAUTH - Creating new user from NextAuth Google OAuth");
+        isNewUser = true;
         user = await User.create({
           email: email,
           firstName: firstName || name?.split(' ')[0] || '',
@@ -377,7 +380,8 @@ router.post("/google/callback", async (req, res) => {
           roleId: user.roleId,
           credits: formatCreditsForFrontend(user),
           subscription: user.subscription,
-          isEmailVerified: user.isEmailVerified
+          isEmailVerified: user.isEmailVerified,
+          isNewUser: isNewUser
         }
       }
     });

@@ -25,10 +25,23 @@ export default function AuthCallback() {
       if (isRedirecting) return;
       setIsRedirecting(true);
 
+      console.log("Auth callback - User data:", user);
+      console.log("Auth callback - Is new user:", user.isNewUser);
+
       try {
-        // Check if user has existing projects
+        // If user is new, skip project check and go directly to onboarding
+        if (user.isNewUser === true) {
+          console.log("Auth callback - New user detected, redirecting to onboarding");
+          router.push('/onboarding');
+          return;
+        }
+
+        // For existing users, check if they have projects
+        console.log("Auth callback - Existing user, checking projects...");
         const response = await apiService.getProjects(1, 1);
         const projects = response?.data?.projects || [];
+        
+        console.log("Auth callback - Projects found:", projects.length);
         
         if (projects.length > 0) {
           router.push('/dashboard');

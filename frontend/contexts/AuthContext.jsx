@@ -62,8 +62,14 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     try {
       const result = await apiService.register(userData);
-      apiService.setToken(result.data.token);
-      setUser(result.data.user);
+      
+      // DO NOT auto-login unverified users
+      // Only set token and user if email is verified
+      if (result.data.token && result.data.user.isEmailVerified) {
+        apiService.setToken(result.data.token);
+        setUser(result.data.user);
+      }
+      
       return { success: true, user: result.data.user };
     } catch (error) {
       throw error;
@@ -152,12 +158,17 @@ function AuthContextInner({ value, children }) {
     if (session && session?.backendToken && session?.backendUser) {
       console.log("AuthContext - Storing backend token and user");
       console.log("AuthContext - Backend user:", session.backendUser);
+      console.log("AuthContext - Is new user:", session.isNewUser);
       
       // Store backend JWT in localStorage
       apiService.setToken(session.backendToken);
       
-      // Update user state with backend user data
-      setUser(session.backendUser);
+      // Update user state with backend user data (including isNewUser flag)
+      const updatedUser = { ...session.backendUser };
+      if (session.isNewUser !== undefined) {
+        updatedUser.isNewUser = session.isNewUser;
+      }
+      setUser(updatedUser);
       
       console.log("AuthContext - User state updated, clearing NextAuth session");
       

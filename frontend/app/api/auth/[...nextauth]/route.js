@@ -57,6 +57,25 @@ const handler = NextAuth({
       
       return true;
     },
+    async redirect({ url, baseUrl }) {
+      console.log("REDIRECT CALLBACK - url:", url, "baseUrl:", baseUrl);
+      
+      // If the callbackUrl is provided and it's relative to the baseUrl, use it
+      if (url.startsWith(baseUrl)) {
+        console.log("REDIRECT CALLBACK - Using provided url:", url);
+        return url;
+      }
+      
+      // For relative URLs, prepend baseUrl
+      if (url.startsWith('/')) {
+        console.log("REDIRECT CALLBACK - Prepending baseUrl to relative url:", baseUrl + url);
+        return baseUrl + url;
+      }
+      
+      // Default fallback
+      console.log("REDIRECT CALLBACK - Using default baseUrl:", baseUrl);
+      return baseUrl;
+    },
     async jwt({ token, account, user }) {
       console.log("JWT CALLBACK - account:", account);
       console.log("JWT CALLBACK - user:", user);
@@ -93,7 +112,9 @@ const handler = NextAuth({
             if (result.success) {
               token.backendToken = result.data.token;
               token.backendUser = result.data.user;
+              token.isNewUser = result.data.user.isNewUser;
               console.log("Backend token stored in NextAuth JWT");
+              console.log("isNewUser flag:", token.isNewUser);
             } else {
               console.error("Backend OAuth error:", result.message);
             }
@@ -117,9 +138,14 @@ const handler = NextAuth({
       }
       if (token.backendUser) {
         session.backendUser = token.backendUser;
+        // Include emailVerified status from backend user data
+        session.backendUser.isEmailVerified = token.backendUser.isEmailVerified || false;
       }
       if (token.provider) {
         session.provider = token.provider;
+      }
+      if (token.isNewUser !== undefined) {
+        session.isNewUser = token.isNewUser;
       }
       
       return session;
